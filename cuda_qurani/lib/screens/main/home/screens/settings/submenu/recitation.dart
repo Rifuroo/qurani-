@@ -288,7 +288,7 @@ class _RecitationPageState extends State<RecitationPage> {
                                 Switch(
                                   value: _dontProgressUntilFixed,
                                   onChanged: _toggleDontProgress,
-                                  activeColor: Color(0xFF4CAF50),
+                                  activeTrackColor: Color(0xFF4CAF50),
                                   inactiveThumbColor: AppColors.borderMedium,
                                   inactiveTrackColor: AppColors.borderLight,
                                 ),
@@ -471,7 +471,7 @@ class _RecitationPageState extends State<RecitationPage> {
           onChanged: canAccess
               ? onChanged
               : (_) => showPremiumFeatureDialog(context, feature),
-          activeColor: const Color(0xFF4CAF50),
+          activeTrackColor: const Color(0xFF4CAF50),
           inactiveThumbColor: AppColors.borderMedium,
           inactiveTrackColor: AppColors.borderLight,
         ),
@@ -479,3 +479,6 @@ class _RecitationPageState extends State<RecitationPage> {
     );
   }
 }
+
+
+

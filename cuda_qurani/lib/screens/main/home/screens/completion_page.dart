@@ -399,9 +399,9 @@ class _CompletionPageState extends State<CompletionPage> {
       margin: EdgeInsets.all(AppDesignSystem.space16 * s),
       padding: EdgeInsets.all(AppDesignSystem.space12 * s),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.1),
+        color: AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
-        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -659,7 +659,7 @@ class _CompletionPageState extends State<CompletionPage> {
                             'Surah ${context.formatNumber(_lastRead.surahId)}',
                             style: AppTypography.captionSmall(
                               context,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
                         ],
@@ -996,3 +996,5 @@ class _CompletionPageState extends State<CompletionPage> {
     );
   }
 }
+
+

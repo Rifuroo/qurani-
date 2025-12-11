@@ -100,7 +100,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.amber.withOpacity(0.3),
+                  color: Colors.amber.withValues(alpha: 0.3),
                   blurRadius: 20,
                   spreadRadius: 5,
                 ),
@@ -144,7 +144,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.amber.withOpacity(0.5),
+                        color: Colors.amber.withValues(alpha: 0.5),
                         blurRadius: 20,
                         spreadRadius: 5,
                       ),
@@ -239,3 +239,6 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
     );
   }
 }
+
+
+

@@ -165,7 +165,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                             Switch(
                               value: _playSound,
                               onChanged: _togglePlaySound,
-                              activeColor: Color(0xFF4CAF50),
+                              activeTrackColor: Color(0xFF4CAF50),
                               inactiveThumbColor: AppColors.borderMedium,
                               inactiveTrackColor: AppColors.borderLight,
                             ),
@@ -300,7 +300,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                       Switch(
                         value: _vibrateDevice,
                         onChanged: _toggleVibrateDevice,
-                        activeColor: Color(0xFF4CAF50),
+                        activeTrackColor: Color(0xFF4CAF50),
                         inactiveThumbColor: AppColors.borderMedium,
                         inactiveTrackColor: AppColors.borderLight,
                       ),
@@ -335,3 +335,5 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
     );
   }
 }
+
+

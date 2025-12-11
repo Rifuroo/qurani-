@@ -2,7 +2,7 @@
 import 'package:cuda_qurani/models/quran_models.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../controllers/stt_controller.dart';
+import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
@@ -21,7 +21,7 @@ class _QuranListViewState extends State<QuranListView> {
   int _currentVisiblePage = 1;
   Timer? _scrollEndTimer;
   bool _hasJumped = false;
-  
+
   // ✅ Background preloading state
   bool _isPreloading = false;
   int _preloadProgress = 0;
@@ -33,18 +33,18 @@ class _QuranListViewState extends State<QuranListView> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _hasJumped) return;
-      
+
       final controller = context.read<SttController>();
       final targetPage = controller.listViewCurrentPage;
-      
+
       print('📍 LIST_VIEW_INIT: Jumping to saved position: $targetPage');
       _jumpToPage(targetPage);
       _currentVisiblePage = targetPage;
       _hasJumped = true;
-      
+
       // ✅ Load immediate visible range
       _loadImmediateRange(targetPage);
-      
+
       // ✅ Start aggressive background preloading
       _startBackgroundPreload(targetPage);
     });
@@ -53,10 +53,10 @@ class _QuranListViewState extends State<QuranListView> {
   /// ✅ PHASE 1: Load visible range INSTANTLY (±3 pages)
   Future<void> _loadImmediateRange(int centerPage) async {
     if (!mounted) return;
-    
+
     final controller = context.read<SttController>();
     final service = context.read<QuranService>();
-    
+
     final immediatePage = <int>[];
     for (int offset = -3; offset <= 3; offset++) {
       final page = centerPage + offset;
@@ -64,11 +64,13 @@ class _QuranListViewState extends State<QuranListView> {
         immediatePage.add(page);
       }
     }
-    
+
     if (immediatePage.isEmpty) return;
-    
-    print('📍 IMMEDIATE: Loading ${immediatePage.length} visible pages around $centerPage');
-    
+
+    print(
+      '📍 IMMEDIATE: Loading ${immediatePage.length} visible pages around $centerPage',
+    );
+
     // Load all visible pages in parallel
     await Future.wait(
       immediatePage.map((page) async {
@@ -83,29 +85,31 @@ class _QuranListViewState extends State<QuranListView> {
         }
       }),
     );
-    
+
     if (mounted) setState(() {});
-    print('📍 IMMEDIATE: All visible pages loaded, cache=${controller.pageCache.length}');
+    print(
+      '📍 IMMEDIATE: All visible pages loaded, cache=${controller.pageCache.length}',
+    );
   }
 
   /// ✅ PHASE 2: Aggressive background preload (ALL remaining pages)
   Future<void> _startBackgroundPreload(int startPage) async {
     if (_isPreloading || !mounted) return;
-    
+
     _isPreloading = true;
     final controller = context.read<SttController>();
     final service = context.read<QuranService>();
-    
+
     print('📍 PRELOAD: Starting background load of all 604 pages');
-    
+
     // ✅ Strategy: Load in expanding circles from current page
     final pagesToLoad = <int>[];
-    
+
     // Add pages in distance order from start page
     for (int distance = 4; distance < 604; distance++) {
       final prevPage = startPage - distance;
       final nextPage = startPage + distance;
-      
+
       if (prevPage >= 1 && !controller.pageCache.containsKey(prevPage)) {
         pagesToLoad.add(prevPage);
       }
@@ -113,20 +117,22 @@ class _QuranListViewState extends State<QuranListView> {
         pagesToLoad.add(nextPage);
       }
     }
-    
-    print('📍 PRELOAD: ${pagesToLoad.length} pages queued for background loading');
-    
+
+    print(
+      '📍 PRELOAD: ${pagesToLoad.length} pages queued for background loading',
+    );
+
     // ✅ Load in batches of 10 pages (parallel within batch)
     const batchSize = 10;
     for (int i = 0; i < pagesToLoad.length; i += batchSize) {
       if (!mounted) break;
-      
+
       final batch = pagesToLoad.skip(i).take(batchSize).toList();
-      
+
       await Future.wait(
         batch.map((page) async {
           if (!mounted || controller.pageCache.containsKey(page)) return;
-          
+
           try {
             final lines = await service.getMushafPageLines(page);
             if (mounted) {
@@ -138,16 +144,16 @@ class _QuranListViewState extends State<QuranListView> {
           }
         }),
       );
-      
+
       // Small delay between batches to avoid blocking UI
       await Future.delayed(const Duration(milliseconds: 50));
-      
+
       if (mounted && _preloadProgress % 50 == 0) {
         print('📍 PRELOAD: Progress ${controller.pageCache.length}/604 pages');
         setState(() {}); // Refresh UI occasionally
       }
     }
-    
+
     if (mounted) {
       print('📍 PRELOAD: ✅ Complete! All 604 pages cached');
       setState(() {});
@@ -177,12 +183,14 @@ class _QuranListViewState extends State<QuranListView> {
 
     if (clampedPage != _currentVisiblePage) {
       _currentVisiblePage = clampedPage;
-      
+
       _scrollEndTimer?.cancel();
       _scrollEndTimer = Timer(const Duration(milliseconds: 300), () {
         if (!mounted) return;
-        print('📍 SCROLL: Settled at page $_currentVisiblePage (cache: ${context.read<SttController>().pageCache.length}/604)');
-        
+        print(
+          '📍 SCROLL: Settled at page $_currentVisiblePage (cache: ${context.read<SttController>().pageCache.length}/604)',
+        );
+
         // Load nearby pages if not cached yet
         _loadImmediateRange(_currentVisiblePage);
       });
@@ -245,7 +253,7 @@ class _VerticalPageWidget extends StatelessWidget {
     // ✅ Minimal loading placeholder
     final screenHeight = MediaQuery.of(context).size.height;
     final distance = (pageNumber - currentPage).abs();
-    
+
     return SizedBox(
       height: screenHeight * 0.75,
       child: Center(
@@ -419,8 +427,22 @@ class _PageHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Juz $juzNumber', style: TextStyle(fontSize: fontSize, color: Colors.black, fontWeight: FontWeight.w100)),
-          Text('$pageNumber', style: TextStyle(fontSize: fontSize, color: Colors.black, fontWeight: FontWeight.w100)),
+          Text(
+            'Juz $juzNumber',
+            style: TextStyle(
+              fontSize: fontSize,
+              color: Colors.black,
+              fontWeight: FontWeight.w100,
+            ),
+          ),
+          Text(
+            '$pageNumber',
+            style: TextStyle(
+              fontSize: fontSize,
+              color: Colors.black,
+              fontWeight: FontWeight.w100,
+            ),
+          ),
         ],
       ),
     );
@@ -444,8 +466,23 @@ class _SurahHeader extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Text('header', style: TextStyle(fontSize: screenHeight * 0.056, fontFamily: 'Quran-Common', color: Colors.black87)),
-          Text(surahGlyphCode, style: TextStyle(fontSize: screenHeight * 0.0475, fontFamily: 'surah-name-v2', color: Colors.black), textDirection: TextDirection.rtl),
+          Text(
+            'header',
+            style: TextStyle(
+              fontSize: screenHeight * 0.056,
+              fontFamily: 'Quran-Common',
+              color: Colors.black87,
+            ),
+          ),
+          Text(
+            surahGlyphCode,
+            style: TextStyle(
+              fontSize: screenHeight * 0.0475,
+              fontFamily: 'surah-name-v2',
+              color: Colors.black,
+            ),
+            textDirection: TextDirection.rtl,
+          ),
         ],
       ),
     );
@@ -467,7 +504,14 @@ class _Basmallah extends StatelessWidget {
     return Container(
       alignment: Alignment.center,
       padding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
-      child: Text('﷽', style: TextStyle(fontSize: screenHeight * 0.04, fontFamily: 'Quran-Common', color: Colors.black87)),
+      child: Text(
+        '﷽',
+        style: TextStyle(
+          fontSize: screenHeight * 0.04,
+          fontFamily: 'Quran-Common',
+          color: Colors.black87,
+        ),
+      ),
     );
   }
 }
@@ -476,10 +520,7 @@ class _CompleteAyahWidget extends StatelessWidget {
   final AyahSegment segment;
   final String fontFamily;
 
-  const _CompleteAyahWidget({
-    required this.segment,
-    required this.fontFamily,
-  });
+  const _CompleteAyahWidget({required this.segment, required this.fontFamily});
 
   @override
   Widget build(BuildContext context) {
@@ -488,9 +529,10 @@ class _CompleteAyahWidget extends StatelessWidget {
         final ayatIndex = controller.ayatList.indexWhere(
           (a) => a.surah_id == segment.surahId && a.ayah == segment.ayahNumber,
         );
-        final isCurrentAyat = ayatIndex >= 0 && ayatIndex == controller.currentAyatIndex;
+        final isCurrentAyat =
+            ayatIndex >= 0 && ayatIndex == controller.currentAyatIndex;
         final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
-        
+
         return _AyahState(
           isCurrentAyat: isCurrentAyat,
           wordStatusMap: controller.wordStatusMap[wordStatusKey],
@@ -506,7 +548,9 @@ class _CompleteAyahWidget extends StatelessWidget {
         return Container(
           width: double.infinity,
           decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0), width: 0.5)),
+            border: Border(
+              bottom: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+            ),
           ),
           padding: EdgeInsets.only(
             bottom: screenHeight * 0.015,
@@ -529,7 +573,9 @@ class _CompleteAyahWidget extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.transparent,
                         border: Border.all(
-                          color: state.isCurrentAyat ? primaryColor : Colors.black54,
+                          color: state.isCurrentAyat
+                              ? primaryColor
+                              : Colors.black54,
                           width: 1,
                         ),
                         borderRadius: BorderRadius.circular(4),
@@ -537,7 +583,9 @@ class _CompleteAyahWidget extends StatelessWidget {
                       child: Text(
                         '${segment.surahId}:${segment.ayahNumber}',
                         style: TextStyle(
-                          color: state.isCurrentAyat ? primaryColor : Colors.black87,
+                          color: state.isCurrentAyat
+                              ? primaryColor
+                              : Colors.black87,
                           fontWeight: FontWeight.w600,
                           fontSize: screenWidth * 0.0275,
                         ),
@@ -552,7 +600,12 @@ class _CompleteAyahWidget extends StatelessWidget {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   spacing: 1,
                   runSpacing: 4,
-                  children: _buildWords(segment, state, screenWidth, screenHeight),
+                  children: _buildWords(
+                    segment,
+                    state,
+                    screenWidth,
+                    screenHeight,
+                  ),
                 ),
               ),
             ],
@@ -571,27 +624,32 @@ class _CompleteAyahWidget extends StatelessWidget {
     return segment.words.map((word) {
       // FIX: Ensure wordIndex is never negative
       final rawIndex = word.wordNumber - 1;
-      final wordIndex = rawIndex < 0 ? 0 : (rawIndex >= segment.words.length ? segment.words.length - 1 : rawIndex);
+      final wordIndex = rawIndex < 0
+          ? 0
+          : (rawIndex >= segment.words.length
+                ? segment.words.length - 1
+                : rawIndex);
       final wordStatus = state.wordStatusMap?[wordIndex];
       Color wordBg = Colors.transparent;
       double opacity = 1.0;
 
-      final isLastWordInAyah = segment.isEndOfAyah && wordIndex == (segment.words.length - 1);
+      final isLastWordInAyah =
+          segment.isEndOfAyah && wordIndex == (segment.words.length - 1);
       final hasNumber = RegExp(r'[٠-٩0-9]').hasMatch(word.text);
 
       if (wordStatus != null) {
         switch (wordStatus) {
           case WordStatus.matched:
-            wordBg = correctColor.withOpacity(0.4);
+            wordBg = correctColor.withValues(alpha: 0.4);
             break;
           case WordStatus.mismatched:
           case WordStatus.skipped:
-            wordBg = errorColor.withOpacity(0.4);
+            wordBg = errorColor.withValues(alpha: 0.4);
             break;
           case WordStatus.processing:
             wordBg = state.isListeningMode
-                ? Colors.grey.withOpacity(0.5)
-                : listeningColor.withOpacity(0.3);
+                ? Colors.grey.withValues(alpha: 0.5)
+                : listeningColor.withValues(alpha: 0.3);
             break;
           default:
             break;
@@ -619,7 +677,7 @@ class _CompleteAyahWidget extends StatelessWidget {
           border: (state.hideUnreadAyat && !isLastWordInAyah)
               ? Border(
                   bottom: BorderSide(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Colors.black.withValues(alpha: 0.15),
                     width: 0.3,
                   ),
                 )
@@ -668,8 +726,12 @@ class _AyahState {
           _mapEquals(wordStatusMap, other.wordStatusMap);
 
   @override
-  int get hashCode =>
-      Object.hash(isCurrentAyat, hideUnreadAyat, isListeningMode, wordStatusMap);
+  int get hashCode => Object.hash(
+    isCurrentAyat,
+    hideUnreadAyat,
+    isListeningMode,
+    wordStatusMap,
+  );
 
   bool _mapEquals(Map<int, WordStatus>? a, Map<int, WordStatus>? b) {
     if (identical(a, b)) return true;

@@ -137,7 +137,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                             Switch(
                               value: _hideVerses,
                               onChanged: _toggleHideVerses,
-                              activeColor: Color(0xFF4CAF50),
+                              activeTrackColor: Color(0xFF4CAF50),
                               inactiveThumbColor: AppColors.borderMedium,
                               inactiveTrackColor: AppColors.borderLight,
                             ),
@@ -184,7 +184,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                             Switch(
                               value: _hideVerseMarkers,
                               onChanged: _toggleHideVerseMarkers,
-                              activeColor: Color(0xFF4CAF50),
+                              activeTrackColor: Color(0xFF4CAF50),
                               inactiveThumbColor: AppColors.borderMedium,
                               inactiveTrackColor: AppColors.borderLight,
                             ),
@@ -225,3 +225,6 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
     );
   }
 }
+
+
+

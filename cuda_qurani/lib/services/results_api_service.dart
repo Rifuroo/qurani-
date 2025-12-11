@@ -227,3 +227,6 @@ class ResultsApiService {
     return (stats['total_words'] as int?) ?? 0;
   }
 }
+
+
+

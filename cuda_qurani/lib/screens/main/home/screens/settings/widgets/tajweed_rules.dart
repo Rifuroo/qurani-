@@ -350,3 +350,5 @@ class TajweedRule {
     required this.descriptionKey,
   });
 }
+
+

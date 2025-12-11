@@ -282,7 +282,7 @@ class _MenuAppBarState extends State<MenuAppBar>
             ),
             border: isSelected
                 ? Border.all(
-                    color: AppColors.primary.withOpacity(0.2),
+                    color: AppColors.primary.withValues(alpha: 0.2),
                     width: AppDesignSystem.borderNormal * s,
                   )
                 : null,
@@ -543,3 +543,6 @@ class ProfileAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 }
+
+
+

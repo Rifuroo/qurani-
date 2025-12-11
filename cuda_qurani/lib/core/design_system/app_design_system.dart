@@ -258,12 +258,12 @@ class AppColors {
   static Color shadowDark = const Color(0x4D000000); // 30% black
 
   // ==================== OPACITY VARIANTS ====================
-  static Color primaryWithOpacity(double opacity) => primary.withOpacity(opacity);
-  static Color secondaryWithOpacity(double opacity) => secondary.withOpacity(opacity);
-  static Color surfaceWithOpacity(double opacity) => surface.withOpacity(opacity);
-  static Color textWithOpacity(double opacity) => textPrimary.withOpacity(opacity);
-  static Color blackWithOpacity(double opacity) => Colors.black.withOpacity(opacity);
-  static Color whiteWithOpacity(double opacity) => Colors.white.withOpacity(opacity);
+  static Color primaryWithOpacity(double opacity) => primary.withValues(alpha: opacity);
+  static Color secondaryWithOpacity(double opacity) => secondary.withValues(alpha: opacity);
+  static Color surfaceWithOpacity(double opacity) => surface.withValues(alpha: opacity);
+  static Color textWithOpacity(double opacity) => textPrimary.withValues(alpha: opacity);
+  static Color blackWithOpacity(double opacity) => Colors.black.withValues(alpha: opacity);
+  static Color whiteWithOpacity(double opacity) => Colors.white.withValues(alpha: opacity);
 
   // ==================== GRADIENT COLORS ====================
   static const LinearGradient primaryGradient = LinearGradient(
@@ -604,7 +604,7 @@ class AppTypography {
     return TextStyle(
       fontFamily: surahNameFont,
       fontSize: (fontSize ?? 36) * s,
-      color: color ?? AppColors.primary.withOpacity(0.8),
+      color: color ?? AppColors.primary.withValues(alpha: 0.8),
     );
   }
 
@@ -614,7 +614,7 @@ class AppTypography {
     return TextStyle(
       fontFamily: surahNameFont,
       fontSize: (fontSize ?? 30) * s,
-      color: color ?? AppColors.primary.withOpacity(0.8),
+      color: color ?? AppColors.primary.withValues(alpha: 0.8),
     );
   }
 
@@ -624,7 +624,7 @@ class AppTypography {
     return TextStyle(
       fontFamily: surahNameFont,
       fontSize: (fontSize ?? 24) * s,
-      color: color ?? AppColors.primary.withOpacity(0.8),
+      color: color ?? AppColors.primary.withValues(alpha: 0.8),
     );
   }
 }
@@ -739,8 +739,8 @@ class AppComponentStyles {
       gradient: gradient
           ? LinearGradient(
               colors: [
-                (backgroundColor ?? AppColors.primary).withOpacity(0.08),
-                (backgroundColor ?? AppColors.primary).withOpacity(0.04),
+                (backgroundColor ?? AppColors.primary).withValues(alpha: 0.08),
+                (backgroundColor ?? AppColors.primary).withValues(alpha: 0.04),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -789,16 +789,16 @@ class AppComponentStyles {
   // ==================== INTERACTION COLORS ====================
   
   /// Ripple/Tap effect color
-  static Color get rippleColor => AppColors.primary.withOpacity(0.08);
+  static Color get rippleColor => AppColors.primary.withValues(alpha: 0.08);
   
   /// Hover effect color
-  static Color get hoverColor => AppColors.primary.withOpacity(0.04);
+  static Color get hoverColor => AppColors.primary.withValues(alpha: 0.04);
   
   /// Focus effect color
-  static Color get focusColor => AppColors.primary.withOpacity(0.12);
+  static Color get focusColor => AppColors.primary.withValues(alpha: 0.12);
 
   /// Splash effect color
-  static Color get splashColor => AppColors.primary.withOpacity(0.16);
+  static Color get splashColor => AppColors.primary.withValues(alpha: 0.16);
 
   // ==================== BUTTON STYLES ====================
   
@@ -1333,3 +1333,5 @@ class AppMargin {
     return SizedBox(width: value * s);
   }
 }
+
+

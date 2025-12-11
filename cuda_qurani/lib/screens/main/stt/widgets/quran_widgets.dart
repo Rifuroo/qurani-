@@ -8,7 +8,7 @@ import 'package:cuda_qurani/screens/main/home/screens/surah_list_page.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/playback_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../controllers/stt_controller.dart';
+import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import '../utils/constants.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
@@ -131,7 +131,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                       style: TextStyle(
                         fontSize: titleSize,
                         fontWeight: FontWeight.w400,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         height: 1.1,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -143,7 +143,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                   Container(
                     width: 1,
                     height: screenHeight * 0.016,
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                   ),
                   SizedBox(width: screenWidth * 0.015),
                   // Juz Badge
@@ -152,7 +152,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     style: TextStyle(
                       fontSize: badgeSize,
                       fontWeight: FontWeight.w400,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       height: 1.1,
                     ),
                   ),
@@ -162,7 +162,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                   Container(
                     width: 1,
                     height: screenHeight * 0.016,
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                   ),
                   SizedBox(width: screenWidth * 0.015),
                   // Page Number
@@ -171,7 +171,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     style: TextStyle(
                       fontSize: subtitleSize,
                       fontWeight: FontWeight.w400,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       height: 1.1,
                     ),
                   ),
@@ -485,7 +485,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                       borderRadius: BorderRadius.circular(trackHeight / 2),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
+                          color: Colors.black.withValues(alpha: 0.15),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
@@ -592,7 +592,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                     color: _getThumbColor(
                                       isListeningActive,
                                       isRecordingActive,
-                                    ).withOpacity(0.4),
+                                    ).withValues(alpha: 0.4),
                                     blurRadius: 12,
                                     offset: const Offset(0, 2),
                                   ),
@@ -689,10 +689,10 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                       //     vertical: 6,
                       //   ),
                       //   decoration: BoxDecoration(
-                      //     color: primaryColor.withOpacity(0.1),
+                      //     color: primaryColor.withValues(alpha: 0.1),
                       //     borderRadius: BorderRadius.circular(20),
                       //     border: Border.all(
-                      //       color: primaryColor.withOpacity(0.3),
+                      //       color: primaryColor.withValues(alpha: 0.3),
                       //       width: 1,
                       //     ),
                       //   ),
@@ -732,8 +732,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
 
     // During drag, show preview color
     if (_isDragging) {
-      if (_dragPosition < -0.3) return primaryColor.withOpacity(0.7);
-      if (_dragPosition > 0.3) return errorColor.withOpacity(0.7);
+      if (_dragPosition < -0.3) return primaryColor.withValues(alpha: 0.7);
+      if (_dragPosition > 0.3) return errorColor.withValues(alpha: 0.7);
     }
 
     return Colors.grey.shade800;
@@ -848,9 +848,9 @@ class QuranErrorWidget extends StatelessWidget {
               width: containerSize,
               height: containerSize,
               decoration: BoxDecoration(
-                color: errorColor.withOpacity(0.1),
+                color: errorColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: errorColor.withOpacity(0.3)),
+                border: Border.all(color: errorColor.withValues(alpha: 0.3)),
               ),
               child: Icon(
                 Icons.error_outline,
@@ -1060,7 +1060,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
             Container(
               padding: EdgeInsets.all(screenWidth * 0.04),
               decoration: BoxDecoration(
-                color: correctColor.withOpacity(0.1),
+                color: correctColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(

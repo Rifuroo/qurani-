@@ -207,7 +207,7 @@ class _RemindersPageState extends State<RemindersPage> {
           onChanged: canAccess
               ? onChanged
               : (_) => showPremiumFeatureDialog(context, feature),
-          activeColor: const Color(0xFF4CAF50),
+          activeTrackColor: const Color(0xFF4CAF50),
           inactiveThumbColor: AppColors.borderMedium,
           inactiveTrackColor: AppColors.borderLight,
         ),
@@ -215,3 +215,5 @@ class _RemindersPageState extends State<RemindersPage> {
     );
   }
 }
+
+

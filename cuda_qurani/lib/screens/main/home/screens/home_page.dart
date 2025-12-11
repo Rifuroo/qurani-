@@ -455,7 +455,7 @@ class _HomePageState extends State<HomePage> {
                     _resumeSession();
                   },
                   style: AppComponentStyles.secondaryButton(context).copyWith(
-                    side: MaterialStateProperty.all(
+                    side: WidgetStateProperty.all(
                       const BorderSide(
                         color: AppColors.textPrimary,
                         width: AppDesignSystem.borderThick,
@@ -1104,3 +1104,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
+
+

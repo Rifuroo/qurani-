@@ -402,7 +402,7 @@ class _MarkingPageState extends State<MarkingPage> {
                           Switch(
                             value: _colorSimilarPhrases,
                             onChanged: _toggleColorSimilarPhrases,
-                            activeColor: Color(0xFF4CAF50),
+                            activeTrackColor: Color(0xFF4CAF50),
                             inactiveThumbColor: AppColors.borderMedium,
                             inactiveTrackColor: AppColors.borderLight,
                           ),
@@ -489,7 +489,7 @@ class _MarkingPageState extends State<MarkingPage> {
           onChanged: canAccess
               ? onChanged
               : (_) => showPremiumFeatureDialog(context, feature),
-          activeColor: const Color(0xFF4CAF50),
+          activeTrackColor: const Color(0xFF4CAF50),
           inactiveThumbColor: AppColors.borderMedium,
           inactiveTrackColor: AppColors.borderLight,
         ),
@@ -497,3 +497,6 @@ class _MarkingPageState extends State<MarkingPage> {
     );
   }
 }
+
+
+

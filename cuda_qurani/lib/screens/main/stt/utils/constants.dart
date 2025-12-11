@@ -20,3 +20,6 @@ const int maxCacheSize = 15;
 // ==================== PERFORMANCE TUNING ====================
 const double averageAyatHeight = 170.0;
 const int listViewCacheExtent = 500;
+
+
+

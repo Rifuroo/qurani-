@@ -86,3 +86,5 @@ class VerseReference {
   @override
   int get hashCode => surahId.hashCode ^ verseNumber.hashCode;
 }
+
+

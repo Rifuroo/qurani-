@@ -332,3 +332,5 @@ print('âš¡ Verse change processed, starting word highlighting...');
     _wordHighlightController?.close();
   }
 }
+
+

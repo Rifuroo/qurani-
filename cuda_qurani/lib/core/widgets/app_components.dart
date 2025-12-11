@@ -39,7 +39,7 @@ class AppListTile extends StatelessWidget {
         onTap: enabled ? onTap : null,
         onLongPress: enabled ? onLongPress : null,
         splashColor: AppComponentStyles.rippleColor,
-        highlightColor: AppComponentStyles.rippleColor.withOpacity(0.5),
+        highlightColor: AppComponentStyles.rippleColor.withValues(alpha: 0.5),
         child: Container(
           padding: padding ?? AppPadding.listTile(context),
           decoration: showDivider ? AppComponentStyles.divider() : null,
@@ -173,8 +173,8 @@ class AppNumberBadge extends StatelessWidget {
         gradient: gradient
             ? LinearGradient(
                 colors: [
-                  (backgroundColor ?? AppColors.primary).withOpacity(0.08),
-                  (backgroundColor ?? AppColors.primary).withOpacity(0.04),
+                  (backgroundColor ?? AppColors.primary).withValues(alpha: 0.08),
+                  (backgroundColor ?? AppColors.primary).withValues(alpha: 0.04),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -348,7 +348,7 @@ class AppErrorState extends StatelessWidget {
               width: 80 * s,
               height: 80 * s,
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+                color: AppColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(
                   AppDesignSystem.radiusRound * s,
                 ),
@@ -621,10 +621,10 @@ class AppButton extends StatelessWidget {
             style ??
             AppComponentStyles.primaryButton(context).copyWith(
               backgroundColor: backgroundColor != null
-                  ? MaterialStateProperty.all(backgroundColor)
+                  ? WidgetStateProperty.all(backgroundColor)
                   : null,
               foregroundColor: textColor != null
-                  ? MaterialStateProperty.all(textColor)
+                  ? WidgetStateProperty.all(textColor)
                   : null,
             ),
         child: buttonChild,
@@ -705,7 +705,7 @@ class AppTextButton extends StatelessWidget {
       onPressed: onPressed,
       style: AppComponentStyles.textButton(context).copyWith(
         foregroundColor: color != null
-            ? MaterialStateProperty.all(color)
+            ? WidgetStateProperty.all(color)
             : null,
       ),
       child: Row(
@@ -996,3 +996,6 @@ class AppAvatar extends StatelessWidget {
     return avatarChild;
   }
 }
+
+
+

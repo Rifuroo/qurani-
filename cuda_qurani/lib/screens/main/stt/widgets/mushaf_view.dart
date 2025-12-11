@@ -1,11 +1,13 @@
 // lib\screens\main\stt\widgets\mushaf_view.dart
 
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../controllers/stt_controller.dart';
+
+import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
@@ -19,7 +21,8 @@ class MushafRenderer {
     return MediaQuery.of(context).size.height * 0.050; // ~5.5% screen height
   }
 
-  static const double PAGE_PADDING = 0.0; // Reduced side padding for less crowding
+  static const double PAGE_PADDING =
+      0.0; // Reduced side padding for less crowding
   static const double WORD_SPACING_MIN = 0.0; // Minimum gap between words
   static const double WORD_SPACING_MAX =
       0.0; // Maximum gap to prevent huge spaces
@@ -478,7 +481,9 @@ class _JustifiedAyahLine extends StatelessWidget {
               style: TextStyle(
                 fontSize: effectiveFontSize,
                 fontFamily: fontFamily,
-                color: _getWordColor(isCurrentAyat).withValues(alpha: wordOpacity),
+                color: _getWordColor(
+                  isCurrentAyat,
+                ).withValues(alpha: wordOpacity),
                 backgroundColor: wordBg,
                 fontWeight: FontWeight.w400,
                 decoration: (controller.hideUnreadAyat && !isLastWord)
@@ -572,7 +577,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
           // Container(
           //   width: 1,
           //   height: screenHeight * 0.016,
-          //   color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.3),
+          //   color: const Color.fromARGB(255, 0, 0, 0).withValues(alpha: 0.3),
           // ),
           // Text(
           //   'Al-Ikhlas',
@@ -586,7 +591,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
           // Container(
           //   width: 1,
           //   height: screenHeight * 0.016,
-          //   color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.3),
+          //   color: const Color.fromARGB(255, 0, 0, 0).withValues(alpha: 0.3),
           // ),
           // Text(
           //   'Al-Falaq',
@@ -600,7 +605,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
           // Container(
           //   width: 1,
           //   height: screenHeight * 0.016,
-          //   color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.3),
+          //   color: const Color.fromARGB(255, 0, 0, 0).withValues(alpha: 0.3),
           // ),
           // Text(
           //   'An-Nas',

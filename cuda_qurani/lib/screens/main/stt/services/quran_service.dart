@@ -558,3 +558,6 @@ class QuranService {
     print('[QuranService] Cache cleared, databases remain open');
   }
 }
+
+
+

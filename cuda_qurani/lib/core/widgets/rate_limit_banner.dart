@@ -54,7 +54,7 @@ class RateLimitBanner extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.3),
+            color: Colors.red.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -67,7 +67,7 @@ class RateLimitBanner extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
@@ -94,7 +94,7 @@ class RateLimitBanner extends StatelessWidget {
                   Text(
                     'Reset dalam $resetTime',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 12,
                     ),
                   ),
@@ -146,7 +146,7 @@ class RateLimitBanner extends StatelessWidget {
           children: [
             Icon(
               Icons.warning_amber_rounded,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               size: 20,
             ),
             const SizedBox(width: 10),
@@ -166,7 +166,7 @@ class RateLimitBanner extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Text(
@@ -185,7 +185,7 @@ class RateLimitBanner extends StatelessWidget {
                 onTap: onDismiss,
                 child: Icon(
                   Icons.close,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                   size: 18,
                 ),
               ),
@@ -276,7 +276,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withOpacity(0.85),
+      color: Colors.black.withValues(alpha: 0.85),
       child: SafeArea(
         child: Center(
           child: Padding(
@@ -310,7 +310,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
                 Text(
                   'Kamu sudah menggunakan $limit sesi hari ini.\nReset dalam $resetTime.',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 16,
                   ),
                   textAlign: TextAlign.center,
@@ -349,7 +349,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
                   Text(
                     'Sesi unlimited & fitur premium lainnya',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
                   ),
@@ -361,7 +361,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
                     child: Text(
                       'Kembali',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         fontSize: 14,
                       ),
                     ),
@@ -407,7 +407,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
 //         ),
 //         boxShadow: [
 //           BoxShadow(
-//             color: Colors.purple.withOpacity(0.3),
+//             color: Colors.purple.withValues(alpha: 0.3),
 //             blurRadius: 8,
 //             offset: const Offset(0, 2),
 //           ),
@@ -420,7 +420,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
 //             Container(
 //               padding: const EdgeInsets.all(8),
 //               decoration: BoxDecoration(
-//                 color: Colors.white.withOpacity(0.2),
+//                 color: Colors.white.withValues(alpha: 0.2),
 //                 borderRadius: BorderRadius.circular(8),
 //               ),
 //               child: const Icon(
@@ -447,7 +447,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
 //                   Text(
 //                     warningMessage,
 //                     style: TextStyle(
-//                       color: Colors.white.withOpacity(0.9),
+//                       color: Colors.white.withValues(alpha: 0.9),
 //                       fontSize: 12,
 //                     ),
 //                     maxLines: 2,
@@ -461,7 +461,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
 //                 onTap: onDismiss,
 //                 child: Icon(
 //                   Icons.close,
-//                   color: Colors.white.withOpacity(0.7),
+//                   color: Colors.white.withValues(alpha: 0.7),
 //                   size: 20,
 //                 ),
 //               ),
@@ -527,7 +527,7 @@ class DurationWarningBanner extends StatelessWidget {
                 onTap: onDismiss,
                 child: Icon(
                   Icons.close,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                   size: 18,
                 ),
               ),
@@ -554,7 +554,7 @@ class DurationLimitExceededOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withOpacity(0.85),
+      color: Colors.black.withValues(alpha: 0.85),
       child: SafeArea(
         child: Center(
           child: Padding(
@@ -588,7 +588,7 @@ class DurationLimitExceededOverlay extends StatelessWidget {
                 Text(
                   message,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 16,
                   ),
                   textAlign: TextAlign.center,
@@ -597,7 +597,7 @@ class DurationLimitExceededOverlay extends StatelessWidget {
                 Text(
                   'Upgrade ke Premium untuk sesi tanpa batas waktu',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 0.6),
                     fontSize: 14,
                   ),
                   textAlign: TextAlign.center,
@@ -640,7 +640,7 @@ class DurationLimitExceededOverlay extends StatelessWidget {
                     child: Text(
                       'Selesai',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         fontSize: 14,
                       ),
                     ),
@@ -653,3 +653,6 @@ class DurationLimitExceededOverlay extends StatelessWidget {
     );
   }
 }
+
+
+

@@ -161,3 +161,6 @@ String getFeatureDescription(PremiumFeature feature) {
       return 'Keep more search history (15 vs 3)';
   }
 }
+
+
+

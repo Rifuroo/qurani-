@@ -1023,7 +1023,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     width: 48 * s,
                     height: 48 * s,
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(
                         AppDesignSystem.radiusMedium * s,
                       ),
@@ -1106,3 +1106,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
+
+
+

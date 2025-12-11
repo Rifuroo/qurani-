@@ -191,3 +191,5 @@ class AuthProvider extends ChangeNotifier {
     return error.toString();
   }
 }
+
+

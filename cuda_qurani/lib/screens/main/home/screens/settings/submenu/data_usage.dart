@@ -95,7 +95,7 @@ class _DataUsagePageState extends State<DataUsagePage> {
           Switch(
             value: isEnabled,
             onChanged: onChanged,
-            activeColor: Color(0xFF4CAF50),
+            activeTrackColor: Color(0xFF4CAF50),
             inactiveThumbColor: AppColors.borderMedium,
             inactiveTrackColor: AppColors.borderLight,
           ),
@@ -184,3 +184,6 @@ class _DataUsagePageState extends State<DataUsagePage> {
     );
   }
 }
+
+
+

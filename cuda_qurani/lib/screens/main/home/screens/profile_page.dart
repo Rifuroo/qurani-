@@ -155,8 +155,8 @@ class _ProfilePageState extends State<ProfilePage> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.primary.withOpacity(0.2),
-                  AppColors.primary.withOpacity(0.1),
+                  AppColors.primary.withValues(alpha: 0.2),
+                  AppColors.primary.withValues(alpha: 0.1),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -353,7 +353,7 @@ class _ProfilePageState extends State<ProfilePage> {
         border: Border.all(
           color: isDisabled
               ? AppColors.borderLight
-              : AppColors.textPrimary.withOpacity(0.75),
+              : AppColors.textPrimary.withValues(alpha: 0.75),
           width: AppDesignSystem.scale(context, 1.5),
         ),
         borderRadius: BorderRadius.circular(
@@ -521,8 +521,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 AppHaptics.light();
                 _showDeleteAccountDialog();
               },
-        splashColor: AppColors.error.withOpacity(0.05),
-        highlightColor: AppColors.error.withOpacity(0.02),
+        splashColor: AppColors.error.withValues(alpha: 0.05),
+        highlightColor: AppColors.error.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(
           AppDesignSystem.scale(context, AppDesignSystem.radiusMedium),
         ),
@@ -828,7 +828,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 border: Border.all(
-                  color: AppColors.textPrimary.withOpacity(0.50),
+                  color: AppColors.textPrimary.withValues(alpha: 0.50),
                   width: AppDesignSystem.scale(context, 1.5),
                 ),
                 borderRadius: BorderRadius.circular(
@@ -861,7 +861,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                             context,
                             AppDesignSystem.iconMedium,
                           ),
-                          color: AppColors.textPrimary.withOpacity(0.85),
+                          color: AppColors.textPrimary.withValues(alpha: 0.85),
                         ),
                         AppMargin.gapHSmall(context),
                         Text(
@@ -873,7 +873,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                               : 'ADD ACCOUNT',
                           style: AppTypography.label(
                             context,
-                            color: AppColors.textPrimary.withOpacity(0.85),
+                            color: AppColors.textPrimary.withValues(alpha: 0.85),
                             weight: AppTypography.semiBold,
                           ).copyWith(letterSpacing: 1.5),
                         ),
@@ -952,7 +952,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
             color: AppColors.surface,
             border: Border.all(
               color: isActive
-                  ? AppColors.textPrimary.withOpacity(0.50)
+                  ? AppColors.textPrimary.withValues(alpha: 0.50)
                   : AppColors.borderMedium,
               width: AppDesignSystem.scale(context, isActive ? 1.5 : 1),
             ),
@@ -968,8 +968,8 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primary.withOpacity(0.2),
-                      AppColors.primary.withOpacity(0.1),
+                      AppColors.primary.withValues(alpha: 0.2),
+                      AppColors.primary.withValues(alpha: 0.1),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -1019,7 +1019,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                 AppMargin.gapHSmall(context),
                 Icon(
                   Icons.check_circle,
-                  color: AppColors.secondaryDark.withOpacity(0.80),
+                  color: AppColors.secondaryDark.withValues(alpha: 0.80),
                   size: AppDesignSystem.scale(
                     context,
                     AppDesignSystem.iconLarge,
@@ -1105,3 +1105,6 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
     );
   }
 }
+
+
+

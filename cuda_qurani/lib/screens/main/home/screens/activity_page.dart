@@ -668,7 +668,7 @@ class _ActivityPageState extends State<ActivityPage> {
             ),
             belowBarData: BarAreaData(
               show: true,
-              color: AppColors.success.withOpacity(0.08),
+              color: AppColors.success.withValues(alpha: 0.08),
             ),
           ),
         ],
@@ -708,7 +708,7 @@ class _ActivityPageState extends State<ActivityPage> {
                       xLabels[index],
                       style: TextStyle(
                         fontSize: 8.5 * s,
-                        color: AppColors.success.withOpacity(0.7),
+                        color: AppColors.success.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -890,7 +890,7 @@ class _ActivityPageState extends State<ActivityPage> {
                       xLabels[index],
                       style: TextStyle(
                         fontSize: 8.5 * s,
-                        color: AppColors.primary.withOpacity(0.7),
+                        color: AppColors.primary.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1162,7 +1162,7 @@ class _ActivityPageState extends State<ActivityPage> {
             width: 28 * s,
             height: 28 * s,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6 * s),
             ),
             child: Icon(icon, color: color, size: 16 * s),
@@ -1196,7 +1196,7 @@ class _ActivityPageState extends State<ActivityPage> {
               subtitle,
               style: TextStyle(
                 fontSize: 8 * s,
-                color: AppColors.textTertiary.withOpacity(0.7),
+                color: AppColors.textTertiary.withValues(alpha: 0.7),
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -1206,3 +1206,5 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 }
+
+

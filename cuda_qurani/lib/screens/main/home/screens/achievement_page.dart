@@ -303,7 +303,7 @@ class _AchievementPageState extends State<AchievementPage> {
                                   shape: BoxShape.circle,
                                   gradient: RadialGradient(
                                     colors: [
-                                      badge.color.withOpacity(0.2),
+                                      badge.color.withValues(alpha: 0.2),
                                       Colors.transparent,
                                     ],
                                     stops: const [0.3, 1.0],
@@ -587,7 +587,7 @@ class _AchievementPageState extends State<AchievementPage> {
                   color: item.isLocked ? AppColors.surfaceContainerHigh : item.color,
                   gradient: !item.isLocked
                       ? LinearGradient(
-                          colors: [item.color, item.color.withOpacity(0.8)],
+                          colors: [item.color, item.color.withValues(alpha: 0.8)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         )
@@ -595,7 +595,7 @@ class _AchievementPageState extends State<AchievementPage> {
                   boxShadow: !item.isLocked
                       ? [
                           BoxShadow(
-                            color: item.color.withOpacity(0.3),
+                            color: item.color.withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -617,7 +617,7 @@ class _AchievementPageState extends State<AchievementPage> {
                       Container(
                         padding: EdgeInsets.all(4 * s),
                         decoration: BoxDecoration(
-                          color: AppColors.surface.withOpacity(0.6),
+                          color: AppColors.surface.withValues(alpha: 0.6),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -878,3 +878,6 @@ class _AchievementPageState extends State<AchievementPage> {
     );
   }
 }
+
+
+

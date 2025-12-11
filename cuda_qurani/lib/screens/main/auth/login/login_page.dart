@@ -548,7 +548,7 @@ class _LoginPageState extends State<LoginPage> {
             ? []
             : [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.25),
+                  color: AppColors.primary.withValues(alpha: 0.25),
                   blurRadius: AppDesignSystem.scale(context, 12),
                   offset: Offset(0, AppDesignSystem.scale(context, 4)),
                 ),

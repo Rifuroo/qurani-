@@ -258,3 +258,5 @@ class AyatProgress {
     required this.isCompleted,
   });
 }
+
+

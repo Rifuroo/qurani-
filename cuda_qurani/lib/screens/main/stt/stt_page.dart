@@ -2,7 +2,7 @@
 
 import 'package:cuda_qurani/screens/main/stt/widgets/slider_guide_popup.dart';
 
-import 'controllers/stt_controller.dart';
+import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import 'services/quran_service.dart';
 import 'utils/constants.dart';
 import 'widgets/quran_widgets.dart';
@@ -110,7 +110,7 @@ class _SttPageState extends State<SttPage> {
                           horizontal: MediaQuery.of(context).size.width * 0.04,
                           vertical: MediaQuery.of(context).size.height * 0.015,
                         ),
-                        color: errorColor.withOpacity(0.9),
+                        color: errorColor.withValues(alpha: 0.9),
                         child: Row(
                           children: [
                             Icon(
@@ -186,10 +186,10 @@ class _SttPageState extends State<SttPage> {
             ),
             // ✅ TAMBAHKAN INI - Popup Guide
             const SliderGuidePopup(),
-            
+
             // ✅ NEW: Rate Limit Warning Banner (at top)
-            if (controller.rateLimit != null && 
-                controller.rateLimitRemaining <= 1 && 
+            if (controller.rateLimit != null &&
+                controller.rateLimitRemaining <= 1 &&
                 controller.rateLimitRemaining > 0 &&
                 !controller.isRateLimitExceeded)
               Positioned(
@@ -206,7 +206,7 @@ class _SttPageState extends State<SttPage> {
                   onUpgradePressed: () => _navigateToPremium(context),
                 ),
               ),
-            
+
             // ✅ NEW: Rate Limit Exceeded Overlay (full screen)
             if (controller.isRateLimitExceeded)
               Positioned.fill(
@@ -218,9 +218,9 @@ class _SttPageState extends State<SttPage> {
                   onClose: () => Navigator.of(context).pop(),
                 ),
               ),
-            
+
             // ⏳ NEW: Duration Warning Banner (3 menit tersisa)
-            if (controller.isDurationWarningActive && 
+            if (controller.isDurationWarningActive &&
                 !controller.isDurationLimitExceeded &&
                 !controller.isDurationUnlimited)
               Positioned(
@@ -234,7 +234,7 @@ class _SttPageState extends State<SttPage> {
                   },
                 ),
               ),
-            
+
             // // 🚨 NEW: Surah Mismatch Warning Banner
             // if (controller.isSurahMismatch && controller.surahMismatchWarning != null)
             //   Positioned(
@@ -249,7 +249,7 @@ class _SttPageState extends State<SttPage> {
             //       },
             //     ),
             //   ),
-            
+
             // ⏳ NEW: Duration Limit Exceeded Overlay
             if (controller.isDurationLimitExceeded)
               Positioned.fill(
@@ -264,11 +264,11 @@ class _SttPageState extends State<SttPage> {
       },
     );
   }
-  
+
   void _navigateToPremium(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PremiumOfferPage()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const PremiumOfferPage()));
   }
 
   Widget _buildQuranText(BuildContext context, SttController controller) {

@@ -625,7 +625,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
         width: 24 * s,
         height: 24 * s,
         decoration: BoxDecoration(
-          color: const Color(0xFF27AE60).withOpacity(0.15),
+          color: const Color(0xFF27AE60).withValues(alpha: 0.15),
           shape: BoxShape.circle,
         ),
         child: Icon(Icons.check, color: const Color(0xFF27AE60), size: 16 * s),
@@ -698,7 +698,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF3FCCB8).withOpacity(0.3),
+                color: const Color(0xFF3FCCB8).withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -714,8 +714,8 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
               borderRadius: BorderRadius.circular(
                 AppDesignSystem.radiusXXLarge * s,
               ),
-              splashColor: Colors.white.withOpacity(0.2),
-              highlightColor: Colors.white.withOpacity(0.1),
+              splashColor: Colors.white.withValues(alpha: 0.2),
+              highlightColor: Colors.white.withValues(alpha: 0.1),
               child: Center(
                 child: Text(
                   _t('premium_offer.plans.subscribe_button'),
@@ -947,3 +947,6 @@ class _FeatureRow {
     this.checkPremium = false,
   });
 }
+
+
+

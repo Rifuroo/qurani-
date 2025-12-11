@@ -1,4 +1,4 @@
-﻿// lib/services/global_ayat_service.dart
+// lib/services/global_ayat_service.dart
 
 class GlobalAyatService {
   /// Total ayat dalam Al-Quran (Standar Kufi)
@@ -150,3 +150,6 @@ class GlobalAyatService {
     return globalAyat >= 1 && globalAyat <= totalAyatCount;
   }
 }
+
+
+

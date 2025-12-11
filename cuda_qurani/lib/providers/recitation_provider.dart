@@ -904,3 +904,5 @@ class RecitationProvider extends ChangeNotifier {
     super.dispose();
   }
 }
+
+

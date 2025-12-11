@@ -287,7 +287,7 @@ class _ListeningPageState extends State<ListeningPage> {
                                 onTap: () => _selectReciter(reciter),
                                 child: Container(
                                   color: isSelected
-                                      ? AppColors.borderLight.withOpacity(0.3)
+                                      ? AppColors.borderLight.withValues(alpha: 0.3)
                                       : Colors.transparent,
                                   padding: EdgeInsets.symmetric(
                                     horizontal:
@@ -412,3 +412,6 @@ class _ListeningPageState extends State<ListeningPage> {
     );
   }
 }
+
+
+

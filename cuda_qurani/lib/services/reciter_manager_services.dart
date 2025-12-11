@@ -383,3 +383,6 @@ static Future<List<Map<String, dynamic>>> getSurahAudioUrls(
     print('🗑️ All reciter databases disposed');
   }
 }
+
+
+
