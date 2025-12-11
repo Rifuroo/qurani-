@@ -128,7 +128,6 @@ flutter:
     - assets/data/uthmani.db
     - assets/data/
     - assets/fonts/QPCV1Font/
-    - assets/data/qpc-v1-ayah-by-ayah-glyphs.db
     - assets/data/quran-metadata-juz.sqlite
 
     - assets/reciters/data/reciters_data.json

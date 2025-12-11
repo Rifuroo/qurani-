@@ -3,7 +3,6 @@ import 'package:cuda_qurani/services/local_database_service.dart';
 import 'package:cuda_qurani/services/reciter_database_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'providers/recitation_provider.dart';
@@ -96,22 +95,22 @@ class MainApp extends StatelessWidget {
           return MaterialApp(
             title: 'Qurani Hafidz',
             debugShowCheckedModeBanner: false,
-            
+
             locale: Locale(languageProvider.currentLanguageCode),
-            
+
             supportedLocales: const [
               Locale('en'), // English
               Locale('id'), // Indonesian
               Locale('ar'), // Arabic - RTL
             ],
-            
+
             // ✅ Tambahkan localization delegates
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            
+
             localeResolutionCallback: (locale, supportedLocales) {
               if (locale != null) {
                 for (var supportedLocale in supportedLocales) {
@@ -122,14 +121,14 @@ class MainApp extends StatelessWidget {
               }
               return supportedLocales.first;
             },
-            
+
             builder: (context, child) {
               return Directionality(
                 textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
                 child: child!,
               );
             },
-            
+
             theme: ThemeData(
               primarySwatch: Colors.green,
               primaryColor: const Color(0xFF247C64),
@@ -190,8 +189,11 @@ class AppLocalizations {
   /// Jika bahasa Arab, convert ke Eastern Arabic Numerals
   static String formatNumber(BuildContext context, dynamic number) {
     try {
-      final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
-      
+      final languageProvider = Provider.of<LanguageProvider>(
+        context,
+        listen: false,
+      );
+
       if (languageProvider.currentLanguageCode == 'ar') {
         return _toArabicNumerals(number.toString());
       }
@@ -201,12 +203,12 @@ class AppLocalizations {
       return number.toString();
     }
   }
-  
+
   /// Convert Western digits (0-9) to Eastern Arabic Numerals (٠-٩)
   static String _toArabicNumerals(String input) {
     const english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    
+
     String result = input;
     for (int i = 0; i < english.length; i++) {
       result = result.replaceAll(english[i], arabic[i]);

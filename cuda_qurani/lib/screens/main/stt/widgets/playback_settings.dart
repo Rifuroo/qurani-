@@ -9,10 +9,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../services/local_database_service.dart';
-import 'dart:io';
 import 'package:cuda_qurani/services/global_ayat_services.dart';
-import 'package:path/path.dart' as path;
-import 'package:sqflite/sqflite.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 
@@ -103,7 +100,6 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
   // ✅ Variable biasa, bukan getter
   String _eachVerseRepeat = '1 time';
   String _rangeRepeat = '1 time';
-  bool _isAutoFillApplied = false;
 
   @override
   void initState() {
@@ -140,45 +136,33 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
   }
 
   /// ✅ NEW: Auto-fill starting & ending verse from current page
+  /// ✅ UPDATED: Auto-fill starting & ending verse from current page
   Future<void> _autoFillRangeFromPage(int pageNumber) async {
     try {
       print('🎯 Auto-filling range from page $pageNumber...');
 
-      // Get first ayah in page
-      final firstAyahInfo = await LocalDatabaseService.getFirstAyahInPage(
+      // Get ayah range using new word_id mapping method
+      final ayahRange = await LocalDatabaseService.getAyahRangeInPage(
         pageNumber,
       );
-      final firstSurah = firstAyahInfo['surah'] as int;
-      final firstAyah = firstAyahInfo['ayah'] as int;
 
-      // Convert to GLOBAL ayat number (CRITICAL!)
+      final firstSurah = ayahRange['firstSurah'] as int;
+      final firstAyah = ayahRange['firstAyah'] as int;
+      final lastSurah = ayahRange['lastSurah'] as int;
+      final lastAyah = ayahRange['lastAyah'] as int;
+
+      // Convert to GLOBAL ayat numbers for validation
       final firstGlobalAyat = GlobalAyatService.toGlobalAyat(
         firstSurah,
         firstAyah,
       );
-
-      print('   First ayat: $firstSurah:$firstAyah (Global #$firstGlobalAyat)');
-
-      // Get last ayah in page by loading all ayats on page
-      final pageAyats = await _getAyatsOnPage(pageNumber);
-
-      if (pageAyats.isEmpty) {
-        print('⚠️ No ayats found on page $pageNumber');
-        return;
-      }
-
-      // Last ayat is the last element in sorted list
-      final lastAyat = pageAyats.last;
-      final lastSurah = lastAyat['surah'] as int;
-      final lastAyahNum = lastAyat['ayah'] as int;
-
-      // Convert to GLOBAL ayat number (CRITICAL!)
       final lastGlobalAyat = GlobalAyatService.toGlobalAyat(
         lastSurah,
-        lastAyahNum,
+        lastAyah,
       );
 
-      print('   Last ayat: $lastSurah:$lastAyahNum (Global #$lastGlobalAyat)');
+      print('   First ayat: $firstSurah:$firstAyah (Global #$firstGlobalAyat)');
+      print('   Last ayat: $lastSurah:$lastAyah (Global #$lastGlobalAyat)');
       print('   ✅ Range: Global #$firstGlobalAyat → #$lastGlobalAyat');
 
       // Apply to UI
@@ -187,8 +171,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
           _startSurahId = firstSurah;
           _startVerse = firstAyah;
           _endSurahId = lastSurah;
-          _endVerse = lastAyahNum;
-          _isAutoFillApplied = true;
+          _endVerse = lastAyah;
         });
 
         print(
@@ -197,47 +180,6 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
       }
     } catch (e) {
       print('❌ Auto-fill error: $e');
-    }
-  }
-
-  /// ✅ NEW: Get all ayats on a specific page (sorted order)
-  Future<List<Map<String, dynamic>>> _getAyatsOnPage(int pageNumber) async {
-    try {
-      // Query database for all ayats on this page
-      // Using qpc-v1-ayah-by-ayah-glyphs.db
-      final databasesPath = await getDatabasesPath();
-      final glyphsPath = path.join(
-        databasesPath,
-        'qpc-v1-ayah-by-ayah-glyphs.db',
-      );
-
-      // Check if database exists
-      if (!await File(glyphsPath).exists()) {
-        print('🔥 Glyphs DB not found, copying...');
-        final data = await rootBundle.load(
-          'assets/data/qpc-v1-ayah-by-ayah-glyphs.db',
-        );
-        final bytes = data.buffer.asUint8List();
-        await File(glyphsPath).writeAsBytes(bytes, flush: true);
-      }
-
-      final db = await openDatabase(glyphsPath, readOnly: true);
-
-      // Query all verses on this page
-      final result = await db.query(
-        'verses',
-        where: 'page_number = ?',
-        whereArgs: [pageNumber],
-        orderBy: 'surah ASC, ayah ASC', // ✅ CRITICAL: Sort by surah then ayah
-      );
-
-      await db.close();
-
-      print('📖 Found ${result.length} ayats on page $pageNumber');
-      return result;
-    } catch (e) {
-      print('❌ Error loading ayats from page: $e');
-      return [];
     }
   }
 

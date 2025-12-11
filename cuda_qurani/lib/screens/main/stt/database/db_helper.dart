@@ -36,10 +36,6 @@ static Future<Database> openDB(DBType type) async {
       "asset": "assets/data/qpc-v1-glyph-codes-wbw.db",
       "name": "qpc-v1-glyph-codes-wbw.db",
     },
-    DBType.qpc_v1_aba: {
-      "asset": "assets/data/qpc-v1-ayah-by-ayah-glyphs.db",
-      "name": "qpc-v1-ayah-by-ayah-glyphs.db",
-    },
     DBType.uthmani: {"asset": "assets/data/uthmani.db", "name": "uthmani.db"},
   };
 
@@ -83,7 +79,6 @@ static Future<void> preInitializeAll() async {
     ensureOpen(DBType.metadata),
     ensureOpen(DBType.qpc_v1_15),
     ensureOpen(DBType.qpc_v1_wbw),
-    ensureOpen(DBType.qpc_v1_aba),
     ensureOpen(DBType.uthmani),
   ]);
 
@@ -115,7 +110,6 @@ static Future<Database> ensureOpen(DBType type) async {
       DBType.metadata: "quran-metadata-surah-name.sqlite",
       DBType.qpc_v1_15: "qpc-v1-15-lines.db",
       DBType.qpc_v1_wbw: "qpc-v1-glyph-codes-wbw.db",
-      DBType.qpc_v1_aba: "qpc-v1-ayah-by-ayah-glyphs.db",
       DBType.uthmani: "uthmani.db",
     };
 

@@ -33,10 +33,6 @@ class QuranService {
     return await DBHelper.ensureOpen(DBType.qpc_v1_wbw);
   }
 
-  Future<Database> _getQpcV1ABA() async {
-    return await DBHelper.ensureOpen(DBType.qpc_v1_aba);
-  }
-
   Future<Database> _getUthmaniLinesDB() async {
     return await DBHelper.ensureOpen(DBType.qpc_v1_15);
   }
