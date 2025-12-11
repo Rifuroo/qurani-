@@ -353,7 +353,8 @@ class QuranService {
       }
     }
     _pageCache[pageNumber] = pageLines;
-    if (_pageCache.length > 10) {
+    // ✅ OPTIMIZED: Increased cache from 10 to 20 pages for smoother navigation
+    if (_pageCache.length > 20) {
       final oldestKey = _pageCache.keys.first;
       _pageCache.remove(oldestKey);
     }
@@ -558,6 +559,3 @@ class QuranService {
     print('[QuranService] Cache cleared, databases remain open');
   }
 }
-
-
-

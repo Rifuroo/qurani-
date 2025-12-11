@@ -67,6 +67,11 @@ class _HomePageState extends State<HomePage> {
   Map<String, dynamic>? _latestSession;
   bool _isLoadingSession = true;
 
+  // ✅ CACHE: Avoid refetching home data within 30 seconds
+  static Map<String, dynamic>? _cachedHomeData;
+  static DateTime? _homeCacheTime;
+  static const _homeCacheDuration = Duration(seconds: 30);
+
   @override
   void initState() {
     super.initState();
@@ -75,7 +80,7 @@ class _HomePageState extends State<HomePage> {
     _loadHomePageData();
   }
 
-  /// OPTIMIZED: Load ALL home page data in ONE call
+  /// OPTIMIZED: Load ALL home page data in ONE call with 30s cache
   Future<void> _loadHomePageData() async {
     final userUuid = _authService.userId;
     if (userUuid == null) {
@@ -84,7 +89,21 @@ class _HomePageState extends State<HomePage> {
     }
 
     try {
-      final data = await _supabaseService.getHomePageData(userUuid);
+      // ✅ CACHE CHECK: Use cached data if within 30 seconds
+      Map<String, dynamic>? data;
+      if (_cachedHomeData != null &&
+          _homeCacheTime != null &&
+          DateTime.now().difference(_homeCacheTime!) < _homeCacheDuration) {
+        data = _cachedHomeData;
+        print(
+          '⚡ HOME: Using cached data (${DateTime.now().difference(_homeCacheTime!).inSeconds}s old)',
+        );
+      } else {
+        data = await _supabaseService.getHomePageData(userUuid);
+        _cachedHomeData = data;
+        _homeCacheTime = DateTime.now();
+        print('📥 HOME: Fetched fresh data from server');
+      }
 
       if (!mounted) return;
 
@@ -1104,6 +1123,3 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-
-
-
