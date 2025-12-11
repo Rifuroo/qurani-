@@ -8,17 +8,17 @@ class SupabaseService {
   final String anonKey;
 
   SupabaseService()
-      : supabaseUrl = AppConfig.supabaseUrl,
-        anonKey = AppConfig.supabaseAnonKey;
+    : supabaseUrl = AppConfig.supabaseUrl,
+      anonKey = AppConfig.supabaseAnonKey;
 
   Map<String, String> get _headers {
     // ✅ FIX: Use user's access token for RLS to work
     final session = Supabase.instance.client.auth.currentSession;
     final accessToken = session?.accessToken ?? anonKey;
-    
+
     return {
       'apikey': anonKey,
-      'Authorization': 'Bearer $accessToken',  // ✅ Use JWT token, not anon key
+      'Authorization': 'Bearer $accessToken', // ✅ Use JWT token, not anon key
       'Content-Type': 'application/json',
     };
   }
@@ -72,16 +72,13 @@ class SupabaseService {
     try {
       // ✅ FIX: Gunakan table 'live_sessions' sesuai backend
       String url = '$supabaseUrl/rest/v1/live_sessions?order=created_at.desc';
-      
+
       // Filter by user if provided
       if (userUuid != null) {
         url += '&user_uuid=eq.$userUuid';
       }
-      
-      final response = await http.get(
-        Uri.parse(url),
-        headers: _headers,
-      );
+
+      final response = await http.get(Uri.parse(url), headers: _headers);
 
       if (response.statusCode == 200) {
         return List<Map<String, dynamic>>.from(jsonDecode(response.body));
@@ -93,7 +90,7 @@ class SupabaseService {
       return [];
     }
   }
-  
+
   /// Get last paused session for resume functionality
   Future<Map<String, dynamic>?> getLastPausedSession(String userUuid) async {
     try {
@@ -116,25 +113,28 @@ class SupabaseService {
       return null;
     }
   }
-  
+
   /// ✅ NEW: Get latest session (any status) for continue functionality
-  Future<Map<String, dynamic>?> getLatestSession(String userUuid, {
+  Future<Map<String, dynamic>?> getLatestSession(
+    String userUuid, {
     List<String>? statuses, // Filter by specific statuses (optional)
   }) async {
     try {
       // Build query - filter by user_uuid AND surah_id not null
       String query = 'user_uuid=eq.$userUuid&surah_id=not.is.null';
-      
+
       // Filter by statuses if provided
       if (statuses != null && statuses.isNotEmpty) {
         // Use OR operator for multiple statuses
         // Example: status=in.(paused,active)
         query += '&status=in.(${statuses.join(',')})';
       }
-      
+
       // Use view with surah name joined
-      print('🔍 Query: $supabaseUrl/rest/v1/live_sessions_with_surah?$query&order=updated_at.desc&limit=1');
-      
+      print(
+        '🔍 Query: $supabaseUrl/rest/v1/live_sessions_with_surah?$query&order=updated_at.desc&limit=1',
+      );
+
       final response = await http.get(
         Uri.parse(
           '$supabaseUrl/rest/v1/live_sessions_with_surah?$query&order=updated_at.desc&limit=1',
@@ -148,13 +148,15 @@ class SupabaseService {
       if (response.statusCode == 200) {
         final sessions = jsonDecode(response.body) as List;
         print('📦 Sessions count: ${sessions.length}');
-        
+
         if (sessions.isNotEmpty) {
           final session = sessions[0] as Map<String, dynamic>;
           print('📥 Latest session found:');
           print('   Session ID: ${session['session_id']}');
           print('   Status: ${session['status']}');
-          print('   Surah: ${session['surah_id']}, Ayah: ${session['ayah']}, Position: ${session['position']}');
+          print(
+            '   Surah: ${session['surah_id']}, Ayah: ${session['ayah']}, Position: ${session['position']}',
+          );
           print('   User UUID: ${session['user_uuid']}');
           print('   Updated: ${session['updated_at']}');
           return session;
@@ -171,12 +173,12 @@ class SupabaseService {
       return null;
     }
   }
-  
+
   /// ✅ NEW: Get resumable session (paused or active only)
   Future<Map<String, dynamic>?> getResumableSession(String userUuid) async {
     return getLatestSession(userUuid, statuses: ['paused', 'active']);
   }
-  
+
   /// Get all sessions for current user (all statuses: active, paused, stopped)
   Future<List<Map<String, dynamic>>> getAllSessions({
     String? userUuid,
@@ -197,7 +199,7 @@ class SupabaseService {
         'calculate_user_streak',
         params: {'p_user_id': userId},
       );
-      
+
       if (response != null && response is List && response.isNotEmpty) {
         return {
           'current_streak': response[0]['current_streak'] ?? 0,
@@ -289,7 +291,7 @@ class SupabaseService {
         'check_and_grant_achievements',
         params: {'p_user_id': userId},
       );
-      
+
       if (response != null && response is List) {
         return List<Map<String, dynamic>>.from(response);
       }
@@ -347,7 +349,11 @@ class SupabaseService {
   }
 
   /// Set user's daily goal
-  Future<bool> setUserGoal(String userId, String goalType, int targetValue) async {
+  Future<bool> setUserGoal(
+    String userId,
+    String goalType,
+    int targetValue,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$supabaseUrl/rest/v1/user_goals'),
@@ -371,7 +377,7 @@ class SupabaseService {
   Future<Map<String, dynamic>?> getDailyGoalProgress(String userId) async {
     try {
       final today = DateTime.now().toIso8601String().split('T')[0];
-      
+
       final response = await http.get(
         Uri.parse(
           '$supabaseUrl/rest/v1/daily_goal_progress?user_id=eq.$userId&goal_date=eq.$today&limit=1',
@@ -404,7 +410,7 @@ class SupabaseService {
         'get_activity_page_data',
         params: {'p_user_id': userId},
       );
-      
+
       if (response != null) {
         return Map<String, dynamic>.from(response);
       }
@@ -427,7 +433,7 @@ class SupabaseService {
         'get_completion_data',
         params: {'p_user_id': userId},
       );
-      
+
       if (response != null) {
         return Map<String, dynamic>.from(response);
       }
@@ -450,7 +456,7 @@ class SupabaseService {
         'get_achievements_data',
         params: {'p_user_id': userId},
       );
-      
+
       if (response != null) {
         return Map<String, dynamic>.from(response);
       }
@@ -473,7 +479,7 @@ class SupabaseService {
         'get_home_page_data',
         params: {'p_user_id': userId},
       );
-      
+
       if (response != null) {
         return Map<String, dynamic>.from(response);
       }
@@ -484,6 +490,3 @@ class SupabaseService {
     }
   }
 }
-
-
-

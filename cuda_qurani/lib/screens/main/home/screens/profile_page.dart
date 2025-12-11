@@ -6,6 +6,7 @@ import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/screens/main/home/widgets/navigation_bar.dart';
 import 'package:cuda_qurani/screens/main/auth/login/login_page.dart';
 import 'package:cuda_qurani/providers/auth_provider.dart';
+import 'package:cuda_qurani/services/auth_service.dart'; // ✅ Added for delete account
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -659,12 +660,7 @@ class _ProfilePageState extends State<ProfilePage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Implement delete account
-              ScaffoldMessenger.of(context).showSnackBar(
-                AppComponentStyles.infoSnackBar(
-                  message: 'Delete account feature coming soon',
-                ),
-              );
+              _performDeleteAccount();
             },
             child: Text(
               _translations.isNotEmpty
@@ -680,6 +676,51 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+  /// ✅ Perform actual account deletion
+  Future<void> _performDeleteAccount() async {
+    setState(() {
+      _isLoggingOut = true; // Reuse loading state
+    });
+
+    try {
+      final authService = AuthService();
+      final result = await authService.deleteAccount();
+
+      if (!mounted) return;
+
+      // Navigate to login page
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        AppComponentStyles.successSnackBar(
+          message: _translations.isNotEmpty
+              ? LanguageHelper.tr(_translations, 'profile.account_deleted_text')
+              : 'Account deleted successfully',
+        ),
+      );
+
+      print('🗑️ Account deletion complete: $result');
+    } catch (e) {
+      print('❌ Delete account failed: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoggingOut = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        AppComponentStyles.errorSnackBar(
+          message: 'Delete failed: ${e.toString()}',
+        ),
+      );
+    }
   }
 
   Future<void> _performLogout() async {
@@ -873,7 +914,9 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                               : 'ADD ACCOUNT',
                           style: AppTypography.label(
                             context,
-                            color: AppColors.textPrimary.withValues(alpha: 0.85),
+                            color: AppColors.textPrimary.withValues(
+                              alpha: 0.85,
+                            ),
                             weight: AppTypography.semiBold,
                           ).copyWith(letterSpacing: 1.5),
                         ),
@@ -1105,6 +1148,3 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
     );
   }
 }
-
-
-

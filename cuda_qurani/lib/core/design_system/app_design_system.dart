@@ -89,7 +89,7 @@ class AppDesignSystem {
   static const double baseWidth = 400.0; // iPhone 12/13 width
 
   // ==================== RESPONSIVE SCALING ====================
-  
+
   /// Get screen width
   static double screenWidth(BuildContext context) {
     return MediaQuery.of(context).size.width;
@@ -122,7 +122,10 @@ class AppDesignSystem {
   }
 
   /// Scale BorderRadius responsively
-  static BorderRadius scaleBorderRadius(BuildContext context, BorderRadius radius) {
+  static BorderRadius scaleBorderRadius(
+    BuildContext context,
+    BorderRadius radius,
+  ) {
     final s = getScaleFactor(context);
     return BorderRadius.only(
       topLeft: Radius.circular((radius.topLeft.x) * s),
@@ -171,7 +174,7 @@ class AppColors {
   static const Color primaryLight = Color(0xFF2D9A7E);
   static const Color primaryDark = Color(0xFF1B5D4C);
   static const Color primaryContainer = Color(0xFFE8F5F2);
-  
+
   // ==================== SECONDARY COLORS ====================
   static const Color secondary = Color(0xFF4A90E2);
   static const Color secondaryLight = Color(0xFF6BA3E8);
@@ -192,7 +195,7 @@ class AppColors {
   static const Color surfaceContainerHigh = Color(0xFFE0E0E0);
   static const Color surfaceDim = Color(0xFFDEDEDE);
   static const Color surfaceBright = Color(0xFFFFFFFF);
-  
+
   // ==================== BACKGROUND COLORS ====================
   static const Color background = Color(0xFFFFFFFF);
   static const Color backgroundLight = Color(0xFFFAFAFA);
@@ -205,7 +208,7 @@ class AppColors {
   static const Color textDisabled = Color(0xFF9E9E9E);
   static const Color textHint = Color(0xFFBDBDBD);
   static const Color textInverse = Color(0xFFFFFFFF);
-  
+
   // ==================== BORDER COLORS ====================
   static const Color borderLight = Color(0xFFF0F0F0);
   static const Color borderMedium = Color(0xFFE0E0E0);
@@ -258,12 +261,18 @@ class AppColors {
   static Color shadowDark = const Color(0x4D000000); // 30% black
 
   // ==================== OPACITY VARIANTS ====================
-  static Color primaryWithOpacity(double opacity) => primary.withValues(alpha: opacity);
-  static Color secondaryWithOpacity(double opacity) => secondary.withValues(alpha: opacity);
-  static Color surfaceWithOpacity(double opacity) => surface.withValues(alpha: opacity);
-  static Color textWithOpacity(double opacity) => textPrimary.withValues(alpha: opacity);
-  static Color blackWithOpacity(double opacity) => Colors.black.withValues(alpha: opacity);
-  static Color whiteWithOpacity(double opacity) => Colors.white.withValues(alpha: opacity);
+  static Color primaryWithOpacity(double opacity) =>
+      primary.withValues(alpha: opacity);
+  static Color secondaryWithOpacity(double opacity) =>
+      secondary.withValues(alpha: opacity);
+  static Color surfaceWithOpacity(double opacity) =>
+      surface.withValues(alpha: opacity);
+  static Color textWithOpacity(double opacity) =>
+      textPrimary.withValues(alpha: opacity);
+  static Color blackWithOpacity(double opacity) =>
+      Colors.black.withValues(alpha: opacity);
+  static Color whiteWithOpacity(double opacity) =>
+      Colors.white.withValues(alpha: opacity);
 
   // ==================== GRADIENT COLORS ====================
   static const LinearGradient primaryGradient = LinearGradient(
@@ -330,9 +339,13 @@ class AppTypography {
   static const double letterSpacingXXWide = 1.5;
 
   // ==================== TYPE SCALE (Responsive) ====================
-  
+
   /// Display Large - Largest text (hero sections, splash screens)
-  static TextStyle displayLarge(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle displayLarge(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 40 * s,
@@ -344,7 +357,11 @@ class AppTypography {
   }
 
   /// Display Medium - Large display text
-  static TextStyle displayMedium(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle displayMedium(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 36 * s,
@@ -356,7 +373,11 @@ class AppTypography {
   }
 
   /// Display Small - Small display text
-  static TextStyle displaySmall(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle displaySmall(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 32 * s,
@@ -366,9 +387,13 @@ class AppTypography {
       color: color ?? AppColors.textPrimary,
     );
   }
-  
+
   /// Heading 1 - Main section headers
-  static TextStyle h1(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle h1(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 28 * s,
@@ -378,9 +403,13 @@ class AppTypography {
       color: color ?? AppColors.textPrimary,
     );
   }
-  
+
   /// Heading 2 - Subsection headers
-  static TextStyle h2(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle h2(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 24 * s,
@@ -392,7 +421,11 @@ class AppTypography {
   }
 
   /// Heading 3 - Minor section headers
-  static TextStyle h3(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle h3(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 20 * s,
@@ -402,9 +435,13 @@ class AppTypography {
       color: color ?? AppColors.textPrimary,
     );
   }
-  
+
   /// Title Large - Large card/list titles
-  static TextStyle titleLarge(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle titleLarge(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 18 * s,
@@ -416,7 +453,11 @@ class AppTypography {
   }
 
   /// Title - Standard card/list item titles
-  static TextStyle title(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle title(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 16 * s,
@@ -428,7 +469,11 @@ class AppTypography {
   }
 
   /// Title Small - Small titles
-  static TextStyle titleSmall(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle titleSmall(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 14 * s,
@@ -438,9 +483,13 @@ class AppTypography {
       color: color ?? AppColors.textPrimary,
     );
   }
-  
+
   /// Body Large - Large body text
-  static TextStyle bodyLarge(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle bodyLarge(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 16 * s,
@@ -450,9 +499,13 @@ class AppTypography {
       color: color ?? AppColors.textSecondary,
     );
   }
-  
+
   /// Body - Standard body text
-  static TextStyle body(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle body(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 14 * s,
@@ -464,7 +517,11 @@ class AppTypography {
   }
 
   /// Body Small - Small body text
-  static TextStyle bodySmall(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle bodySmall(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 12 * s,
@@ -474,9 +531,13 @@ class AppTypography {
       color: color ?? AppColors.textSecondary,
     );
   }
-  
+
   /// Caption Large - Large metadata text
-  static TextStyle captionLarge(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle captionLarge(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 13 * s,
@@ -488,7 +549,11 @@ class AppTypography {
   }
 
   /// Caption - Standard metadata text
-  static TextStyle caption(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle caption(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 12 * s,
@@ -500,7 +565,11 @@ class AppTypography {
   }
 
   /// Caption Small - Tiny text (timestamps, footnotes)
-  static TextStyle captionSmall(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle captionSmall(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 10 * s,
@@ -510,9 +579,13 @@ class AppTypography {
       color: color ?? AppColors.textTertiary,
     );
   }
-  
+
   /// Label Large - Large button/badge text
-  static TextStyle labelLarge(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle labelLarge(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 14 * s,
@@ -524,7 +597,11 @@ class AppTypography {
   }
 
   /// Label - Standard button/badge/chip text
-  static TextStyle label(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle label(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 13 * s,
@@ -536,7 +613,11 @@ class AppTypography {
   }
 
   /// Label Small - Small labels
-  static TextStyle labelSmall(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle labelSmall(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 11 * s,
@@ -546,9 +627,13 @@ class AppTypography {
       color: color ?? AppColors.textSecondary,
     );
   }
-  
+
   /// Overline - Category labels (uppercase)
-  static TextStyle overline(BuildContext context, {Color? color, FontWeight? weight}) {
+  static TextStyle overline(
+    BuildContext context, {
+    Color? color,
+    FontWeight? weight,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontSize: 11 * s,
@@ -558,9 +643,13 @@ class AppTypography {
       color: color ?? AppColors.textTertiary,
     );
   }
-  
+
   /// Arabic Text - Quran verses (large)
-  static TextStyle arabicLarge(BuildContext context, {double? fontSize, Color? color}) {
+  static TextStyle arabicLarge(
+    BuildContext context, {
+    double? fontSize,
+    Color? color,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontFamily: arabicFontFamily,
@@ -573,7 +662,11 @@ class AppTypography {
   }
 
   /// Arabic Text - Quran verses (medium, default)
-  static TextStyle arabic(BuildContext context, {double? fontSize, Color? color}) {
+  static TextStyle arabic(
+    BuildContext context, {
+    double? fontSize,
+    Color? color,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontFamily: arabicFontFamily,
@@ -586,7 +679,11 @@ class AppTypography {
   }
 
   /// Arabic Text - Quran verses (small)
-  static TextStyle arabicSmall(BuildContext context, {double? fontSize, Color? color}) {
+  static TextStyle arabicSmall(
+    BuildContext context, {
+    double? fontSize,
+    Color? color,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontFamily: arabicFontFamily,
@@ -597,9 +694,13 @@ class AppTypography {
       color: color ?? AppColors.textPrimary,
     );
   }
-  
+
   /// Surah Name (decorative Arabic font) - Large
-  static TextStyle surahNameLarge(BuildContext context, {double? fontSize, Color? color}) {
+  static TextStyle surahNameLarge(
+    BuildContext context, {
+    double? fontSize,
+    Color? color,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontFamily: surahNameFont,
@@ -609,7 +710,11 @@ class AppTypography {
   }
 
   /// Surah Name (decorative Arabic font) - Medium
-  static TextStyle surahName(BuildContext context, {double? fontSize, Color? color}) {
+  static TextStyle surahName(
+    BuildContext context, {
+    double? fontSize,
+    Color? color,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontFamily: surahNameFont,
@@ -619,7 +724,11 @@ class AppTypography {
   }
 
   /// Surah Name (decorative Arabic font) - Small
-  static TextStyle surahNameSmall(BuildContext context, {double? fontSize, Color? color}) {
+  static TextStyle surahNameSmall(
+    BuildContext context, {
+    double? fontSize,
+    Color? color,
+  }) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextStyle(
       fontFamily: surahNameFont,
@@ -632,7 +741,7 @@ class AppTypography {
 /// ==================== COMPONENT STYLES ====================
 class AppComponentStyles {
   // ==================== CARD DECORATIONS ====================
-  
+
   /// Standard card with shadow
   static BoxDecoration card({
     Color? color,
@@ -643,28 +752,31 @@ class AppComponentStyles {
   }) {
     return BoxDecoration(
       color: color ?? AppColors.surface,
-      borderRadius: BorderRadius.circular(borderRadius ?? AppDesignSystem.radiusMedium),
-      border: borderColor != null 
+      borderRadius: BorderRadius.circular(
+        borderRadius ?? AppDesignSystem.radiusMedium,
+      ),
+      border: borderColor != null
           ? Border.all(color: borderColor, width: borderWidth ?? 1.0)
           : null,
-      boxShadow: shadow ? [
-        BoxShadow(
-          color: AppColors.shadowLight,
-          blurRadius: 8,
-          offset: const Offset(0, 2),
-        ),
-      ] : null,
+      boxShadow: shadow
+          ? [
+              BoxShadow(
+                color: AppColors.shadowLight,
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ]
+          : null,
     );
   }
 
   /// Card with strong shadow
-  static BoxDecoration cardElevated({
-    Color? color,
-    double? borderRadius,
-  }) {
+  static BoxDecoration cardElevated({Color? color, double? borderRadius}) {
     return BoxDecoration(
       color: color ?? AppColors.surface,
-      borderRadius: BorderRadius.circular(borderRadius ?? AppDesignSystem.radiusMedium),
+      borderRadius: BorderRadius.circular(
+        borderRadius ?? AppDesignSystem.radiusMedium,
+      ),
       boxShadow: [
         BoxShadow(
           color: AppColors.shadowMedium,
@@ -683,15 +795,17 @@ class AppComponentStyles {
   }) {
     return BoxDecoration(
       color: color ?? AppColors.surface,
-      borderRadius: BorderRadius.circular(borderRadius ?? AppDesignSystem.radiusMedium),
+      borderRadius: BorderRadius.circular(
+        borderRadius ?? AppDesignSystem.radiusMedium,
+      ),
       border: borderColor != null
           ? Border.all(color: borderColor, width: 1.0)
           : Border.all(color: AppColors.borderLight, width: 1.0),
     );
   }
-  
+
   // ==================== DIVIDER DECORATIONS ====================
-  
+
   /// Bottom divider
   static BoxDecoration divider({Color? color, double? width}) {
     return BoxDecoration(
@@ -723,12 +837,14 @@ class AppComponentStyles {
         color: color ?? AppColors.borderMedium,
         width: width ?? 1.0,
       ),
-      borderRadius: BorderRadius.circular(radius ?? AppDesignSystem.radiusMedium),
+      borderRadius: BorderRadius.circular(
+        radius ?? AppDesignSystem.radiusMedium,
+      ),
     );
   }
-  
+
   // ==================== CONTAINER DECORATIONS ====================
-  
+
   /// Icon container with background
   static BoxDecoration iconContainer({
     Color? backgroundColor,
@@ -746,7 +862,9 @@ class AppComponentStyles {
               end: Alignment.bottomRight,
             )
           : null,
-      color: gradient ? null : (backgroundColor ?? AppColors.primaryWithOpacity(0.08)),
+      color: gradient
+          ? null
+          : (backgroundColor ?? AppColors.primaryWithOpacity(0.08)),
       borderRadius: BorderRadius.circular(
         borderRadius ?? AppDesignSystem.radiusSmall,
       ),
@@ -762,7 +880,9 @@ class AppComponentStyles {
   }) {
     return BoxDecoration(
       gradient: gradient,
-      borderRadius: BorderRadius.circular(borderRadius ?? AppDesignSystem.radiusMedium),
+      borderRadius: BorderRadius.circular(
+        borderRadius ?? AppDesignSystem.radiusMedium,
+      ),
       border: borderColor != null
           ? Border.all(color: borderColor, width: borderWidth ?? 1.0)
           : null,
@@ -785,15 +905,15 @@ class AppComponentStyles {
       borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall),
     );
   }
-  
+
   // ==================== INTERACTION COLORS ====================
-  
+
   /// Ripple/Tap effect color
   static Color get rippleColor => AppColors.primary.withValues(alpha: 0.08);
-  
+
   /// Hover effect color
   static Color get hoverColor => AppColors.primary.withValues(alpha: 0.04);
-  
+
   /// Focus effect color
   static Color get focusColor => AppColors.primary.withValues(alpha: 0.12);
 
@@ -801,7 +921,7 @@ class AppComponentStyles {
   static Color get splashColor => AppColors.primary.withValues(alpha: 0.16);
 
   // ==================== BUTTON STYLES ====================
-  
+
   /// Primary button style
   static ButtonStyle primaryButton(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
@@ -817,7 +937,11 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
       ),
-      textStyle: AppTypography.label(context, color: Colors.white, weight: AppTypography.semiBold),
+      textStyle: AppTypography.label(
+        context,
+        color: Colors.white,
+        weight: AppTypography.semiBold,
+      ),
     );
   }
 
@@ -836,7 +960,11 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
       ),
-      textStyle: AppTypography.label(context, color: AppColors.primary, weight: AppTypography.semiBold),
+      textStyle: AppTypography.label(
+        context,
+        color: AppColors.primary,
+        weight: AppTypography.semiBold,
+      ),
     );
   }
 
@@ -854,7 +982,11 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
       ),
-      textStyle: AppTypography.label(context, color: AppColors.primary, weight: AppTypography.semiBold),
+      textStyle: AppTypography.label(
+        context,
+        color: AppColors.primary,
+        weight: AppTypography.semiBold,
+      ),
     );
   }
 
@@ -873,7 +1005,11 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
       ),
-      textStyle: AppTypography.labelSmall(context, color: Colors.white, weight: AppTypography.semiBold),
+      textStyle: AppTypography.labelSmall(
+        context,
+        color: Colors.white,
+        weight: AppTypography.semiBold,
+      ),
     );
   }
 
@@ -891,7 +1027,7 @@ class AppComponentStyles {
   }
 
   // ==================== INPUT FIELD DECORATION ====================
-  
+
   /// Standard input decoration
   static InputDecoration inputDecoration({
     required BuildContext context,
@@ -941,23 +1077,17 @@ class AppComponentStyles {
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
-        borderSide: BorderSide(
-          color: AppColors.borderError,
-          width: 1.5 * s,
-        ),
+        borderSide: BorderSide(color: AppColors.borderError, width: 1.5 * s),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
-        borderSide: BorderSide(
-          color: AppColors.error,
-          width: 2.0 * s,
-        ),
+        borderSide: BorderSide(color: AppColors.error, width: 2.0 * s),
       ),
     );
   }
 
   // ==================== SNACKBAR STYLE ====================
-  
+
   /// Success snackbar
   static SnackBar successSnackBar({
     required String message,
@@ -975,10 +1105,7 @@ class AppComponentStyles {
   }
 
   /// Error snackbar
-  static SnackBar errorSnackBar({
-    required String message,
-    Duration? duration,
-  }) {
+  static SnackBar errorSnackBar({required String message, Duration? duration}) {
     return SnackBar(
       content: Text(message),
       backgroundColor: AppColors.error,
@@ -991,10 +1118,7 @@ class AppComponentStyles {
   }
 
   /// Info snackbar
-  static SnackBar infoSnackBar({
-    required String message,
-    Duration? duration,
-  }) {
+  static SnackBar infoSnackBar({required String message, Duration? duration}) {
     return SnackBar(
       content: Text(message),
       backgroundColor: AppColors.info,
@@ -1007,7 +1131,7 @@ class AppComponentStyles {
   }
 
   // ==================== BOTTOM SHEET DECORATION ====================
-  
+
   static BoxDecoration bottomSheetDecoration() {
     return const BoxDecoration(
       color: AppColors.surface,
@@ -1019,7 +1143,7 @@ class AppComponentStyles {
   }
 
   // ==================== DIALOG DECORATION ====================
-  
+
   static BoxDecoration dialogDecoration() {
     return BoxDecoration(
       color: AppColors.surface,
@@ -1035,7 +1159,7 @@ class AppComponentStyles {
   }
 
   // ==================== APP BAR THEME ====================
-  
+
   static AppBarTheme appBarTheme(BuildContext context) {
     return AppBarTheme(
       backgroundColor: AppColors.surface,
@@ -1052,7 +1176,7 @@ class AppComponentStyles {
   }
 
   // ==================== TAB BAR THEME ====================
-  
+
   static TabBarThemeData tabBarTheme(BuildContext context) {
     return TabBarThemeData(
       labelColor: AppColors.primary,
@@ -1060,10 +1184,7 @@ class AppComponentStyles {
       labelStyle: AppTypography.label(context, weight: AppTypography.semiBold),
       unselectedLabelStyle: AppTypography.label(context),
       indicator: const UnderlineTabIndicator(
-        borderSide: BorderSide(
-          color: AppColors.primary,
-          width: 2.5,
-        ),
+        borderSide: BorderSide(color: AppColors.primary, width: 2.5),
       ),
     );
   }
@@ -1333,5 +1454,3 @@ class AppMargin {
     return SizedBox(width: value * s);
   }
 }
-
-

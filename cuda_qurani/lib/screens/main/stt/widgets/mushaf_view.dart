@@ -214,12 +214,12 @@ class _MushafDisplayState extends State<MushafDisplay> {
 
   // ✅ CRITICAL: Track emergency loads to prevent duplicates
   static final Set<int> _emergencyLoadingPages = {};
-  
+
   Widget _buildMushafPageOptimized(BuildContext context) {
     final controller = context.watch<SttController>();
     final pageNumber = controller.currentPage;
     var cachedLines = controller.pageCache[pageNumber];
-    
+
     // ✅ CRITICAL: Also check QuranService cache (shared singleton)
     if (cachedLines == null || cachedLines.isEmpty) {
       final service = context.read<QuranService>();
@@ -236,36 +236,43 @@ class _MushafDisplayState extends State<MushafDisplay> {
       // ✅ OPTIMIZED: Use RepaintBoundary to prevent unnecessary repaints
       return RepaintBoundary(
         key: ValueKey('mushaf_page_$pageNumber'),
-        child: MushafPageContent(pageLines: cachedLines, pageNumber: pageNumber),
+        child: MushafPageContent(
+          pageLines: cachedLines,
+          pageNumber: pageNumber,
+        ),
       );
     }
 
     // ⚠️ FALLBACK: Emergency load only if not already loading
     if (!_emergencyLoadingPages.contains(pageNumber)) {
       final service = context.read<QuranService>();
-      
+
       // ✅ CRITICAL: Check if page is already being loaded in QuranService
       if (service.isPageLoading(pageNumber)) {
         // Wait for existing load instead of creating duplicate
         final loadingFuture = service.getLoadingFuture(pageNumber);
         if (loadingFuture != null) {
-          loadingFuture.then((lines) {
-            controller.updatePageCache(pageNumber, lines);
-          }).catchError((e) {
-            print('❌ Waiting for page $pageNumber load failed: $e');
-          });
+          loadingFuture
+              .then((lines) {
+                controller.updatePageCache(pageNumber, lines);
+              })
+              .catchError((e) {
+                print('❌ Waiting for page $pageNumber load failed: $e');
+              });
           // Show loading indicator while waiting
         }
       } else {
         // Only trigger new emergency load if not already loading
         _emergencyLoadingPages.add(pageNumber);
-        print('⚠️ CACHE MISS: Page $pageNumber not cached, emergency loading...');
+        print(
+          '⚠️ CACHE MISS: Page $pageNumber not cached, emergency loading...',
+        );
 
         // ✅ CRITICAL: Trigger emergency load and sync cache
         Future.microtask(() async {
           try {
             final lines = await service.getMushafPageLines(pageNumber);
-            
+
             // ✅ CRITICAL: Sync cache to controller immediately
             controller.updatePageCache(pageNumber, lines);
           } catch (e) {

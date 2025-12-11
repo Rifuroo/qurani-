@@ -2,6 +2,7 @@
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
 import 'package:cuda_qurani/providers/premium_provider.dart';
@@ -25,6 +26,7 @@ class _RecitationPageState extends State<RecitationPage> {
   void initState() {
     super.initState();
     _loadTranslations();
+    _loadSavedSettings(); // ✅ Load saved settings on init
   }
 
   Future<void> _loadTranslations() async {
@@ -35,46 +37,66 @@ class _RecitationPageState extends State<RecitationPage> {
     });
   }
 
-  // Default states untuk semua toggle (dummy state)
+  // ✅ Settings keys for SharedPreferences
+  static const String _keyDetectMistakes = 'setting_detect_mistakes';
+  static const String _keyDetectTashkeel = 'setting_detect_tashkeel';
+  static const String _keyDontProgress = 'setting_dont_progress';
+  static const String _keyResumableSessions = 'setting_resumable_sessions';
+
+  // Default states untuk semua toggle
   bool _detectMistakes = true;
   bool _detectTashkeelMistakes = true;
   bool _dontProgressUntilFixed = false;
   bool _resumableSessions = false;
 
-  void _toggleDetectMistakes(bool value) {
+  // ✅ Load saved settings from SharedPreferences
+  Future<void> _loadSavedSettings() async {
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _detectMistakes = value;
+      _detectMistakes = prefs.getBool(_keyDetectMistakes) ?? true;
+      _detectTashkeelMistakes = prefs.getBool(_keyDetectTashkeel) ?? true;
+      _dontProgressUntilFixed = prefs.getBool(_keyDontProgress) ?? false;
+      _resumableSessions = prefs.getBool(_keyResumableSessions) ?? false;
     });
-    AppHaptics.selection();
-
-    // TODO: Implement toggle logic
+    print(
+      '⚙️ Settings loaded: mistakes=$_detectMistakes, tashkeel=$_detectTashkeelMistakes, dontProgress=$_dontProgressUntilFixed, resumable=$_resumableSessions',
+    );
   }
 
-  void _toggleDetectTashkeel(bool value) {
-    setState(() {
-      _detectTashkeelMistakes = value;
-    });
+  void _toggleDetectMistakes(bool value) async {
+    setState(() => _detectMistakes = value);
     AppHaptics.selection();
 
-    // TODO: Implement toggle logic
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyDetectMistakes, value);
+    print('⚙️ Setting saved: detect_mistakes = $value');
   }
 
-  void _toggleDontProgress(bool value) {
-    setState(() {
-      _dontProgressUntilFixed = value;
-    });
+  void _toggleDetectTashkeel(bool value) async {
+    setState(() => _detectTashkeelMistakes = value);
     AppHaptics.selection();
 
-    // TODO: Implement toggle logic
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyDetectTashkeel, value);
+    print('⚙️ Setting saved: detect_tashkeel = $value');
   }
 
-  void _toggleResumableSessions(bool value) {
-    setState(() {
-      _resumableSessions = value;
-    });
+  void _toggleDontProgress(bool value) async {
+    setState(() => _dontProgressUntilFixed = value);
     AppHaptics.selection();
 
-    // TODO: Implement toggle logic
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyDontProgress, value);
+    print('⚙️ Setting saved: dont_progress = $value');
+  }
+
+  void _toggleResumableSessions(bool value) async {
+    setState(() => _resumableSessions = value);
+    AppHaptics.selection();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyResumableSessions, value);
+    print('⚙️ Setting saved: resumable_sessions = $value');
   }
 
   @override
@@ -479,6 +501,3 @@ class _RecitationPageState extends State<RecitationPage> {
     );
   }
 }
-
-
-
