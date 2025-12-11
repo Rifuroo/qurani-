@@ -319,14 +319,14 @@ class _CompletionPageState extends State<CompletionPage> {
 
   Future<void> _navigateToSurah(int surahId) async {
     AppHaptics.light();
-    await Navigator.of(context).pushReplacement(
+    await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => SttPage(suratId: surahId)),
     );
   }
 
   Future<void> _continueReading() async {
     AppHaptics.medium();
-    await Navigator.of(context).pushReplacement(
+    await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => SttPage(suratId: _lastRead.surahId)),
     );
   }

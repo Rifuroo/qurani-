@@ -1,10 +1,15 @@
 {
     "home": {
+        "user_text": "User",
         "greeting_text": "Good",
         "afternoon": "Afternoon",
         "morning": "Morning",
         "evening": "Evening",
         "latest_Session_text": "Latest Session",
+        "paused_Session_text": "Paused Session",
+        "no_recent_session_text": "No recent session",
+        "start_first_recitation_text": "Start your first recitation",
+        "just_now_text": "Just now",
         "surah_text": "Surah",
         "juz_text": "Juz",
         "page_text": "Page",
@@ -19,16 +24,19 @@
         "seconds_text": "seconds",
         "continue_reading_text": "Continue Reading",
         "see_all_text": "See All",
+        "failed_to_resume_text": "Failed to resume",
         "session": {
             "session_text": "Session",
             "sessions_text": "Sessions",
             "reading_text": "Reading",
             "min_text": "min",
-            "continue_text" : "Continue"
+            "continue_text": "Continue"
         },
         "streak_text": "Streak",
-        "treak": "Longest Streak",
+        "current_streak_text": "Current Streak 🔥",
+        "longest_streak_text": "Longest Streak",
         "day_text": "Day",
+        "more_text": "More",
         "days_text": "Days",
         "progress_text": "Progress",
         "completion_text": "Completion",
@@ -37,7 +45,12 @@
         "verse_text": "Verse",
         "verses_text": "Verses",
         "todays_goal_text": "Today's Goal",
+        "goal_text": "Goal",
+        "set_goal_text": "Set a Goal",
+        "tap_to_create_goal_text": "Tap to create daily goal",
         "ayah_a_day_text": "Ayah a Day",
-        "achievements_text": "Achievements"
+        "achievements_text": "Achievements",
+        "badge_text": "Badge",
+        "complete_sessions_to_earn_badges_text": "Complete sessions to earn badges"
     }
 }
