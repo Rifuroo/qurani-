@@ -3,6 +3,7 @@
 import '../data/models.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
+import '../utils/constants.dart';
 
 class QuranService {
   static final QuranService _instance = QuranService._internal();
@@ -15,7 +16,13 @@ class QuranService {
   // etc...
 
   // ✅ FIX: Selalu ambil dari DBHelper (singleton source of truth)
+  // ✅ OPTIMIZED: Increased cache size for faster loading
   final Map<int, List<MushafPageLine>> _pageCache = {};
+  final List<int> _cacheAccessOrder = []; // Track access order for LRU eviction
+  
+  // ✅ CRITICAL: Prevent duplicate requests for same page
+  final Set<int> _loadingPages = {}; // Track pages currently being loaded
+  final Map<int, Future<List<MushafPageLine>>> _loadingFutures = {}; // Share loading futures
 
   // ✅ Helper method: Always get FRESH database from DBHelper
   Future<Database> _getMetadataDB() async {
@@ -46,6 +53,31 @@ class QuranService {
   Future<void> initialize() async {
     // ✅ FIX: Tidak perlu initialize, DBHelper sudah handle semuanya
     print('[QuranService] Using DBHelper singleton - no re-init needed');
+  }
+
+  // ✅ OPTIMIZED: Update cache access order for LRU eviction
+  void _updateCacheAccess(int pageNumber) {
+    _cacheAccessOrder.remove(pageNumber);
+    _cacheAccessOrder.add(pageNumber);
+  }
+  
+  // ✅ CRITICAL: Public method to check cache without loading (for sync)
+  List<MushafPageLine>? getCachedPage(int pageNumber) {
+    if (_pageCache.containsKey(pageNumber)) {
+      _updateCacheAccess(pageNumber);
+      return _pageCache[pageNumber];
+    }
+    return null;
+  }
+  
+  // ✅ NEW: Check if page is currently being loaded
+  bool isPageLoading(int pageNumber) {
+    return _loadingPages.contains(pageNumber);
+  }
+  
+  // ✅ NEW: Get loading future if page is being loaded
+  Future<List<MushafPageLine>>? getLoadingFuture(int pageNumber) {
+    return _loadingFutures[pageNumber];
   }
 
   // ==================== OPTIMIZED BATCH LOADING ====================
@@ -179,7 +211,15 @@ class QuranService {
     return ayatList;
   }
 
+  // ✅ OPTIMIZED: Cache for page layouts to avoid repeated queries
+  final Map<int, List<PageLayoutData>> _pageLayoutCache = {};
+  
   Future<List<PageLayoutData>> getPageLayout(int pageNumber) async {
+    // ✅ OPTIMIZED: Check cache first
+    if (_pageLayoutCache.containsKey(pageNumber)) {
+      return _pageLayoutCache[pageNumber]!;
+    }
+    
     final uthmaniLinesDB = await _getUthmaniLinesDB();
     final result = await uthmaniLinesDB.query(
       'pages',
@@ -187,14 +227,81 @@ class QuranService {
       whereArgs: [pageNumber],
       orderBy: 'line_number ASC',
     );
-    return result.map((row) => PageLayoutData.fromSqlite(row)).toList();
+    final layouts = result.map((row) => PageLayoutData.fromSqlite(row)).toList();
+    
+    // ✅ OPTIMIZED: Cache layout data (persistent across page loads)
+    _pageLayoutCache[pageNumber] = layouts;
+    
+    // ✅ OPTIMIZED: Limit cache size to prevent memory issues
+    if (_pageLayoutCache.length > 100) {
+      final oldestKey = _pageLayoutCache.keys.first;
+      _pageLayoutCache.remove(oldestKey);
+    }
+    
+    return layouts;
+  }
+  
+  /// ✅ OPTIMIZED: Batch load multiple page layouts in parallel
+  Future<Map<int, List<PageLayoutData>>> getPageLayoutsBatch(List<int> pageNumbers) async {
+    final result = <int, List<PageLayoutData>>{};
+    
+    // Check cache first
+    final pagesToLoad = <int>[];
+    for (final pageNum in pageNumbers) {
+      if (_pageLayoutCache.containsKey(pageNum)) {
+        result[pageNum] = _pageLayoutCache[pageNum]!;
+      } else {
+        pagesToLoad.add(pageNum);
+      }
+    }
+    
+    if (pagesToLoad.isEmpty) {
+      return result;
+    }
+    
+    // Load missing pages in parallel
+    final uthmaniLinesDB = await _getUthmaniLinesDB();
+    final loadFutures = pagesToLoad.map((pageNum) async {
+      try {
+        final queryResult = await uthmaniLinesDB.query(
+          'pages',
+          where: 'page_number = ?',
+          whereArgs: [pageNum],
+          orderBy: 'line_number ASC',
+        );
+        final layouts = queryResult.map((row) => PageLayoutData.fromSqlite(row)).toList();
+        _pageLayoutCache[pageNum] = layouts;
+        return MapEntry(pageNum, layouts);
+      } catch (e) {
+        print('BATCH_LAYOUT_ERROR: Failed to load page $pageNum: $e');
+        return null;
+      }
+    });
+    
+    final loadedLayouts = await Future.wait(loadFutures, eagerError: false);
+    for (final entry in loadedLayouts) {
+      if (entry != null) {
+        result[entry.key] = entry.value;
+      }
+    }
+    
+    return result;
   }
 
+  // ✅ OPTIMIZED: Batch loading cache for word ranges
+  final Map<String, List<WordData>> _wordRangeCache = {};
+  
   Future<List<WordData>> _getWordsByIdRange(
     int startId,
     int endId, {
     bool isQuranMode = true,
   }) async {
+    // ✅ OPTIMIZED: Check cache first using range key
+    final cacheKey = '${isQuranMode ? 'wbw' : 'uth'}_$startId-$endId';
+    if (_wordRangeCache.containsKey(cacheKey)) {
+      return _wordRangeCache[cacheKey]!;
+    }
+    
     final db = await _getWordsDatabase(isQuranMode);
     final result = await db.query(
       'words',
@@ -202,73 +309,156 @@ class QuranService {
       whereArgs: [startId, endId],
       orderBy: 'id ASC',
     );
-    return result.map((row) => WordData.fromSqlite(row)).toList();
+    final words = result.map((row) => WordData.fromSqlite(row)).toList();
+    
+    // ✅ OPTIMIZED: Cache word ranges (limit cache size)
+    _wordRangeCache[cacheKey] = words;
+    if (_wordRangeCache.length > 200) {
+      final oldestKey = _wordRangeCache.keys.first;
+      _wordRangeCache.remove(oldestKey);
+    }
+    
+    return words;
   }
 
+  // ✅ OPTIMIZED: Cache ayat data for pages to avoid repeated queries
+  final Map<int, List<AyatData>> _ayatCache = {};
+  
   Future<List<AyatData>> getCurrentPageAyats(int pageNumber) async {
-    print('MUSHAF: Loading page $pageNumber');
+    // ✅ CRITICAL: Check cache first (instant return)
+    if (_ayatCache.containsKey(pageNumber)) {
+      return _ayatCache[pageNumber]!;
+    }
+    
     final pageLayout = await getPageLayout(pageNumber);
     if (pageLayout.isEmpty) {
-      print('MUSHAF: No layout data for page $pageNumber');
       return [];
     }
-    Map<String, AyatData> uniqueAyats = {};
+    
+    // ✅ STEP 1: Build Set of valid word IDs from layout ranges (O(1) lookup)
+    final Set<int> validWordIds = {};
+    int? minId;
+    int? maxId;
+    
     for (final layout in pageLayout) {
       if (layout.lineType != 'ayah' ||
           layout.firstWordId == null ||
           layout.lastWordId == null)
         continue;
-      final lineWords = await _getWordsByIdRange(
-        layout.firstWordId!,
-        layout.lastWordId!,
-        isQuranMode: true,
-      );
-      if (lineWords.isEmpty) continue;
-      for (final word in lineWords) {
-        final key = '${word.surah}:${word.ayah}';
-        if (!uniqueAyats.containsKey(key)) {
-          uniqueAyats[key] = AyatData(
-            surah_id: word.surah,
-            ayah: word.ayah,
-            words: [],
-            page: pageNumber,
-            juz: calculateJuzAccurate(word.surah, word.ayah),
-            fullArabicText: '',
-          );
-        }
+      
+      // Add all word IDs in range to set
+      for (int wordId = layout.firstWordId!; wordId <= layout.lastWordId!; wordId++) {
+        validWordIds.add(wordId);
+      }
+      
+      // Track min/max for efficient range query
+      if (minId == null || layout.firstWordId! < minId) {
+        minId = layout.firstWordId!;
+      }
+      if (maxId == null || layout.lastWordId! > maxId) {
+        maxId = layout.lastWordId!;
       }
     }
-    for (final key in uniqueAyats.keys) {
-      final parts = key.split(':');
+    
+    if (minId == null || maxId == null || validWordIds.isEmpty) {
+      _ayatCache[pageNumber] = [];
+      return [];
+    }
+    
+    // ✅ STEP 2: Batch load ALL words in ONE query (much faster than multiple queries)
+    final db = await _getWordsDatabase(true);
+    final result = await db.query(
+      'words',
+      where: 'id >= ? AND id <= ?',
+      whereArgs: [minId, maxId],
+      orderBy: 'id ASC',
+    );
+    
+    // ✅ STEP 3: Group words by ayat (O(1) lookup with Set)
+    final Map<String, List<WordData>> ayatWordsMap = {};
+    for (final row in result) {
+      final word = WordData.fromSqlite(row);
+      
+      // ✅ OPTIMIZED: O(1) lookup instead of nested loop
+      if (!validWordIds.contains(word.id)) continue;
+      
+      final key = '${word.surah}:${word.ayah}';
+      ayatWordsMap.putIfAbsent(key, () => []).add(word);
+    }
+    
+    // ✅ STEP 4: Build AyatData list (already have all words, no more queries needed)
+    final List<AyatData> ayatList = [];
+    for (final entry in ayatWordsMap.entries) {
+      final parts = entry.key.split(':');
       final surahId = int.parse(parts[0]);
       final ayahNum = int.parse(parts[1]);
-      final completeWords = await getAyahWords(
-        surahId,
-        ayahNum,
-        isQuranMode: true,
-      );
-      uniqueAyats[key] = AyatData(
-        surah_id: surahId,
-        ayah: ayahNum,
-        words: completeWords,
-        page: pageNumber,
-        juz: calculateJuzAccurate(surahId, ayahNum),
-        fullArabicText: completeWords.map((w) => w.text).join(' '),
+      
+      // Sort words by word number
+      entry.value.sort((a, b) => a.wordNumber.compareTo(b.wordNumber));
+      
+      ayatList.add(
+        AyatData(
+          surah_id: surahId,
+          ayah: ayahNum,
+          words: entry.value,
+          page: pageNumber,
+          juz: calculateJuzAccurate(surahId, ayahNum),
+          fullArabicText: entry.value.map((w) => w.text).join(' '),
+        ),
       );
     }
-    final ayatList = uniqueAyats.values.toList();
+    
     ayatList.sort((a, b) {
       if (a.surah_id != b.surah_id) return a.surah_id.compareTo(b.surah_id);
       return a.ayah.compareTo(b.ayah);
     });
-    print('MUSHAF: Found ${ayatList.length} unique ayats on page $pageNumber');
+    
+    // ✅ Cache result for instant future access
+    _ayatCache[pageNumber] = ayatList;
+    
+    // ✅ OPTIMIZED: Larger cache to prevent re-loading (sync with page cache)
+    if (_ayatCache.length > 500) {
+      final oldestKey = _ayatCache.keys.first;
+      _ayatCache.remove(oldestKey);
+    }
+    
+    // ✅ Reduce log spam - only log for first 20 pages or every 50th page
+    if (pageNumber <= 20 || pageNumber % 50 == 0) {
+      print('MUSHAF: Found ${ayatList.length} unique ayats on page $pageNumber');
+    }
     return ayatList;
   }
 
   Future<List<MushafPageLine>> getMushafPageLines(int pageNumber) async {
+    // ✅ OPTIMIZED: Check cache first and update access order
     if (_pageCache.containsKey(pageNumber)) {
+      _updateCacheAccess(pageNumber);
       return _pageCache[pageNumber]!;
     }
+    
+    // ✅ CRITICAL: Prevent duplicate requests - if already loading, wait for existing future
+    if (_loadingPages.contains(pageNumber) && _loadingFutures.containsKey(pageNumber)) {
+      print('MUSHAF_LINES: Page $pageNumber already loading, waiting for existing request...');
+      return await _loadingFutures[pageNumber]!;
+    }
+    
+    // ✅ Mark as loading and create future
+    _loadingPages.add(pageNumber);
+    final loadingFuture = _loadMushafPageLinesInternal(pageNumber);
+    _loadingFutures[pageNumber] = loadingFuture;
+    
+    try {
+      final result = await loadingFuture;
+      return result;
+    } finally {
+      // ✅ Clean up loading state
+      _loadingPages.remove(pageNumber);
+      _loadingFutures.remove(pageNumber);
+    }
+  }
+  
+  // ✅ Internal method to actually load page lines
+  Future<List<MushafPageLine>> _loadMushafPageLinesInternal(int pageNumber) async {
     print('MUSHAF_LINES: Getting lines for page $pageNumber');
     final pageLayout = await getPageLayout(pageNumber);
     final List<MushafPageLine> pageLines = [];
@@ -352,13 +542,33 @@ class QuranService {
         }
       }
     }
+    // ✅ OPTIMIZED: LRU cache implementation
+    _updateCacheAccess(pageNumber);
     _pageCache[pageNumber] = pageLines;
     // ✅ OPTIMIZED: Increased cache from 10 to 20 pages for smoother navigation
     if (_pageCache.length > 20) {
       final oldestKey = _pageCache.keys.first;
       _pageCache.remove(oldestKey);
     }
-    print('MUSHAF_LINES: Processed ${pageLines.length} lines');
+    // ✅ OPTIMIZED: Only evict when cache is VERY large (prevent re-loading)
+    // Use cacheEvictionThreshold instead of quranServiceCacheSize to keep more pages
+    if (_pageCache.length > cacheEvictionThreshold) {
+      // Remove least recently used page (only when cache is very full)
+      if (_cacheAccessOrder.isNotEmpty) {
+        final lruPage = _cacheAccessOrder.removeAt(0);
+        _pageCache.remove(lruPage);
+        // ✅ Reduce log spam
+        if (_pageCache.length % 50 == 0) {
+          print('MUSHAF_CACHE: Evicted LRU page $lruPage (cache size: ${_pageCache.length})');
+        }
+      }
+    }
+    // ✅ Reduce log spam - only log every 10th page or first 20 pages
+    if (pageNumber <= 20 || pageNumber % 10 == 0 || _pageCache.length % 10 == 0) {
+      print('MUSHAF_LINES: Processed ${pageLines.length} lines (cache: ${_pageCache.length}/$quranServiceCacheSize)');
+    }
+    
+    // ✅ CRITICAL: Return cached data (already in cache now)
     return pageLines;
   }
 
@@ -368,9 +578,10 @@ class QuranService {
   ) async {
     final result = <int, List<MushafPageLine>>{};
 
-    // Check cache first
+    // ✅ OPTIMIZED: Check cache first and update access order
     for (final pageNum in pageNumbers) {
       if (_pageCache.containsKey(pageNum)) {
+        _updateCacheAccess(pageNum);
         result[pageNum] = _pageCache[pageNum]!;
       }
     }
@@ -556,6 +767,11 @@ class QuranService {
   void dispose() {
     // ✅ ONLY clear cache, databases remain open (managed by DBHelper)
     _pageCache.clear();
-    print('[QuranService] Cache cleared, databases remain open');
+    _cacheAccessOrder.clear();
+    _pageLayoutCache.clear();
+    _wordRangeCache.clear();
+    _loadingPages.clear();
+    _loadingFutures.clear();
+    print('[QuranService] All caches cleared, databases remain open');
   }
 }

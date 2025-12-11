@@ -5,7 +5,7 @@
     "week_text": "Minggu",
     "day_text": "Hari",
     "pages_text": "Halaman",
-    "engangement_text": "Interaksi",
+    "engangement_text": "Keterlibatan",
     "statistics_text": "Statistik",
     "this_day_text": "Hari Ini",
     "this_week_text": "Minggu Ini",
@@ -15,9 +15,19 @@
     "completion_text": "Penyelesaian",
     "verses_recited": "Ayat Dibaca",
     "recitatiom_time_text": "Waktu Tilawah",
-    "earned_badges_text": "Lencana Didapat",
-    "deeds_estimated_text": "Estimasi Amal",
+    "earned_badges_text": "Badge Diperoleh",
+    "deeds_estimated_text": "Perkiraan Pahala",
     "verses_shared_text": "Ayat Dibagikan",
-    "search_queries_text": "Riwayat Pencarian"
+    "search_queries_text": "Pencarian",
+    "accuracy_text": "Akurasi",
+    "minutes_suffix": "menit",
+    "percent_suffix": "%",
+    "loading_text": "Memuat...",
+    "no_pages_data": "Belum ada data halaman",
+    "no_engagement_data": "Belum ada data keterlibatan",
+    "no_accuracy_data": "Belum ada data akurasi",
+    "hour_suffix": "j",
+    "minute_suffix": "m",
+    "second_suffix": "d"
   }
 }

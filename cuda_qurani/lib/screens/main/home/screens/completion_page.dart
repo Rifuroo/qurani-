@@ -130,12 +130,17 @@ class CompletionPage extends StatefulWidget {
 
 class _CompletionPageState extends State<CompletionPage> {
   Map<String, dynamic> _translations = {};
+  bool _isRTL = false;
 
   Future<void> _loadTranslations() async {
-    // Ganti path sesuai file JSON yang dibutuhkan
     final trans = await context.loadTranslations('home/completion');
+    final languageProvider = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    );
     setState(() {
       _translations = trans;
+      _isRTL = languageProvider.currentLanguageCode == 'ar';
     });
   }
 
@@ -319,9 +324,9 @@ class _CompletionPageState extends State<CompletionPage> {
 
   Future<void> _navigateToSurah(int surahId) async {
     AppHaptics.light();
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => SttPage(suratId: surahId)),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SttPage(suratId: surahId)));
   }
 
   Future<void> _continueReading() async {
@@ -331,13 +336,51 @@ class _CompletionPageState extends State<CompletionPage> {
     );
   }
 
+  // Helper: Get surah name berdasarkan bahasa
+  String _getSurahName(Map<String, dynamic> surah) {
+    if (_isRTL) {
+      return surah['name_arabic'] as String? ??
+          surah['name_simple'] as String? ??
+          '';
+    }
+    return surah['name_simple'] as String? ?? '';
+  }
+
+  // Helper: Format angka dengan separator untuk RTL
+  String _formatRTLNumber(
+    dynamic num1,
+    dynamic num2, {
+    String separator = '/',
+  }) {
+    if (_isRTL) {
+      // RTL: 10/1 bukan 1/10
+      return '${context.formatNumber(num2)}$separator${context.formatNumber(num1)}';
+    }
+    // LTR: 1/10
+    return '${context.formatNumber(num1)}$separator${context.formatNumber(num2)}';
+  }
+
+  // Helper: Format range untuk RTL
+  String _formatRTLRange(dynamic start, dynamic end) {
+    if (_isRTL) {
+      // RTL: 10-1 bukan 1-10
+      return '${context.formatNumber(end)}-${context.formatNumber(start)}';
+    }
+    // LTR: 1-10
+    return '${context.formatNumber(start)}-${context.formatNumber(end)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: AppColors.surfaceVariant,
         appBar: MenuAppBar(selectedIndex: 2),
-        body: const AppLoadingIndicator(message: 'Loading completion data...'),
+        body: AppLoadingIndicator(
+          message: _translations.isNotEmpty
+              ? LanguageHelper.tr(_translations, 'completion.loading_text')
+              : 'Loading completion data...',
+        ),
       );
     }
 
@@ -390,6 +433,152 @@ class _CompletionPageState extends State<CompletionPage> {
     );
   }
 
+  // ==================== SECTION HEADER ====================
+
+  Widget _buildSectionHeader() {
+    final s = AppDesignSystem.getScaleFactor(context);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppDesignSystem.space16 * s,
+        AppDesignSystem.space8 * s,
+        AppDesignSystem.space16 * s,
+        AppDesignSystem.space8 * s,
+      ),
+      child: Text(
+        (_translations.isNotEmpty
+                ? LanguageHelper.tr(
+                    _translations,
+                    'completion.completion_by_chapter_text',
+                  )
+                : 'COMPLETION BY CHAPTER')
+            .toUpperCase(),
+        style: AppTypography.overline(context),
+      ),
+    );
+  }
+
+  // ==================== SURAH COMPLETION TILE ====================
+
+  Widget _buildSurahCompletionTile(Map<String, dynamic> surah) {
+    final s = AppDesignSystem.getScaleFactor(context);
+    final int id = surah['id'] as int;
+    final String name = _getSurahName(surah);
+    final int totalVerses = surah['verses_count'] ?? 0;
+
+    final completion = _getCompletion(id);
+    final percentage = completion?.percentage ?? 0.0;
+    final versesRead = completion?.versesRead ?? 0;
+
+    // Calculate remaining ranges
+    String remainingText = _translations.isNotEmpty
+        ? LanguageHelper.tr(_translations, 'completion.not_started_text')
+        : 'Not started';
+
+    if (versesRead > 0 && versesRead < totalVerses) {
+      final remLabel = _translations.isNotEmpty
+          ? LanguageHelper.tr(_translations, 'completion.remaining_text')
+          : 'Remaining';
+      // RTL: 10-1 bukan 1-10
+      remainingText =
+          '$remLabel: ${_formatRTLRange(versesRead + 1, totalVerses)}';
+    } else if (versesRead >= totalVerses) {
+      remainingText = _translations.isNotEmpty
+          ? LanguageHelper.tr(_translations, 'completion.none_remaining_text')
+          : 'Completed';
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _navigateToSurah(id),
+        splashColor: AppComponentStyles.rippleColor,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppDesignSystem.space16 * s,
+            vertical: AppDesignSystem.space12 * s,
+          ),
+          decoration: AppComponentStyles.divider(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Row
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Directionality(
+                          textDirection: _isRTL
+                              ? TextDirection.rtl
+                              : TextDirection.ltr,
+                          child: Text(
+                            '$name - ${context.formatNumber(percentage.toStringAsFixed(0))}% (${_formatRTLNumber(versesRead, totalVerses)})',
+                            style: AppTypography.body(
+                              context,
+                              weight: AppTypography.semiBold,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: AppDesignSystem.space2 * s),
+                        Directionality(
+                          textDirection: _isRTL
+                              ? TextDirection.rtl
+                              : TextDirection.ltr,
+                          child: Text(
+                            remainingText,
+                            style: AppTypography.captionSmall(
+                              context,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _isRTL
+                        ? Icons.chevron_left_rounded
+                        : Icons.chevron_right_rounded,
+                    color: AppColors.borderDark,
+                    size: AppDesignSystem.iconMedium * s,
+                  ),
+                ],
+              ),
+
+              SizedBox(height: AppDesignSystem.space8 * s),
+
+              // Progress Bar
+              Directionality(
+                textDirection: _isRTL ? TextDirection.rtl : TextDirection.ltr,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(
+                    AppDesignSystem.radiusRound * s,
+                  ),
+                  child: LinearProgressIndicator(
+                    value: percentage / 100,
+                    minHeight: 6 * s,
+                    backgroundColor: AppColors.surfaceContainerLowest,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      percentage >= 100
+                          ? AppColors.success
+                          : percentage >= 50
+                          ? AppColors.primary
+                          : percentage > 0
+                          ? AppColors.warning
+                          : AppColors.borderLight,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ==================== ERROR BANNER ====================
 
   Widget _buildErrorBanner() {
@@ -409,7 +598,12 @@ class _CompletionPageState extends State<CompletionPage> {
           SizedBox(width: AppDesignSystem.space8 * s),
           Expanded(
             child: Text(
-              'Using offline data. Pull to refresh.',
+              _translations.isNotEmpty
+                  ? LanguageHelper.tr(
+                      _translations,
+                      'completion.error_offline_text',
+                    )
+                  : 'Using offline data. Pull to refresh.',
               style: AppTypography.caption(context, color: AppColors.error),
             ),
           ),
@@ -508,40 +702,40 @@ class _CompletionPageState extends State<CompletionPage> {
             children: [
               Expanded(
                 child: _buildStatCard(
-                  label:
-                      _translations.isNotEmpty
-                          ? LanguageHelper.tr(
-                            _translations,
-                            'completion.total_pages_text',
-                          )
-                          : 'Verses Read',
+                  label: _translations.isNotEmpty
+                      ? LanguageHelper.tr(
+                          _translations,
+                          'completion.total_pages_text',
+                        )
+                      : 'Verses Read',
                   value: context.formatNumber(_stats.totalVersesRead),
                 ),
               ),
               SizedBox(width: AppDesignSystem.space8 * s),
               Expanded(
                 child: _buildStatCard(
-                  label:
-                      _translations.isNotEmpty
-                          ? LanguageHelper.tr(
-                            _translations,
-                            'completion.Remaining_pages_textq',
-                          )
-                          : 'Remaining',
-                  value: context.formatNumber(_stats.totalQuranVerses - _stats.totalVersesRead),
+                  label: _translations.isNotEmpty
+                      ? LanguageHelper.tr(
+                          _translations,
+                          'completion.Remaining_pages_textq',
+                        )
+                      : 'Remaining',
+                  value: context.formatNumber(
+                    _stats.totalQuranVerses - _stats.totalVersesRead,
+                  ),
                 ),
               ),
               SizedBox(width: AppDesignSystem.space8 * s),
               Expanded(
                 child: _buildStatCard(
-                  label:
-                      _translations.isNotEmpty
-                          ? LanguageHelper.tr(
-                            _translations,
-                            'completion.completions_text',
-                          )
-                          : 'Completed',
-                  value: '${context.formatNumber(_stats.completedSurahs)} Surah',
+                  label: _translations.isNotEmpty
+                      ? LanguageHelper.tr(
+                          _translations,
+                          'completion.completions_text',
+                        )
+                      : 'Completed',
+                  value:
+                      '${context.formatNumber(_stats.completedSurahs)} ${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'completion.surah_text') : 'Surah'}',
                 ),
               ),
             ],
@@ -553,8 +747,6 @@ class _CompletionPageState extends State<CompletionPage> {
 
   Widget _buildStatCard({required String label, required String value}) {
     final s = AppDesignSystem.getScaleFactor(context);
-    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
-    final isRTL = languageProvider.currentLanguageCode == 'ar';
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -579,7 +771,7 @@ class _CompletionPageState extends State<CompletionPage> {
           ),
           SizedBox(height: AppDesignSystem.space4 * s),
           Directionality(
-            textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
+            textDirection: _isRTL ? TextDirection.rtl : TextDirection.ltr,
             child: Text(
               value,
               style: AppTypography.titleLarge(
@@ -612,9 +804,9 @@ class _CompletionPageState extends State<CompletionPage> {
           Text(
             _translations.isNotEmpty
                 ? LanguageHelper.tr(
-                  _translations,
-                  'completion.continue_reading_text',
-                )
+                    _translations,
+                    'completion.continue_reading_text',
+                  )
                 : 'Continue Reading',
             style: AppTypography.title(context, weight: AppTypography.semiBold),
           ),
@@ -646,12 +838,17 @@ class _CompletionPageState extends State<CompletionPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '${_lastRead.surahName}, ${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'completion.page_text') : 'Ayah'} ${context.formatNumber(_lastRead.ayah)}',
-                            style: AppTypography.body(
-                              context,
-                              color: Colors.white,
-                              weight: AppTypography.semiBold,
+                          Directionality(
+                            textDirection: _isRTL
+                                ? TextDirection.rtl
+                                : TextDirection.ltr,
+                            child: Text(
+                              '${_lastRead.surahName}, ${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'completion.page_text') : 'Ayah'} ${context.formatNumber(_lastRead.ayah)}',
+                              style: AppTypography.body(
+                                context,
+                                color: Colors.white,
+                                weight: AppTypography.semiBold,
+                              ),
                             ),
                           ),
                           SizedBox(height: AppDesignSystem.space2 * s),
@@ -662,11 +859,24 @@ class _CompletionPageState extends State<CompletionPage> {
                               color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
+                          Directionality(
+                            textDirection: _isRTL
+                                ? TextDirection.rtl
+                                : TextDirection.ltr,
+                            child: Text('${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'completion.surah_text') : 'Surah'} ${context.formatNumber(_lastRead.surahId)}',
+                              style: AppTypography.captionSmall(
+                                context,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                     Icon(
-                      Icons.arrow_forward_ios_rounded,
+                      _isRTL
+                          ? Icons.arrow_back_ios_rounded
+                          : Icons.arrow_forward_ios_rounded,
                       color: Colors.white,
                       size: AppDesignSystem.iconSmall * s,
                     ),
@@ -708,22 +918,21 @@ class _CompletionPageState extends State<CompletionPage> {
             child: TextField(
               controller: _searchController,
               style: AppTypography.body(context),
+              textDirection: _isRTL ? TextDirection.rtl : TextDirection.ltr,
               decoration: InputDecoration(
-                hintText:
-                    _translations.isNotEmpty
-                        ? LanguageHelper.tr(
-                          _translations,
-                          'completion.search_text',
-                        )
-                        : 'Search by surah',
+                hintText: _translations.isNotEmpty
+                    ? LanguageHelper.tr(_translations, 'completion.search_text')
+                    : 'Search by surah',
                 hintStyle: AppTypography.body(
                   context,
                   color: AppColors.textHint,
                 ),
                 prefixIcon: Padding(
                   padding: EdgeInsets.only(
-                    left: AppDesignSystem.space12 * s,
-                    right: AppDesignSystem.space8 * s,
+                    left: _isRTL ? 0 : AppDesignSystem.space12 * s,
+                    right: _isRTL
+                        ? AppDesignSystem.space12 * s
+                        : AppDesignSystem.space8 * s,
                   ),
                   child: Icon(
                     Icons.search_rounded,
@@ -761,44 +970,44 @@ class _CompletionPageState extends State<CompletionPage> {
           SizedBox(height: AppDesignSystem.space12 * s),
 
           // Filter Toggles
-          Row(
-            children: [
-              _buildFilterToggle(
-                label:
-                    _translations.isNotEmpty
-                        ? LanguageHelper.tr(
+          Directionality(
+            textDirection: _isRTL ? TextDirection.rtl : TextDirection.ltr,
+            child: Row(
+              children: [
+                _buildFilterToggle(
+                  label: _translations.isNotEmpty
+                      ? LanguageHelper.tr(
                           _translations,
                           'completion.complete_text',
                         )
-                        : 'Complete',
-                isSelected: _filterComplete,
-                onTap: () => _toggleFilter('complete'),
-              ),
-              SizedBox(width: AppDesignSystem.space8 * s),
-              _buildFilterToggle(
-                label:
-                    _translations.isNotEmpty
-                        ? LanguageHelper.tr(
+                      : 'Complete',
+                  isSelected: _filterComplete,
+                  onTap: () => _toggleFilter('complete'),
+                ),
+                SizedBox(width: AppDesignSystem.space8 * s),
+                _buildFilterToggle(
+                  label: _translations.isNotEmpty
+                      ? LanguageHelper.tr(
                           _translations,
                           'completion.started_text',
                         )
-                        : 'In Progress',
-                isSelected: _filterStarted,
-                onTap: () => _toggleFilter('started'),
-              ),
-              SizedBox(width: AppDesignSystem.space8 * s),
-              _buildFilterToggle(
-                label:
-                    _translations.isNotEmpty
-                        ? LanguageHelper.tr(
+                      : 'In Progress',
+                  isSelected: _filterStarted,
+                  onTap: () => _toggleFilter('started'),
+                ),
+                SizedBox(width: AppDesignSystem.space8 * s),
+                _buildFilterToggle(
+                  label: _translations.isNotEmpty
+                      ? LanguageHelper.tr(
                           _translations,
                           'completion.incomplete_text',
                         )
-                        : 'Not Started',
-                isSelected: _filterIncomplete,
-                onTap: () => _toggleFilter('incomplete'),
-              ),
-            ],
+                      : 'Not Started',
+                  isSelected: _filterIncomplete,
+                  onTap: () => _toggleFilter('incomplete'),
+                ),
+              ],
+            ),
           ),
 
           SizedBox(height: AppDesignSystem.space16 * s),
@@ -863,138 +1072,138 @@ class _CompletionPageState extends State<CompletionPage> {
 
   // ==================== SECTION HEADER ====================
 
-  Widget _buildSectionHeader() {
-    final s = AppDesignSystem.getScaleFactor(context);
+  // Widget _buildSectionHeader() {
+  //   final s = AppDesignSystem.getScaleFactor(context);
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppDesignSystem.space16 * s,
-        AppDesignSystem.space8 * s,
-        AppDesignSystem.space16 * s,
-        AppDesignSystem.space8 * s,
-      ),
-      child: Text(
-        (_translations.isNotEmpty
-                ? LanguageHelper.tr(
-                  _translations,
-                  'completion.completion_by_chapter_text',
-                )
-                : 'COMPLETION BY CHAPTER')
-            .toUpperCase(),
-        style: AppTypography.overline(context),
-      ),
-    );
-  }
+  //   return Padding(
+  //     padding: EdgeInsets.fromLTRB(
+  //       AppDesignSystem.space16 * s,
+  //       AppDesignSystem.space8 * s,
+  //       AppDesignSystem.space16 * s,
+  //       AppDesignSystem.space8 * s,
+  //     ),
+  //     child: Text(
+  //       (_translations.isNotEmpty
+  //               ? LanguageHelper.tr(
+  //                 _translations,
+  //                 'completion.completion_by_chapter_text',
+  //               )
+  //               : 'COMPLETION BY CHAPTER')
+  //           .toUpperCase(),
+  //       style: AppTypography.overline(context),
+  //     ),
+  //   );
+  // }
 
   // ==================== SURAH COMPLETION TILE ====================
 
-  Widget _buildSurahCompletionTile(Map<String, dynamic> surah) {
-    final s = AppDesignSystem.getScaleFactor(context);
-    final int id = surah['id'] as int;
-    final String name = surah['name_simple'] ?? 'Surah $id';
-    final int totalVerses = surah['verses_count'] ?? 0;
+//   Widget _buildSurahCompletionTile(Map<String, dynamic> surah) {
+//     final s = AppDesignSystem.getScaleFactor(context);
+//     final int id = surah['id'] as int;
+//     final String name = surah['name_simple'] ?? 'Surah $id';
+//     final int totalVerses = surah['verses_count'] ?? 0;
 
-    final completion = _getCompletion(id);
-    final percentage = completion?.percentage ?? 0.0;
-    final versesRead = completion?.versesRead ?? 0;
+//     final completion = _getCompletion(id);
+//     final percentage = completion?.percentage ?? 0.0;
+//     final versesRead = completion?.versesRead ?? 0;
 
-    // Calculate remaining ranges
-    String remainingText =
-        _translations.isNotEmpty
-            ? LanguageHelper.tr(_translations, 'completion.incomplete_text')
-            : 'Not started';
+//     // Calculate remaining ranges
+//     String remainingText =
+//         _translations.isNotEmpty
+//             ? LanguageHelper.tr(_translations, 'completion.incomplete_text')
+//             : 'Not started';
 
-    if (versesRead > 0 && versesRead < totalVerses) {
-      final remLabel =
-          _translations.isNotEmpty
-              ? LanguageHelper.tr(_translations, 'completion.remaining_text')
-              : 'Remaining';
-      remainingText = '$remLabel: ${context.formatNumber(versesRead + 1)}-${context.formatNumber(totalVerses)}';
-    } else if (versesRead >= totalVerses) {
-      remainingText =
-          _translations.isNotEmpty
-              ? LanguageHelper.tr(
-                _translations,
-                'completion.none_remaining_text',
-              )
-              : 'Completed';
-    }
+//     if (versesRead > 0 && versesRead < totalVerses) {
+//       final remLabel =
+//           _translations.isNotEmpty
+//               ? LanguageHelper.tr(_translations, 'completion.remaining_text')
+//               : 'Remaining';
+//       remainingText = '$remLabel: ${context.formatNumber(versesRead + 1)}-${context.formatNumber(totalVerses)}';
+//     } else if (versesRead >= totalVerses) {
+//       remainingText =
+//           _translations.isNotEmpty
+//               ? LanguageHelper.tr(
+//                 _translations,
+//                 'completion.none_remaining_text',
+//               )
+//               : 'Completed';
+//     }
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _navigateToSurah(id),
-        splashColor: AppComponentStyles.rippleColor,
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppDesignSystem.space16 * s,
-            vertical: AppDesignSystem.space12 * s,
-          ),
-          decoration: AppComponentStyles.divider(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$name - ${context.formatNumber(percentage.toStringAsFixed(0))}% (${context.formatNumber(versesRead)}/${context.formatNumber(totalVerses)})',
-                          style: AppTypography.body(
-                            context,
-                            weight: AppTypography.semiBold,
-                          ),
-                        ),
-                        SizedBox(height: AppDesignSystem.space2 * s),
-                        Text(
-                          remainingText,
-                          style: AppTypography.captionSmall(
-                            context,
-                            color: AppColors.textTertiary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.borderDark,
-                    size: AppDesignSystem.iconMedium * s,
-                  ),
-                ],
-              ),
+//     return Material(
+//       color: Colors.transparent,
+//       child: InkWell(
+//         onTap: () => _navigateToSurah(id),
+//         splashColor: AppComponentStyles.rippleColor,
+//         child: Container(
+//           padding: EdgeInsets.symmetric(
+//             horizontal: AppDesignSystem.space16 * s,
+//             vertical: AppDesignSystem.space12 * s,
+//           ),
+//           decoration: AppComponentStyles.divider(),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               // Header Row
+//               Row(
+//                 children: [
+//                   Expanded(
+//                     child: Column(
+//                       crossAxisAlignment: CrossAxisAlignment.start,
+//                       children: [
+//                         Text(
+//                           '$name - ${context.formatNumber(percentage.toStringAsFixed(0))}% (${context.formatNumber(versesRead)}/${context.formatNumber(totalVerses)})',
+//                           style: AppTypography.body(
+//                             context,
+//                             weight: AppTypography.semiBold,
+//                           ),
+//                         ),
+//                         SizedBox(height: AppDesignSystem.space2 * s),
+//                         Text(
+//                           remainingText,
+//                           style: AppTypography.captionSmall(
+//                             context,
+//                             color: AppColors.textTertiary,
+//                           ),
+//                         ),
+//                       ],
+//                     ),
+//                   ),
+//                   Icon(
+//                     Icons.chevron_right_rounded,
+//                     color: AppColors.borderDark,
+//                     size: AppDesignSystem.iconMedium * s,
+//                   ),
+//                 ],
+//               ),
 
-              SizedBox(height: AppDesignSystem.space8 * s),
+//               SizedBox(height: AppDesignSystem.space8 * s),
 
-              // Progress Bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(
-                  AppDesignSystem.radiusRound * s,
-                ),
-                child: LinearProgressIndicator(
-                  value: percentage / 100,
-                  minHeight: 6 * s,
-                  backgroundColor: AppColors.surfaceContainerLowest,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    percentage >= 100
-                        ? AppColors.success
-                        : percentage >= 50
-                        ? AppColors.primary
-                        : percentage > 0
-                        ? AppColors.warning
-                        : AppColors.borderLight,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+//               // Progress Bar
+//               ClipRRect(
+//                 borderRadius: BorderRadius.circular(
+//                   AppDesignSystem.radiusRound * s,
+//                 ),
+//                 child: LinearProgressIndicator(
+//                   value: percentage / 100,
+//                   minHeight: 6 * s,
+//                   backgroundColor: AppColors.surfaceContainerLowest,
+//                   valueColor: AlwaysStoppedAnimation<Color>(
+//                     percentage >= 100
+//                         ? AppColors.success
+//                         : percentage >= 50
+//                         ? AppColors.primary
+//                         : percentage > 0
+//                         ? AppColors.warning
+//                         : AppColors.borderLight,
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
 }
-
 

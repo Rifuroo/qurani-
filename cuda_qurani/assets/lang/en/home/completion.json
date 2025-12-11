@@ -2,17 +2,22 @@
     "completion": {
         "completeion_banner": "Complete the Quran",
         "khatm_text": "(khatm)",
-        "total_pages_text": "Total Pages",
-        "Remaining_pages_textq": "Remaining Pages",
-        "completions_text": "Completions",
+        "total_pages_text": "Verses Read",
+        "Remaining_pages_textq": "Remaining",
+        "completions_text": "Completed",
         "continue_reading_text": "Continue Reading",
-        "page_text": "Page",
+        "page_text": "Ayah",
         "search_text": "Search by surah",
         "complete_text": "Complete",
-        "incomplete_text": "Incomplete",
-        "started_text": "Started",
+        "incomplete_text": "Not Started",
+        "started_text": "In Progress",
         "completion_by_chapter_text": "Completion by Chapter",
         "remaining_text": "Remaining",
-        "none_remaining_text": "None Remaining"
+        "none_remaining_text": "Completed",
+        "surah_text": "Surah",
+        "loading_text": "Loading completion data...",
+        "error_offline_text": "Using offline data. Pull to refresh.",
+        "not_started_text": "Not started",
+        "verses_of_text": "of"
     }
 }

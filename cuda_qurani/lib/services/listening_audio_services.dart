@@ -304,16 +304,18 @@ print('âš¡ Verse change processed, starting word highlighting...');
 
   Future<void> pausePlayback() async {
     if (_isPlaying && !_isPaused) {
-      await _player.pause();
+      // ✅ CRITICAL: Update state BEFORE await untuk UI update yang lebih cepat
       _isPaused = true;
+      await _player.pause();
       print('â¸ï¸ Playback paused');
     }
   }
 
   Future<void> resumePlayback() async {
     if (_isPlaying && _isPaused) {
-      await _player.play();
+      // ✅ CRITICAL: Update state BEFORE await untuk UI update yang lebih cepat
       _isPaused = false;
+      await _player.play();
       print('â–¶ï¸ Playback resumed');
     }
   }

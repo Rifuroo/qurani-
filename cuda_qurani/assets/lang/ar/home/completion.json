@@ -1,18 +1,23 @@
 {
   "completion": {
-    "completeion_banner": "أكمل القرآن",
+    "completeion_banner": "إكمال القرآن",
     "khatm_text": "(ختم)",
-    "total_pages_text": "إجمالي الصفحات",
-    "Remaining_pages_textq": "الصفحات المتبقية",
-    "completions_text": "الختمات",
-    "continue_reading_text": "تابع القراءة",
-    "page_text": "صفحة",
+    "total_pages_text": "الآيات المقروءة",
+    "Remaining_pages_textq": "المتبقي",
+    "completions_text": "مكتمل",
+    "continue_reading_text": "متابعة القراءة",
+    "page_text": "آية",
     "search_text": "ابحث حسب السورة",
     "complete_text": "مكتمل",
-    "incomplete_text": "غير مكتمل",
-    "started_text": "بدأ",
-    "completion_by_chapter_text": "الإكمال حسب السور",
+    "incomplete_text": "لم يبدأ",
+    "started_text": "قيد التقدم",
+    "completion_by_chapter_text": "التقدم حسب السورة",
     "remaining_text": "المتبقي",
-    "none_remaining_text": "لا يوجد متبقٍ"
+    "none_remaining_text": "مكتمل",
+    "surah_text": "سورة",
+    "loading_text": "جاري تحميل بيانات التقدم...",
+    "error_offline_text": "يتم استخدام البيانات دون اتصال. اسحب للتحديث.",
+    "not_started_text": "لم يبدأ",
+    "verses_of_text": "من"
   }
 }

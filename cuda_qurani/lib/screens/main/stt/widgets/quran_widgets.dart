@@ -423,9 +423,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
         } else {
           await controller.pauseListening();
         }
-
-        // ✅ CRITICAL: Force rebuild untuk update icon
-        setState(() {});
+        // ✅ Widget akan auto-rebuild via context.watch<SttController>()
+        // Tidak perlu setState karena controller sudah memanggil notifyListeners()
       }
     } else if (controller.isRecording) {
       await controller.stopRecording();
@@ -609,17 +608,27 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                       child: child,
                                     );
                                   },
-                                  child: Icon(
-                                    _getThumbIcon(
-                                      controller,
-                                      isListeningActive,
-                                      isRecordingActive,
-                                    ),
-                                    key: ValueKey(
-                                      '${isListeningActive}_${isRecordingActive}_${controller.listeningAudioService?.isPaused ?? false}_${_dragPosition.toStringAsFixed(1)}',
-                                    ), // ✅ CRITICAL: Tambahkan isPaused ke key!
-                                    color: Colors.white,
-                                    size: iconSize,
+                                  child: Builder(
+                                    builder: (context) {
+                                      // ✅ CRITICAL: Baca state terbaru setiap rebuild
+                                      final audioService = controller.listeningAudioService;
+                                      final isPaused = audioService?.isPaused ?? false;
+                                      final icon = _getThumbIcon(
+                                        controller,
+                                        isListeningActive,
+                                        isRecordingActive,
+                                      );
+                                      
+                                      // ✅ CRITICAL: Gunakan icon codePoint sebagai bagian dari key untuk memastikan AnimatedSwitcher detect perubahan
+                                      return Icon(
+                                        icon,
+                                        key: ValueKey(
+                                          'icon_${icon.codePoint}_${isListeningActive}_${isRecordingActive}_${isPaused}_${_dragPosition.toStringAsFixed(1)}',
+                                        ), // ✅ Key yang unik termasuk icon codePoint untuk memastikan perubahan terdeteksi
+                                        color: Colors.white,
+                                        size: iconSize,
+                                      );
+                                    },
                                   ),
                                 ),
                               ),

@@ -9,6 +9,8 @@ import 'package:cuda_qurani/screens/main/home/widgets/navigation_bar.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/widgets/app_components.dart';
 import 'package:cuda_qurani/services/supabase_service.dart';
+import 'package:provider/provider.dart';
+import 'package:cuda_qurani/core/providers/language_provider.dart';
 
 class ActivityPage extends StatefulWidget {
   const ActivityPage({super.key});
@@ -19,11 +21,14 @@ class ActivityPage extends StatefulWidget {
 
 class _ActivityPageState extends State<ActivityPage> {
   Map<String, dynamic> _translations = {};
+  bool _isRTL = false;
 
   Future<void> _loadTranslations() async {
     final trans = await context.loadTranslations('home/activity');
+    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
     setState(() {
       _translations = trans;
+      _isRTL = languageProvider.currentLanguageCode == 'ar';
     });
   }
 
@@ -257,7 +262,7 @@ class _ActivityPageState extends State<ActivityPage> {
 
     return {
       'engagement': _formatDuration(durationSeconds),
-      'completion': '${completion.toStringAsFixed(completion < 1 ? 2 : 1)}%',
+      'completion': '${completion.toStringAsFixed(completion < 1 ? 2 : 1)}${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'activity.percent_suffix') : '%'}',
       'verses': verses,
       'recitation': _formatDuration(reciteTimeSeconds),
       'accuracy': accuracy,
@@ -271,7 +276,7 @@ class _ActivityPageState extends State<ActivityPage> {
   Map<String, dynamic> _defaultStats() {
     return {
       'engagement': '00:00',
-      'completion': '0%',
+      'completion': '0${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'activity.percent_suffix') : '%'}',
       'verses': 0,
       'recitation': '00:00',
       'accuracy': 0.0,
@@ -283,34 +288,90 @@ class _ActivityPageState extends State<ActivityPage> {
   }
 
   String _formatDuration(int seconds) {
-    if (seconds <= 0) return '00:00';
+    if (seconds <= 0) return '${context.formatNumber('00')}:${context.formatNumber('00')}';
+    
     final hours = seconds ~/ 3600;
     final minutes = (seconds % 3600) ~/ 60;
     final secs = seconds % 60;
-    if (hours > 0) {
-      return '${context.formatNumber(hours.toString().padLeft(2, '0'))}:${context.formatNumber(minutes.toString().padLeft(2, '0'))}:${context.formatNumber(secs.toString().padLeft(2, '0'))}';
+    
+    // Format untuk RTL (Arabic) = detik:menit:jam
+    // Format untuk LTR = jam:menit:detik
+    if (_isRTL) {
+      if (hours > 0) {
+        return '${context.formatNumber(secs.toString().padLeft(2, '0'))}:${context.formatNumber(minutes.toString().padLeft(2, '0'))}:${context.formatNumber(hours.toString().padLeft(2, '0'))}';
+      }
+      return '${context.formatNumber(secs.toString().padLeft(2, '0'))}:${context.formatNumber(minutes.toString().padLeft(2, '0'))}';
+    } else {
+      if (hours > 0) {
+        return '${context.formatNumber(hours.toString().padLeft(2, '0'))}:${context.formatNumber(minutes.toString().padLeft(2, '0'))}:${context.formatNumber(secs.toString().padLeft(2, '0'))}';
+      }
+      return '${context.formatNumber(minutes.toString().padLeft(2, '0'))}:${context.formatNumber(secs.toString().padLeft(2, '0'))}';
     }
-    return '${context.formatNumber(minutes.toString().padLeft(2, '0'))}:${context.formatNumber(secs.toString().padLeft(2, '0'))}';
   }
 
   String _formatNumber(int number) {
-    if (number >= 1000000) return '${context.formatNumber((number / 1000000).toStringAsFixed(1))}M';
-    if (number >= 1000) return '${context.formatNumber((number / 1000).toStringAsFixed(1))}K';
+    if (number >= 1000000) {
+      return '${context.formatNumber((number / 1000000).toStringAsFixed(1))}M';
+    }
+    if (number >= 1000) {
+      return '${context.formatNumber((number / 1000).toStringAsFixed(1))}K';
+    }
     return context.formatNumber(number);
   }
 
   String _formatEngagementWithSuffix(String timeStr) {
+    // Parse time string untuk extract hours dan minutes
     final parts = timeStr.split(':');
-    if (parts.length == 2) {
-      final minutes = int.tryParse(parts[0].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
-      if (minutes > 0) return '$timeStr (${context.formatNumber(minutes)}m)';
-      return timeStr;
-    } else if (parts.length == 3) {
-      final hours = int.tryParse(parts[0].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
-      final minutes = int.tryParse(parts[1].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
-      if (hours > 0) return '$timeStr (${context.formatNumber(hours)}h ${context.formatNumber(minutes)}m)';
-      if (minutes > 0) return '$timeStr (${context.formatNumber(minutes)}m)';
+    
+    final hourSuffix = _translations.isNotEmpty 
+        ? LanguageHelper.tr(_translations, 'activity.hour_suffix') 
+        : 'h';
+    final minuteSuffix = _translations.isNotEmpty 
+        ? LanguageHelper.tr(_translations, 'activity.minute_suffix') 
+        : 'm';
+    
+    if (_isRTL) {
+      // RTL format: detik:menit atau detik:menit:jam
+      if (parts.length == 2) {
+        // Format: detik:menit
+        final minutes = int.tryParse(parts[1].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        if (minutes > 0) {
+          return '$timeStr (${context.formatNumber(minutes)}$minuteSuffix)';
+        }
+        return timeStr;
+      } else if (parts.length == 3) {
+        // Format: detik:menit:jam
+        final hours = int.tryParse(parts[2].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        final minutes = int.tryParse(parts[1].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        if (hours > 0) {
+          return '$timeStr (${context.formatNumber(hours)}$hourSuffix ${context.formatNumber(minutes)}$minuteSuffix)';
+        }
+        if (minutes > 0) {
+          return '$timeStr (${context.formatNumber(minutes)}$minuteSuffix)';
+        }
+      }
+    } else {
+      // LTR format: menit:detik atau jam:menit:detik
+      if (parts.length == 2) {
+        // Format: menit:detik
+        final minutes = int.tryParse(parts[0].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        if (minutes > 0) {
+          return '$timeStr (${context.formatNumber(minutes)}$minuteSuffix)';
+        }
+        return timeStr;
+      } else if (parts.length == 3) {
+        // Format: jam:menit:detik
+        final hours = int.tryParse(parts[0].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        final minutes = int.tryParse(parts[1].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        if (hours > 0) {
+          return '$timeStr (${context.formatNumber(hours)}$hourSuffix ${context.formatNumber(minutes)}$minuteSuffix)';
+        }
+        if (minutes > 0) {
+          return '$timeStr (${context.formatNumber(minutes)}$minuteSuffix)';
+        }
+      }
     }
+    
     return timeStr;
   }
 
@@ -542,7 +603,12 @@ class _ActivityPageState extends State<ActivityPage> {
             child: _isLoading
                 ? _buildChartSkeleton(context)
                 : (spots.length <= 1 && spots.first.y == 0)
-                ? _buildEmptyChart(context, 'No pages data yet')
+                ? _buildEmptyChart(
+                    context, 
+                    _translations.isNotEmpty
+                        ? LanguageHelper.tr(_translations, 'activity.no_pages_data')
+                        : 'No pages data yet'
+                  )
                 : _buildLineChart(spots, maxY, labels, context),
           ),
         ),
@@ -556,6 +622,10 @@ class _ActivityPageState extends State<ActivityPage> {
     final labels = _getEngagementXLabels();
     final maxY = _getEngagementMaxY();
 
+    final minutesSuffix = _translations.isNotEmpty 
+        ? LanguageHelper.tr(_translations, 'activity.minutes_suffix')
+        : 'minutes';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -566,7 +636,7 @@ class _ActivityPageState extends State<ActivityPage> {
             children: [
               Text(
                 _translations.isNotEmpty
-                    ? '${LanguageHelper.tr(_translations, 'activity.engangement_text')} (minutes)'
+                    ? '${LanguageHelper.tr(_translations, 'activity.engangement_text')} ($minutesSuffix)'
                     : 'Engagement (minutes)',
                 style: TextStyle(
                   fontSize: 16 * s,
@@ -588,7 +658,12 @@ class _ActivityPageState extends State<ActivityPage> {
             child: _isLoading
                 ? _buildChartSkeleton(context)
                 : (spots.length <= 1 && spots.first.y == 0)
-                ? _buildEmptyChart(context, 'No engagement data yet')
+                ? _buildEmptyChart(
+                    context, 
+                    _translations.isNotEmpty
+                        ? LanguageHelper.tr(_translations, 'activity.no_engagement_data')
+                        : 'No engagement data yet'
+                  )
                 : _buildLineChart(spots, maxY, labels, context),
           ),
         ),
@@ -602,6 +677,10 @@ class _ActivityPageState extends State<ActivityPage> {
     final labels = _getAccuracyXLabels();
     final maxY = _getAccuracyMaxY();
 
+    final percentSuffix = _translations.isNotEmpty 
+        ? LanguageHelper.tr(_translations, 'activity.percent_suffix')
+        : '%';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -611,7 +690,9 @@ class _ActivityPageState extends State<ActivityPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Accuracy (%)',
+                _translations.isNotEmpty
+                    ? '${LanguageHelper.tr(_translations, 'activity.accuracy_text')} ($percentSuffix)'
+                    : 'Accuracy (%)',
                 style: TextStyle(
                   fontSize: 16 * s,
                   fontWeight: FontWeight.w700,
@@ -632,7 +713,12 @@ class _ActivityPageState extends State<ActivityPage> {
             child: _isLoading
                 ? _buildChartSkeleton(context)
                 : (spots.length <= 1 && spots.first.y == 0)
-                ? _buildEmptyChart(context, 'No accuracy data yet')
+                ? _buildEmptyChart(
+                    context, 
+                    _translations.isNotEmpty
+                        ? LanguageHelper.tr(_translations, 'activity.no_accuracy_data')
+                        : 'No accuracy data yet'
+                  )
                 : _buildAccuracyLineChart(spots, maxY, labels, context),
           ),
         ),
@@ -734,6 +820,10 @@ class _ActivityPageState extends State<ActivityPage> {
 
   Widget _buildChartSkeleton(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
+    final loadingText = _translations.isNotEmpty
+        ? LanguageHelper.tr(_translations, 'activity.loading_text')
+        : 'Loading...';
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -748,7 +838,7 @@ class _ActivityPageState extends State<ActivityPage> {
           ),
           SizedBox(height: 8 * s),
           Text(
-            'Loading...',
+            loadingText,
             style: TextStyle(fontSize: 11 * s, color: AppColors.textTertiary),
           ),
         ],
@@ -1032,7 +1122,12 @@ class _ActivityPageState extends State<ActivityPage> {
     final data = _getStatsForPeriod(periodKey);
 
     final accuracy = (data['accuracy'] as num?)?.toDouble() ?? 0.0;
-    final accuracyStr = accuracy > 0 ? '${context.formatNumber(accuracy.toStringAsFixed(1))}%' : '${context.formatNumber(0)}%';
+    final percentSuffix = _translations.isNotEmpty 
+        ? LanguageHelper.tr(_translations, 'activity.percent_suffix')
+        : '%';
+    final accuracyStr = accuracy > 0 
+        ? '${context.formatNumber(accuracy.toStringAsFixed(1))}$percentSuffix' 
+        : '${context.formatNumber(0)}$percentSuffix';
 
     return Column(
       children: [
@@ -1097,7 +1192,9 @@ class _ActivityPageState extends State<ActivityPage> {
             Expanded(
               child: _buildStatCard(
                 accuracyStr,
-                'Accuracy',
+                _translations.isNotEmpty
+                    ? LanguageHelper.tr(_translations, 'activity.accuracy_text')
+                    : 'Accuracy',
                 Icons.analytics_outlined,
                 AppColors.secondary,
                 context,

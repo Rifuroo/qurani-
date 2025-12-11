@@ -1,18 +1,23 @@
 {
   "completion": {
-    "completeion_banner": "Selesaikan Al-Qur’an",
+    "completeion_banner": "Selesaikan Al-Qur'an",
     "khatm_text": "(khatam)",
-    "total_pages_text": "Total Halaman",
-    "Remaining_pages_textq": "Sisa Halaman",
-    "completions_text": "Penyelesaian",
+    "total_pages_text": "Ayat Dibaca",
+    "Remaining_pages_textq": "Sisa",
+    "completions_text": "Selesai",
     "continue_reading_text": "Lanjutkan Membaca",
-    "page_text": "Halaman",
+    "page_text": "Ayat",
     "search_text": "Cari berdasarkan surah",
     "complete_text": "Selesai",
-    "incomplete_text": "Belum Selesai",
-    "started_text": "Dimulai",
-    "completion_by_chapter_text": "Penyelesaian per Surah",
+    "incomplete_text": "Belum Mulai",
+    "started_text": "Sedang Berjalan",
+    "completion_by_chapter_text": "Progress per Surah",
     "remaining_text": "Sisa",
-    "none_remaining_text": "Tidak Ada Sisa"
+    "none_remaining_text": "Selesai",
+    "surah_text": "Surah",
+    "loading_text": "Memuat data progres...",
+    "error_offline_text": "Menggunakan data offline. Tarik untuk refresh.",
+    "not_started_text": "Belum mulai",
+    "verses_of_text": "dari"
   }
 }
