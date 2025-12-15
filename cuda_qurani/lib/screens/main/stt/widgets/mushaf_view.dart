@@ -1,8 +1,6 @@
 // lib\screens\main\stt\widgets\mushaf_view.dart
 
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
+import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
@@ -443,7 +441,9 @@ class _JustifiedAyahLine extends StatelessWidget {
     final controller = context.watch<SttController>();
     List<InlineSpan> spans = [];
 
-    final fontFamily = 'p$pageNumber';
+    final fontFamily = controller.mushafLayout.isGlyphBased
+        ? 'p$pageNumber' // QPC: p1, p2, p3, etc.
+        : 'IndoPak-Nastaleeq'; // IndoPak: single font for all pages
 
     for (final segment in line.ayahSegments!) {
       final ayatIndex = controller.ayatList.indexWhere(

@@ -1,14 +1,19 @@
 ﻿// lib\screens\main\stt\controllers\stt_controller.dart
 
 import 'dart:async';
+import 'dart:io';
+import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/models/playback_settings_model.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
 import 'package:cuda_qurani/screens/main/home/services/juz_service.dart';
+import 'package:cuda_qurani/screens/main/stt/database/db_helper.dart';
 import 'package:cuda_qurani/services/global_ayat_services.dart';
 import 'package:cuda_qurani/services/listening_audio_services.dart';
 import 'package:cuda_qurani/services/local_database_service.dart';
 import 'package:cuda_qurani/services/reciter_database_service.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 import '../data/models.dart' hide TartibStatus;
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
@@ -30,6 +35,12 @@ class SttController with ChangeNotifier {
   final String? resumeSessionId; // ? NEW: Continue existing session
 
   int? _determinedSurahId;
+
+  MushafLayout _mushafLayout = MushafLayout.qpc;
+  MushafLayout get mushafLayout => _mushafLayout;
+
+  // ✅ TAMBAHKAN getter untuk total pages (dynamic based on layout)
+  int get totalPages => _mushafLayout.totalPages;
 
   SttController({
     this.suratId,
@@ -62,7 +73,85 @@ class SttController with ChangeNotifier {
     }
   }
 
-  // ? NEW: Apply word status map from Supabase data
+  Future<void> switchMushafLayout(MushafLayout newLayout) async {
+    if (_mushafLayout == newLayout) return;
+
+    appLogger.log(
+      'LAYOUT_SWITCH',
+      'Switching: ${_mushafLayout.displayName} → ${newLayout.displayName}',
+    );
+
+    // Update service first
+    await _sqliteService.setMushafLayout(newLayout);
+
+    // Update local state
+    _mushafLayout = newLayout;
+
+    // ✅ CRITICAL FIX: Clear ALL caches
+    pageCache.clear();
+    _sqliteService.clearPageCache();
+
+    // ✅ NEW: Close ALL databases BEFORE deleting files
+    print('[LAYOUT_SWITCH] Closing all databases...');
+    await DBHelper.closeAllDatabases();
+    print('[LAYOUT_SWITCH] ✅ All databases closed');
+    await LocalDatabaseService.closePageDatabase();
+    // ✅ TAMBAHKAN INI - Force delete old database file
+    print('[LAYOUT_SWITCH] Deleting old database files...');
+    try {
+      final databasesPath = await getDatabasesPath();
+
+      // Delete both databases to force re-copy
+      final qpcPath = join(databasesPath, 'qpc-v1-15-lines.db');
+      final indopakPath = join(
+        databasesPath,
+        'qudratullah-indopak-15-lines.db',
+      );
+
+      if (await File(qpcPath).exists()) {
+        await File(qpcPath).delete();
+        print('[LAYOUT_SWITCH] Deleted qpc-v1-15-lines.db');
+      }
+
+      if (await File(indopakPath).exists()) {
+        await File(indopakPath).delete();
+        print('[LAYOUT_SWITCH] Deleted qudratullah-indopak-15-lines.db');
+      }
+    } catch (e) {
+      print('[LAYOUT_SWITCH] Error deleting databases: $e');
+    }
+
+    // ✅ FIX: Rebuild metadata cache SEKALI SAJA dengan layout baru
+    appLogger.log(
+      'LAYOUT_SWITCH',
+      'Rebuilding metadata cache for ${newLayout.displayName}...',
+    );
+    await _metadataCache.rebuildForLayout(newLayout);
+    appLogger.log('LAYOUT_SWITCH', '✅ Metadata cache rebuilt successfully');
+
+    // ✅ CRITICAL: Adjust current page if exceeds new layout's max
+    if (_currentPage > newLayout.totalPages) {
+      _currentPage = newLayout.totalPages;
+    }
+    if (_listViewCurrentPage > newLayout.totalPages) {
+      _listViewCurrentPage = newLayout.totalPages;
+    }
+
+    // Reload current page data
+    _isDataLoaded = false;
+    await _loadSinglePageData(_currentPage);
+
+    // ✅ FIX: Notify listeners to update UI
+    notifyListeners();
+
+    appLogger.log(
+      'LAYOUT_SWITCH',
+      '✅ Layout switched to ${newLayout.displayName} (${newLayout.totalPages} pages)',
+    );
+    notifyListeners();
+  }
+
+  // ✅ NEW: Apply word status map from Supabase data
   void _applyInitialWordStatusMap(int surahId, Map<String, dynamic> wordMap) {
     print('?? Applying initial word status map for surah $surahId');
     print('   Input data: $wordMap');
@@ -280,7 +369,13 @@ class SttController with ChangeNotifier {
     try {
       await _sqliteService.initialize();
 
-      // 🚀 STEP 1: Determine target page FIRST
+      _mushafLayout = _sqliteService.currentLayout;
+      appLogger.log(
+        'APP_INIT',
+        'Loaded layout: ${_mushafLayout.displayName} (${_mushafLayout.totalPages} pages)',
+      );
+
+      // ðŸš€ STEP 1: Determine target page FIRST
       int targetPage = await _determineTargetPage();
       _currentPage = targetPage;
       _listViewCurrentPage = targetPage;
@@ -1304,7 +1399,6 @@ class SttController with ChangeNotifier {
 
   void _cleanupDistantCache() {
     // ✅ OPTIMIZED: Only evict when cache is VERY large and pages are VERY far
-    // This prevents re-loading when user swipes back and forth
     if (pageCache.length > cacheEvictionThreshold) {
       final sortedKeys = pageCache.keys.toList()
         ..sort(
@@ -1312,27 +1406,42 @@ class SttController with ChangeNotifier {
               (a - _currentPage).abs().compareTo((b - _currentPage).abs()),
         );
 
-      // ✅ Only remove pages that are VERY far (> 300 pages away) and cache is full
+      // ✅ Dynamic: Use totalPages for validation
       final keysToRemove = sortedKeys
-          .where((key) => (key - _currentPage).abs() > cacheEvictionDistance)
-          .take(
-            pageCache.length - maxCacheSize,
-          ) // Keep at least maxCacheSize pages
+          .where(
+            (key) =>
+                (key - _currentPage).abs() > cacheEvictionDistance ||
+                key > totalPages,
+          ) // ✅ ADD: Remove pages beyond current layout max
+          .take(pageCache.length - maxCacheSize)
           .toList();
 
       for (final key in keysToRemove) {
         pageCache.remove(key);
-        appLogger.log(
-          'CACHE',
-          'Removed very distant page $key (${(key - _currentPage).abs()} pages away)',
-        );
+        if (keysToRemove.length % 10 == 0) {
+          // Only log occasionally
+          appLogger.log(
+            'CACHE',
+            'Removed page $key (distance: ${(key - _currentPage).abs()}, max: $totalPages)',
+          );
+        }
       }
     }
   }
 
   void navigateToPage(int newPage) {
-    if (newPage < 1 || newPage > 604 || newPage == _currentPage) {
-      appLogger.log('NAV', 'Invalid navigation to page $newPage');
+    if (newPage < 1 || newPage > totalPages || newPage == _currentPage) {
+      appLogger.log(
+        'NAV',
+        'Invalid navigation to page $newPage (max: $totalPages)',
+      );
+      return;
+    }
+    if (newPage < 1 || newPage > totalPages || newPage == _currentPage) {
+      appLogger.log(
+        'NAV',
+        'Invalid navigation to page $newPage (max: $totalPages)',
+      );
       return;
     }
 
@@ -1466,8 +1575,8 @@ class SttController with ChangeNotifier {
     int targetPage,
     int targetSurahId,
   ) async {
-    if (targetPage < 1 || targetPage > 604) {
-      appLogger.log('NAV', 'Invalid page: $targetPage');
+    if (targetPage < 1 || targetPage > totalPages) {
+      appLogger.log('NAV', 'Invalid page: $targetPage (max: $totalPages)');
       return;
     }
 
@@ -2073,7 +2182,7 @@ class SttController with ChangeNotifier {
           );
         }
 
-        // ? NEW: Set NEXT word to processing (blue) based on next_word_index from backend
+        // ✅ NEW: Set NEXT word to processing (blue) based on next_word_index from backend
         final int? nextWordIndex = message['next_word_index'];
         if (nextWordIndex != null &&
             nextWordIndex < totalWords &&
@@ -2166,7 +2275,7 @@ class SttController with ChangeNotifier {
           (a) => a.ayah == nextAyah && a.surah_id == completedSurah,
         );
 
-        // ?? TARTEEL-STYLE: Set first word of NEXT ayah to processing immediately
+        // 🔵 TARTEEL-STYLE: Set first word of NEXT ayah to processing immediately
         // This ensures smooth transition - new ayah starts with blue indicator
         if (nextAyah > 0) {
           final nextAyahKey = _wordKey(completedSurah, nextAyah);
@@ -2176,7 +2285,7 @@ class SttController with ChangeNotifier {
           // Set word 0 to processing (blue)
           _wordStatusMap[nextAyahKey]![0] = WordStatus.processing;
           print(
-            '?? STT: Ayah complete! Set first word of next ayah to processing - $nextAyahKey[0]',
+            '🔵 STT: Ayah complete! Set first word of next ayah to processing - $nextAyahKey[0]',
           );
         }
 
@@ -2251,7 +2360,7 @@ class SttController with ChangeNotifier {
             _wordStatusMap[firstWordKey]![0] == WordStatus.pending) {
           _wordStatusMap[firstWordKey]![0] = WordStatus.processing;
           print(
-            '?? STT: Set first word to processing (Tarteel-style) - $firstWordKey[0]',
+            '🔵 STT: Set first word to processing (Tarteel-style) - $firstWordKey[0]',
           );
         }
 
@@ -2873,7 +2982,7 @@ class SttController with ChangeNotifier {
       // ? Send with page/juz info if available
       final firstAyah = _ayatList.isNotEmpty ? _ayatList.first.ayah : 1;
 
-      // ? FIX: isResume true ONLY when resumeSessionId is set (from Resume History)
+      // ✅ FIX: isResume true ONLY when resumeSessionId is set (from Resume History)
       final bool shouldResume = resumeSessionId != null;
 
       _webSocketService.sendStartRecording(
@@ -2884,7 +2993,7 @@ class SttController with ChangeNotifier {
         isFromHistory: isFromHistory,
         sessionId: resumeSessionId,
         isResume:
-            shouldResume, // ? NEW: Backend will restore words only if true
+            shouldResume, // ✅ NEW: Backend will restore words only if true
       );
 
       print('🎙️ startRecording(): Starting audio recording...');

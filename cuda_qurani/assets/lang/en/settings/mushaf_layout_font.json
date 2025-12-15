@@ -1,0 +1,18 @@
+{
+  "mushaf_type": {
+    "title": "Mushaf Type",
+    "book_settings": "Book Settings",
+    "description": "Please select the Mushaf that best matches your recitation and memorization preferences.",
+    "show_tajweed_colors": "Show Tajweed Colors",
+    "indopak_title": "(1441)",
+    "indopak_subtitle": "Indopak Mushaf (Naskh)",
+    "indopak_description": "Designed specifically for non-Arabic speakers, this layout is widely used in South Asia for its readability.",
+    "madani_1405_title": "Madani Mushaf (1405)",
+    "madani_1405_description": "The original layout, widely used in many parts of the world. This edition maintains the classic ayah placements.",
+    "madani_1426_title": "Madani Mushaf (1426)",
+    "madani_1426_description": "This updated newer version includes minor layout changes, including updated ayah positions.",
+    "lines_format": "15 Lines",
+    "pages_format_604": "604 pages",
+    "pages_format_610": "610 pages"
+  }
+}

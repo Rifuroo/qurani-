@@ -1,5 +1,6 @@
 // lib\screens\main\stt\widgets\quran_widgets.dart
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
+import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/models/playback_settings_model.dart';
@@ -38,6 +39,51 @@ class _QuranAppBarState extends State<QuranAppBar> {
     setState(() {
       _translations = trans;
     });
+  }
+
+  void _showLayoutPicker(BuildContext context) {
+    final controller = context.read<SttController>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Select Mushaf Layout',
+          style: TextStyle(fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: MushafLayout.values.map((layout) {
+            final isSelected = controller.mushafLayout == layout;
+            return RadioListTile<MushafLayout>(
+              title: Text(
+                '${layout.displayName} (${layout.totalPages} pages)',
+                style: const TextStyle(fontSize: 14),
+              ),
+              subtitle: Text(
+                layout.isGlyphBased ? 'Glyph-based fonts' : 'Single font',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              value: layout,
+              groupValue: controller.mushafLayout,
+              onChanged: (value) {
+                if (value != null) {
+                  Navigator.of(ctx).pop();
+                  controller.switchMushafLayout(value);
+                }
+              },
+              selected: isSelected,
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -255,6 +301,11 @@ class _QuranAppBarState extends State<QuranAppBar> {
               splashRadius: iconSize * 1.1,
             ),
             SizedBox(width: screenWidth * 0.01),
+            IconButton(
+              icon: const Icon(Icons.book_outlined, size: 20),
+              onPressed: () => _showLayoutPicker(context),
+              tooltip: 'Mushaf Layout',
+            ),
           ],
         ),
       ),
@@ -611,14 +662,16 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                   child: Builder(
                                     builder: (context) {
                                       // ✅ CRITICAL: Baca state terbaru setiap rebuild
-                                      final audioService = controller.listeningAudioService;
-                                      final isPaused = audioService?.isPaused ?? false;
+                                      final audioService =
+                                          controller.listeningAudioService;
+                                      final isPaused =
+                                          audioService?.isPaused ?? false;
                                       final icon = _getThumbIcon(
                                         controller,
                                         isListeningActive,
                                         isRecordingActive,
                                       );
-                                      
+
                                       // ✅ CRITICAL: Gunakan icon codePoint sebagai bagian dari key untuk memastikan AnimatedSwitcher detect perubahan
                                       return Icon(
                                         icon,

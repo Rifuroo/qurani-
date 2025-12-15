@@ -1,7 +1,9 @@
 // lib/services/metadata_cache_service.dart
 
+import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/services/local_database_service.dart';
 import 'package:cuda_qurani/screens/main/home/services/juz_service.dart';
+import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 
 /// ✅ SINGLETON: Pre-load ALL metadata for instant access
 class MetadataCacheService {
@@ -34,11 +36,12 @@ class MetadataCacheService {
         .map((id) {
           final surahData = _surahMap[id];
           if (surahData == null) return '';
-          
+
           // ✅ Return Arabic name if useArabic is true
           if (useArabic) {
-            return surahData['name_arabic'] as String? ?? 
-                   surahData['name_simple'] as String? ?? '';
+            return surahData['name_arabic'] as String? ??
+                surahData['name_simple'] as String? ??
+                '';
           }
           return surahData['name_simple'] as String? ?? '';
         })
@@ -59,9 +62,9 @@ class MetadataCacheService {
         if (surahData != null) {
           // ✅ Return Arabic name if useArabic is true
           if (useArabic) {
-            return surahData['name_arabic'] as String? ?? 
-                   surahData['name_simple'] as String? ?? 
-                   'Unknown Surah';
+            return surahData['name_arabic'] as String? ??
+                surahData['name_simple'] as String? ??
+                'Unknown Surah';
           }
           return surahData['name_simple'] as String? ?? 'Unknown Surah';
         }
@@ -102,8 +105,8 @@ class MetadataCacheService {
         _buildPageSurahMapping(),
       ]);
 
-      _allSurahs = results[0] as List<Map<String, dynamic>>;
-      _allJuz = results[1] as List<Map<String, dynamic>>;
+      _allSurahs = List<Map<String, dynamic>>.from(results[0] as List);
+      _allJuz = List<Map<String, dynamic>>.from(results[1] as List);
 
       // Build fast lookup maps
       for (final surah in _allSurahs) {
@@ -139,22 +142,46 @@ class MetadataCacheService {
     }
   }
 
-  /// Build page → surah mapping for instant lookup
   Future<void> _buildPageSurahMapping() async {
     print('[MetadataCache] Building page-surah mapping...');
 
     try {
-      // ✅ Use optimized query from LocalDatabaseService
-      _pageSurahMap = await LocalDatabaseService.buildPageSurahMapping();
+      // ✅ FIX: Get current layout from service (sudah di-update di switchMushafLayout)
+      final currentLayout = await MushafSettingsService().getMushafLayout();
+
+      _pageSurahMap = await LocalDatabaseService.buildPageSurahMapping(
+        layout: currentLayout,
+      );
 
       print(
-        '[MetadataCache] Page-surah mapping complete: ${_pageSurahMap.length} pages',
+        '[MetadataCache] Page-surah mapping complete: ${_pageSurahMap.length} pages for ${currentLayout.displayName}',
       );
-    } catch (e) {
-      print('[MetadataCache] Fallback: Building basic mapping...');
 
-      // Fallback: basic mapping by querying page by page (slower but works)
-      for (int page = 1; page <= 604; page++) {
+      // ✅ TAMBAHKAN: Debug log untuk verifikasi
+      if (_pageSurahMap.isNotEmpty) {
+        print('[MetadataCache] Sample mapping:');
+        print('  Page 1: ${_pageSurahMap[1]}');
+        print('  Page 2: ${_pageSurahMap[2]}');
+        if (currentLayout == MushafLayout.indopak) {
+          print('  Page 605: ${_pageSurahMap[605]}');
+          print('  Page 610: ${_pageSurahMap[610]}');
+        } else {
+          print('  Page 604: ${_pageSurahMap[604]}');
+        }
+      }
+    } catch (e) {
+      print('[MetadataCache] Error: $e, using fallback...');
+
+      // Fallback tetap sama...
+      final MushafSettingsService settingsService = MushafSettingsService();
+      final currentLayout = await settingsService.getMushafLayout();
+      final totalPages = currentLayout.totalPages;
+
+      print(
+        '[MetadataCache] Fallback using layout: ${currentLayout.displayName} ($totalPages pages)',
+      );
+
+      for (int page = 1; page <= totalPages; page++) {
         try {
           final ayahInfo = await LocalDatabaseService.getFirstAyahInPage(page);
           final surahId = ayahInfo['surah'] as int;
@@ -170,9 +197,8 @@ class MetadataCacheService {
           print('[MetadataCache] Error mapping page $page: $e');
         }
 
-        // Progress indicator
         if (page % 100 == 0) {
-          print('[MetadataCache] Progress: $page/604 pages mapped');
+          print('[MetadataCache] Progress: $page/$totalPages pages mapped');
         }
       }
     }
@@ -180,6 +206,22 @@ class MetadataCacheService {
 
   List<int> getSurahIdsForPage(int pageNumber) {
     return _pageSurahMap[pageNumber] ?? [];
+  }
+
+  Future<void> rebuildForLayout(MushafLayout layout) async {
+    print('[MetadataCache] 🔄 Rebuilding cache for ${layout.displayName}...');
+
+    _allSurahs = [];
+    _allJuz = [];
+    _surahMap.clear();
+    _juzMap.clear();
+    _pageSurahMap.clear();
+    _isInitialized = false;
+
+    // Rebuild with new layout
+    await initialize(); // ← Ini akan pakai layout yang baru
+
+    print('[MetadataCache] ✅ Cache rebuilt for ${layout.displayName}');
   }
 
   /// Clear cache (for testing/debugging)
@@ -192,5 +234,3 @@ class MetadataCacheService {
     _isInitialized = false;
   }
 }
-
-

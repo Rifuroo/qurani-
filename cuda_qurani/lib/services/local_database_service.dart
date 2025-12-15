@@ -1,6 +1,8 @@
 // lib/services/local_database_service.dart
 
 import 'dart:io';
+import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
+import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -408,11 +410,28 @@ class LocalDatabaseService {
 
       // Query pages database to find page containing this word
       final databasesPath = await getDatabasesPath();
-      final pagesPath = join(databasesPath, 'qpc-v1-15-lines.db');
+      
+      // ✅ FIX: Get current layout to determine which DB to use
+      final currentLayout = await MushafSettingsService().getMushafLayout();
+      final String dbFileName;
+      
+      switch (currentLayout) {
+        case MushafLayout.qpc:
+          dbFileName = 'qpc-v1-15-lines.db';
+          break;
+        case MushafLayout.indopak:
+          dbFileName = 'qudratullah-indopak-15-lines.db';
+          break;
+      }
+      
+      final pagesPath = join(databasesPath, dbFileName);
 
       if (!await File(pagesPath).exists()) {
-        print('[DB] Pages database not found, copying...');
-        final data = await rootBundle.load('assets/data/qpc-v1-15-lines.db');
+        print('[DB] Pages database not found, copying $dbFileName...');
+        final assetPath = currentLayout == MushafLayout.qpc
+            ? 'assets/data/qpc-v1-15-lines.db'
+            : 'assets/indopak/qudratullah-indopak-15-lines.db';
+        final data = await rootBundle.load(assetPath);
         final bytes = data.buffer.asUint8List();
         await File(pagesPath).writeAsBytes(bytes, flush: true);
       }
@@ -514,20 +533,72 @@ class LocalDatabaseService {
     _chaptersDb = null;
   }
 
-  static Future<Map<int, List<int>>> buildPageSurahMapping() async {
+  /// ✅ NEW: Close pages database connection
+  static Future<void> closePageDatabase() async {
+    try {
+      // Close pages database yang mungkin masih open
+      final databasesPath = await getDatabasesPath();
+      final qpcPath = join(databasesPath, 'qpc-v1-15-lines.db');
+      final indopakPath = join(
+        databasesPath,
+        'qudratullah-indopak-15-lines.db',
+      );
+
+      // Close via sqflite
+      if (await databaseExists(qpcPath)) {
+        await databaseFactory.deleteDatabase(qpcPath);
+      }
+      if (await databaseExists(indopakPath)) {
+        await databaseFactory.deleteDatabase(indopakPath);
+      }
+
+      print('[LocalDB] ✅ Page databases closed');
+    } catch (e) {
+      print('[LocalDB] Error closing page databases: $e');
+    }
+  }
+
+  static Future<Map<int, List<int>>> buildPageSurahMapping({
+    required MushafLayout layout, // ✅ NEW PARAMETER
+  }) async {
     await _ensureInitialized();
 
     try {
       final databasesPath = await getDatabasesPath();
-      final pagesPath = join(databasesPath, 'qpc-v1-15-lines.db');
 
-      if (!await File(pagesPath).exists()) {
-        print('[LocalDB] Pages database not found, copying...');
-        final data = await rootBundle.load('assets/data/qpc-v1-15-lines.db');
-        final bytes = data.buffer.asUint8List();
-        await File(pagesPath).writeAsBytes(bytes, flush: true);
+      // ✅ DYNAMIC: Pilih database berdasarkan layout
+      final String dbFileName;
+      switch (layout) {
+        case MushafLayout.qpc:
+          dbFileName = 'qpc-v1-15-lines.db';
+          break;
+        case MushafLayout.indopak:
+          dbFileName = 'qudratullah-indopak-15-lines.db';
+          break;
       }
 
+      final pagesPath = join(databasesPath, dbFileName);
+
+      if (!await File(pagesPath).exists()) {
+        print('[LocalDB] Pages database not found, copying $dbFileName...');
+
+        // ✅ CRITICAL: Copy correct database based on layout
+        final String assetPath;
+        switch (layout) {
+          case MushafLayout.qpc:
+            assetPath = 'assets/data/qpc-v1-15-lines.db';
+            break;
+          case MushafLayout.indopak:
+            assetPath = 'assets/indopak/qudratullah-indopak-15-lines.db';
+            break;
+        }
+
+        print('[LocalDB] Copying from: $assetPath');
+        final data = await rootBundle.load(assetPath);
+        final bytes = data.buffer.asUint8List();
+        await File(pagesPath).writeAsBytes(bytes, flush: true);
+        print('[LocalDB] ✅ Copied $dbFileName successfully');
+      }
       final pagesDb = await openDatabase(pagesPath, readOnly: true);
 
       // ✅ NEW ALGORITHM: Get all pages and extract surah from first_word_id

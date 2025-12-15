@@ -1,5 +1,6 @@
 import 'package:cuda_qurani/screens/main/stt/database/db_helper.dart';
 import 'package:cuda_qurani/services/local_database_service.dart';
+import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:cuda_qurani/services/reciter_database_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -26,6 +27,7 @@ void main() async {
     url: AppConfig.supabaseUrl,
     anonKey: AppConfig.supabaseAnonKey,
   );
+  await MushafSettingsService().initialize();
   await _initializeDatabases();
   await JuzService.initialize();
   await _initializeListeningServices();

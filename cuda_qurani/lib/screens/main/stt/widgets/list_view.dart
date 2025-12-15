@@ -1,4 +1,5 @@
 // lib/screens/main/stt/widgets/list_view.dart
+import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -56,11 +57,15 @@ class _QuranListViewState extends State<QuranListView> {
 
     final controller = context.read<SttController>();
     final service = context.read<QuranService>();
+    final totalPages = controller.totalPages;
 
     final immediatePage = <int>[];
     for (int offset = -3; offset <= 3; offset++) {
       final page = centerPage + offset;
-      if (page >= 1 && page <= 604 && !controller.pageCache.containsKey(page)) {
+      // ✅ UBAH: Validate against dynamic total pages
+      if (page >= 1 &&
+          page <= totalPages &&
+          !controller.pageCache.containsKey(page)) {
         immediatePage.add(page);
       }
     }
@@ -99,25 +104,26 @@ class _QuranListViewState extends State<QuranListView> {
     _isPreloading = true;
     final controller = context.read<SttController>();
     final service = context.read<QuranService>();
+    final totalPages = controller.totalPages; // ✅ TAMBAH
 
     print('📍 PRELOAD: Starting background load of all 604 pages');
 
     // ✅ Strategy: Load in expanding circles from current page
     final pagesToLoad = <int>[];
 
-    // Add pages in distance order from start page
-    for (int distance = 4; distance < 604; distance++) {
+    // ✅ UBAH: Dynamic total pages
+    for (int distance = 4; distance < totalPages; distance++) {
       final prevPage = startPage - distance;
       final nextPage = startPage + distance;
 
       if (prevPage >= 1 && !controller.pageCache.containsKey(prevPage)) {
         pagesToLoad.add(prevPage);
       }
-      if (nextPage <= 604 && !controller.pageCache.containsKey(nextPage)) {
+      if (nextPage <= totalPages &&
+          !controller.pageCache.containsKey(nextPage)) {
         pagesToLoad.add(nextPage);
       }
     }
-
     print(
       '📍 PRELOAD: ${pagesToLoad.length} pages queued for background loading',
     );
@@ -179,7 +185,9 @@ class _QuranListViewState extends State<QuranListView> {
     final screenHeight = MediaQuery.of(context).size.height;
     final estimatedPageHeight = screenHeight * 0.75;
     final pageNumber = (offset / estimatedPageHeight).floor() + 1;
-    final clampedPage = pageNumber.clamp(1, 604);
+    // ✅ TAMBAHKAN: Get total pages from controller
+    final totalPages = context.read<SttController>().totalPages;
+    final clampedPage = pageNumber.clamp(1, totalPages);
 
     if (clampedPage != _currentVisiblePage) {
       _currentVisiblePage = clampedPage;
@@ -207,10 +215,13 @@ class _QuranListViewState extends State<QuranListView> {
 
   @override
   Widget build(BuildContext context) {
+    final controller = context.read<SttController>();
+    final totalPages = controller.totalPages;
+
     return ListView.builder(
       controller: _scrollController,
-      itemCount: 604,
-      cacheExtent: 2000, // ✅ Large cache for smooth scrolling
+      itemCount: totalPages, // ✅ UBAH: dari 604 jadi dynamic
+      cacheExtent: 2000,
       addAutomaticKeepAlives: true,
       addRepaintBoundaries: true,
       physics: const BouncingScrollPhysics(),
@@ -329,6 +340,10 @@ class _VerticalPageContent extends StatelessWidget {
   List<Widget> _buildLinesInOrder(BuildContext context) {
     final widgets = <Widget>[];
     final renderedAyahs = <String>{};
+    final controller = context.read<SttController>();
+    final fontFamily = controller.mushafLayout.isGlyphBased
+        ? 'p$pageNumber'
+        : 'IndoPak-Nastaleeq';
 
     // Pre-aggregate complete ayahs
     final Map<String, List<WordData>> completeAyahs = {};
@@ -384,7 +399,7 @@ class _VerticalPageContent extends StatelessWidget {
                 widgets.add(
                   _CompleteAyahWidget(
                     segment: completeSegment,
-                    fontFamily: 'p$pageNumber',
+                    fontFamily: fontFamily, // ✅ Dynamic based on layout
                   ),
                 );
               }
@@ -685,21 +700,43 @@ class _CompleteAyahWidget extends StatelessWidget {
         ),
         child: Opacity(
           opacity: opacity,
-          child: Text(
+          child: _buildWordText(
             word.text,
-            style: TextStyle(
-              fontSize: screenWidth * 0.0625,
-              fontFamily: fontFamily,
-              color: state.isCurrentAyat ? listeningColor : Colors.black87,
-              fontWeight: FontWeight.w400,
-              height: 1.7,
-              letterSpacing: -5,
-            ),
-            textDirection: TextDirection.rtl,
+            fontFamily,
+            state.isCurrentAyat,
+            screenWidth,
           ),
         ),
       );
     }).toList();
+  }
+
+  // ✅ FIX: Helper method untuk render text dengan setting yang berbeda per layout
+  Widget _buildWordText(
+    String text,
+    String fontFamily,
+    bool isCurrentAyat,
+    double screenWidth,
+  ) {
+    // ✅ CRITICAL: Deteksi layout dari fontFamily
+    final isIndopak = fontFamily == 'IndoPak-Nastaleeq';
+
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: isIndopak
+            ? screenWidth * 0.070 // ← Sedikit lebih besar untuk Indopak
+            : screenWidth * 0.0625, // ← Original untuk QPC
+        fontFamily: fontFamily,
+        color: isCurrentAyat ? listeningColor : Colors.black87,
+        fontWeight: FontWeight.w400,
+        height: 1.7,
+        letterSpacing: isIndopak
+            ? 0 // ← PENTING: Tidak ada overlap untuk Indopak!
+            : -5, // ← Overlap untuk QPC glyph fonts
+      ),
+      textDirection: TextDirection.rtl,
+    );
   }
 }
 

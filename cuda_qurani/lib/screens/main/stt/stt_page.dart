@@ -1,5 +1,6 @@
 // lib\screens\main\stt\stt_page.dart
 
+import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/slider_guide_popup.dart';
 
 import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
@@ -12,7 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/widgets/achievement_popup.dart';
 import 'package:cuda_qurani/core/widgets/rate_limit_banner.dart';
-import 'package:cuda_qurani/screens/main/home/screens/premium_offer_page.dart'; // ✅ NEW: Rate Limit
+import 'package:cuda_qurani/screens/main/home/screens/premium_offer_page.dart';
 
 class SttPage extends StatefulWidget {
   final int? suratId;
@@ -273,8 +274,7 @@ class _SttPageState extends State<SttPage> {
 
   Widget _buildQuranText(BuildContext context, SttController controller) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final padding =
-        screenWidth * 0.03; // 1% padding to perfectly center the text
+    final padding = screenWidth * 0.03;
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: padding),
@@ -283,25 +283,32 @@ class _SttPageState extends State<SttPage> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200), // ✅ ADD: Smooth transition
+        duration: const Duration(milliseconds: 200),
         switchInCurve: Curves.easeInOut,
         switchOutCurve: Curves.easeInOut,
         transitionBuilder: (child, animation) {
-          // ✅ ADD: Fade transition for smooth mode switch
           return FadeTransition(opacity: animation, child: child);
         },
         child: controller.isQuranMode
-            ? MushafDisplay(
-                key: ValueKey(
-                  'mushaf_${controller.currentPage}',
-                ), // ✅ ADD: Unique key
-              )
-            : QuranListView(
-                key: ValueKey(
-                  'list_${controller.listViewCurrentPage}',
-                ), // ✅ ADD: Unique key
-              ),
+            ? _buildMushafView(controller) // ✅ UBAH: Dynamic widget
+            : _buildListView(controller), // ✅ UBAH: Dynamic widget
       ),
     );
+  }
+
+  Widget _buildMushafView(SttController controller) {
+    // ✅ Key UNIK per layout untuk force rebuild saat switch
+    final uniqueKey =
+        '${controller.mushafLayout.toStringValue()}_${controller.currentPage}';
+
+    return MushafDisplay(key: ValueKey('mushaf_$uniqueKey'));
+  }
+
+  Widget _buildListView(SttController controller) {
+    // ✅ Key UNIK per layout untuk force rebuild saat switch
+    final uniqueKey =
+        '${controller.mushafLayout.toStringValue()}_${controller.listViewCurrentPage}';
+
+    return QuranListView(key: ValueKey('list_$uniqueKey'));
   }
 }

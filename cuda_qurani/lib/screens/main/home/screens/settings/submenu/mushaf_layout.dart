@@ -1,5 +1,6 @@
 // lib/screens/main/home/screens/settings/submenu/mushaf_layout.dart
 import 'package:cuda_qurani/core/utils/language_helper.dart';
+import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/mushaf_layout_font.dart';
 import 'package:flutter/material.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
@@ -48,12 +49,9 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
 
   void _navigateToMushafSettings() {
     AppHaptics.selection();
-    // TODO: Navigate to Mushaf Layout and Font settings page
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Mushaf Layout and Font settings coming soon'),
-        duration: Duration(seconds: 2),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MushafLayoutFontPage()),
     );
   }
 

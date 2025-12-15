@@ -130,6 +130,9 @@ flutter:
     - assets/fonts/QPCV1Font/
     - assets/data/quran-metadata-juz.sqlite
 
+    - assets/indopak/indopak-nastaleeq-word-by-word.db
+    - assets/indopak/qudratullah-indopak-15-lines.db
+
     - assets/reciters/data/reciters_data.json
 
     - assets/reciters/ayah-recitation-abdul-basit-abdul-samad-murattal-hafs-950.db
@@ -150,6 +153,11 @@ flutter:
     - assets/reciters/ayah-recitation-yasser-al-dosari-murattal-hafs-961.db
 
   fonts:
+
+    - family: IndoPak-Nastaleeq
+      fonts:
+        - asset: assets/indopak/font.ttf
+        
     - family: UthmanTN
       fonts:
         - asset: assets/fonts/UthmanTN_v2-0.ttf

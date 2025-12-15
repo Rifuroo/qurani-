@@ -1,0 +1,18 @@
+{
+  "mushaf_type": {
+    "title": "Jenis Mushaf",
+    "book_settings": "Pengaturan Buku",
+    "description": "Silakan pilih mushaf yang paling sesuai dengan preferensi bacaan dan hafalan Anda.",
+    "show_tajweed_colors": "Tampilkan Warna Tajwid",
+    "indopak_title": "(1441)",
+    "indopak_subtitle": "Mushaf Indopak (Naskh)",
+    "indopak_description": "Didesain khusus untuk non-penutur bahasa Arab, mushaf ini banyak digunakan di Asia Selatan karena keterbacaannya.",
+    "madani_1405_title": "Mushaf Madani (1405)",
+    "madani_1405_description": "Tata letak asli yang digunakan di banyak negara. Edisi ini mempertahankan penempatan ayat klasik.",
+    "madani_1426_title": "Mushaf Madani (1426)",
+    "madani_1426_description": "Versi terbaru ini mencakup beberapa perubahan tata letak kecil, termasuk pembaruan posisi ayat.",
+    "lines_format": "15 Baris",
+    "pages_format_604": "604 halaman",
+    "pages_format_610": "610 halaman"
+  }
+}

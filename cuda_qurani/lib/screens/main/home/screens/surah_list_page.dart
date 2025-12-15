@@ -1,6 +1,7 @@
 // lib/screens/main/home/screens/surah_list_page.dart
 
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
+import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/core/widgets/app_components.dart';
 import 'package:cuda_qurani/main.dart';
@@ -8,6 +9,7 @@ import 'package:cuda_qurani/screens/main/home/services/juz_service.dart';
 import 'package:cuda_qurani/screens/main/stt/stt_page.dart';
 import 'package:cuda_qurani/services/local_database_service.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
+import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cuda_qurani/screens/main/home/widgets/navigation_bar.dart';
 import 'dart:async';
@@ -146,7 +148,12 @@ class _SurahListPageState extends State<SurahListPage> {
       }
 
       // Search Page by number
-      if (numQuery != null && numQuery >= 1 && numQuery <= 604) {
+      // Search Page by number (dynamic based on active layout)
+      final maxPages = MushafSettingsService().getMushafLayout().then(
+        (layout) => layout.totalPages,
+      );
+      if (numQuery != null && numQuery >= 1 && numQuery <= 610) {
+        // Max possible pages
         results.add({'type': 'page', 'page_number': numQuery});
       }
 
@@ -193,138 +200,130 @@ class _SurahListPageState extends State<SurahListPage> {
 
   // ==================== NAVIGATION ====================
 
-Future<void> _openSurah(BuildContext context, int surahId) async {
-  await Navigator.of(context).push(
-    PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          SttPage(suratId: surahId),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeInOut,
-          ),
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.0, 0.02),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              ),
+  Future<void> _openSurah(BuildContext context, int surahId) async {
+    await Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            SttPage(suratId: surahId),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
             ),
-            child: child,
-          ),
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 250),
-      reverseTransitionDuration: const Duration(milliseconds: 200),
-    ),
-  );
-}
+            child: SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(0.0, 0.02),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+                  ),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 250),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+      ),
+    );
+  }
 
-Future<void> _openPage(BuildContext context, int pageNumber) async {
-  await Navigator.of(context).push(
-    PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          SttPage(pageId: pageNumber),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeInOut,
-          ),
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.0, 0.02),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              ),
+  Future<void> _openPage(BuildContext context, int pageNumber) async {
+    await Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            SttPage(pageId: pageNumber),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
             ),
-            child: child,
-          ),
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 250),
-      reverseTransitionDuration: const Duration(milliseconds: 200),
-    ),
-  );
-}
+            child: SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(0.0, 0.02),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+                  ),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 250),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+      ),
+    );
+  }
 
-Future<void> _openSurahAtAyah(
-  BuildContext context,
-  int surahId,
-  int ayahNumber,
-) async {
-  final page = await LocalDatabaseService.getPageNumber(surahId, ayahNumber);
-  await Navigator.of(context).push(
-    PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          SttPage(pageId: page),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeInOut,
-          ),
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.0, 0.02),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              ),
+  Future<void> _openSurahAtAyah(
+    BuildContext context,
+    int surahId,
+    int ayahNumber,
+  ) async {
+    final page = await LocalDatabaseService.getPageNumber(surahId, ayahNumber);
+    await Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            SttPage(pageId: page),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
             ),
-            child: child,
-          ),
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 250),
-      reverseTransitionDuration: const Duration(milliseconds: 200),
-    ),
-  );
-}
+            child: SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(0.0, 0.02),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+                  ),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 250),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+      ),
+    );
+  }
 
-Future<void> _openJuz(
-  BuildContext context,
-  int juzNumber,
-  String firstVerseKey,
-) async {
-  await Navigator.of(context).push(
-    PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          SttPage(juzId: juzNumber),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeInOut,
-          ),
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.0, 0.02),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              ),
+  Future<void> _openJuz(
+    BuildContext context,
+    int juzNumber,
+    String firstVerseKey,
+  ) async {
+    await Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            SttPage(juzId: juzNumber),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
             ),
-            child: child,
-          ),
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 250),
-      reverseTransitionDuration: const Duration(milliseconds: 200),
-    ),
-  );
-}
+            child: SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(0.0, 0.02),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+                  ),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 250),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+      ),
+    );
+  }
 
   // ==================== BUILD ====================
 
@@ -582,37 +581,34 @@ Future<void> _openJuz(
   // ==================== BODY CONTENT ====================
 
   Widget _buildBodyContent() {
-  if (_isSearching) {
-    return _buildSearchResults();
-  }
+    if (_isSearching) {
+      return _buildSearchResults();
+    }
 
-  return AnimatedSwitcher(
-    duration: const Duration(milliseconds: 200),
-    switchInCurve: Curves.easeIn,
-    switchOutCurve: Curves.easeOut,
-    transitionBuilder: (Widget child, Animation<double> animation) {
-      return FadeTransition(
-        opacity: animation,
-        child: child,
-      );
-    },
-    child: KeyedSubtree(
-      key: ValueKey<TabType>(_currentTab),
-      child: Builder(
-        builder: (context) {
-          switch (_currentTab) {
-            case TabType.surah:
-              return _buildSurahList();
-            case TabType.juz:
-              return _buildJuzList();
-            case TabType.page:
-              return _buildPageList();
-          }
-        },
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      switchInCurve: Curves.easeIn,
+      switchOutCurve: Curves.easeOut,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      child: KeyedSubtree(
+        key: ValueKey<TabType>(_currentTab),
+        child: Builder(
+          builder: (context) {
+            switch (_currentTab) {
+              case TabType.surah:
+                return _buildSurahList();
+              case TabType.juz:
+                return _buildJuzList();
+              case TabType.page:
+                return _buildPageList();
+            }
+          },
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildTabContent() {
     // Key unik agar AnimatedSwitcher detect perubahan
@@ -648,7 +644,7 @@ Future<void> _openJuz(
         final surah = _surahs[index];
         final int id = surah['id'] as int;
         // ✅ Use name_arabic if language is Arabic, otherwise use name_simple
-        final String name = isArabic 
+        final String name = isArabic
             ? (surah['name_arabic'] ?? surah['name_simple'] ?? 'Surah $id')
             : (surah['name_simple'] ?? 'Surah $id');
         final int ayat = surah['verses_count'] ?? 0;
@@ -713,7 +709,7 @@ Future<void> _openJuz(
         final juzText = _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, "surah_list.juz_text")
             : "Juz";
-                final ayatText = _translations.isNotEmpty
+        final ayatText = _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, "surah_list.ayah_text")
             : "Ayah";
 
@@ -722,8 +718,11 @@ Future<void> _openJuz(
 
           title: '$juzText ${context.formatNumber(juzNum)}',
 
-          subtitle: '${context.formatNumber(firstVerse)} - ${context.formatNumber(lastVerse)}',
-          trailing: AppChip(label: '${context.formatNumber(verseCount)} $ayatText'),
+          subtitle:
+              '${context.formatNumber(firstVerse)} - ${context.formatNumber(lastVerse)}',
+          trailing: AppChip(
+            label: '${context.formatNumber(verseCount)} $ayatText',
+          ),
         );
       },
     );
@@ -776,46 +775,58 @@ Future<void> _openJuz(
         bottom: AppDesignSystem.space32 * s,
       ),
       children: [
-  if (juzResults.isNotEmpty) ...[
-    AppCategoryHeader(
-      title: _translations.isNotEmpty
-        ? LanguageHelper.tr(_translations, 'surah_list.juz_text').toUpperCase()
-        : 'JUZ', 
-      count: context.formatNumber(juzResults.length)  // ✅ Tanpa ${}
-    ),
-    ...juzResults.map((r) => _buildJuzSearchTile(r)),
-    SizedBox(height: AppDesignSystem.space12 * s),
-  ],
-  if (pageResults.isNotEmpty) ...[
-    AppCategoryHeader(
-      title: _translations.isNotEmpty
-        ? LanguageHelper.tr(_translations, 'surah_list.page_text').toUpperCase()
-        : 'PAGE', 
-      count: context.formatNumber(pageResults.length)  // ✅ Tanpa ${}
-    ),
-    ...pageResults.map((r) => _buildPageSearchTile(r)),
-    SizedBox(height: AppDesignSystem.space12 * s),
-  ],
-  if (surahResults.isNotEmpty) ...[
-    AppCategoryHeader(
-      title: _translations.isNotEmpty
-        ? LanguageHelper.tr(_translations, 'surah_list.surah_text').toUpperCase()
-        : 'SURAH', 
-      count: context.formatNumber(surahResults.length)  // ✅ Tanpa ${}
-    ),
-    ...surahResults.map((r) => _buildSurahSearchTile(r)),
-    SizedBox(height: AppDesignSystem.space12 * s),
-  ],
-  if (verseResults.isNotEmpty) ...[
-    AppCategoryHeader(
-      title: _translations.isNotEmpty
-        ? LanguageHelper.tr(_translations, 'surah_list.ayah_text').toUpperCase()
-        : 'VERSES', 
-      count: context.formatNumber(verseResults.length)  // ✅ Tanpa ${}
-    ),
-    ...verseResults.map((r) => _buildVerseSearchTile(r)),
-  ],
-],
+        if (juzResults.isNotEmpty) ...[
+          AppCategoryHeader(
+            title: _translations.isNotEmpty
+                ? LanguageHelper.tr(
+                    _translations,
+                    'surah_list.juz_text',
+                  ).toUpperCase()
+                : 'JUZ',
+            count: context.formatNumber(juzResults.length), // ✅ Tanpa ${}
+          ),
+          ...juzResults.map((r) => _buildJuzSearchTile(r)),
+          SizedBox(height: AppDesignSystem.space12 * s),
+        ],
+        if (pageResults.isNotEmpty) ...[
+          AppCategoryHeader(
+            title: _translations.isNotEmpty
+                ? LanguageHelper.tr(
+                    _translations,
+                    'surah_list.page_text',
+                  ).toUpperCase()
+                : 'PAGE',
+            count: context.formatNumber(pageResults.length), // ✅ Tanpa ${}
+          ),
+          ...pageResults.map((r) => _buildPageSearchTile(r)),
+          SizedBox(height: AppDesignSystem.space12 * s),
+        ],
+        if (surahResults.isNotEmpty) ...[
+          AppCategoryHeader(
+            title: _translations.isNotEmpty
+                ? LanguageHelper.tr(
+                    _translations,
+                    'surah_list.surah_text',
+                  ).toUpperCase()
+                : 'SURAH',
+            count: context.formatNumber(surahResults.length), // ✅ Tanpa ${}
+          ),
+          ...surahResults.map((r) => _buildSurahSearchTile(r)),
+          SizedBox(height: AppDesignSystem.space12 * s),
+        ],
+        if (verseResults.isNotEmpty) ...[
+          AppCategoryHeader(
+            title: _translations.isNotEmpty
+                ? LanguageHelper.tr(
+                    _translations,
+                    'surah_list.ayah_text',
+                  ).toUpperCase()
+                : 'VERSES',
+            count: context.formatNumber(verseResults.length), // ✅ Tanpa ${}
+          ),
+          ...verseResults.map((r) => _buildVerseSearchTile(r)),
+        ],
+      ],
     );
   }
 
@@ -833,8 +844,9 @@ Future<void> _openJuz(
         r['first_verse_key'] as String,
       ),
       leading: AppIconContainer(icon: Icons.auto_stories_rounded),
-title: '$juzText ${context.formatNumber(r['juz_number'])}',
-subtitle: '${context.formatNumber(r['first_verse_key'])} - ${context.formatNumber(r['last_verse_key'])} · ${context.formatNumber(r['verses_count'])} $ayahText',
+      title: '$juzText ${context.formatNumber(r['juz_number'])}',
+      subtitle:
+          '${context.formatNumber(r['first_verse_key'])} - ${context.formatNumber(r['last_verse_key'])} · ${context.formatNumber(r['verses_count'])} $ayahText',
 
       trailing: Icon(
         Icons.chevron_right_rounded,
@@ -848,21 +860,23 @@ subtitle: '${context.formatNumber(r['first_verse_key'])} - ${context.formatNumbe
     final pageNum = r['page_number'] as int;
     // ✅ Check if current language is Arabic
     final isArabic = context.currentLanguage == 'ar';
-    
+
     // ✅ Get surah IDs for this page
     final surahIds = _cache.getSurahIdsForPage(pageNum);
     String surahName = 'Unknown Surah';
-    
+
     if (surahIds.isNotEmpty) {
       final surahData = _cache.getSurah(surahIds.first);
       if (surahData != null) {
         // ✅ Use name_arabic if language is Arabic, otherwise use name_simple
-        surahName = isArabic 
-            ? (surahData['name_arabic'] ?? surahData['name_simple'] ?? 'Unknown Surah')
+        surahName = isArabic
+            ? (surahData['name_arabic'] ??
+                  surahData['name_simple'] ??
+                  'Unknown Surah')
             : (surahData['name_simple'] ?? 'Unknown Surah');
       }
     }
-    
+
     final pageText = _translations.isNotEmpty
         ? LanguageHelper.tr(_translations, "surah_list.page_text")
         : "Page";
@@ -885,7 +899,7 @@ subtitle: '${context.formatNumber(r['first_verse_key'])} - ${context.formatNumbe
     // ✅ Check if current language is Arabic
     final isArabic = context.currentLanguage == 'ar';
     // ✅ Use name_arabic if language is Arabic, otherwise use name_simple
-    final surahName = isArabic 
+    final surahName = isArabic
         ? (r['name_arabic'] ?? r['name_simple'] ?? 'Surah $surahId')
         : (r['name_simple'] as String? ?? 'Surah $surahId');
     final ayahText = _translations.isNotEmpty
@@ -1066,7 +1080,7 @@ class _OptimizedPageListState extends State<_OptimizedPageList> {
   }
 
   final ScrollController _scrollController = ScrollController();
-  final int totalPages = 604;
+  late int totalPages;
 
   int _visibleStart = 0;
   int _visibleEnd = 100;
@@ -1077,6 +1091,14 @@ class _OptimizedPageListState extends State<_OptimizedPageList> {
     super.initState();
     _loadTranslations();
     _scrollController.addListener(_onScroll);
+    _loadTotalPages(); // ✅ ADD: Load dynamic total pages
+  }
+
+  Future<void> _loadTotalPages() async {
+    final layout = await MushafSettingsService().getMushafLayout();
+    setState(() {
+      totalPages = layout.totalPages;
+    });
   }
 
   @override
@@ -1152,17 +1174,19 @@ class _OptimizedPageListState extends State<_OptimizedPageList> {
             // ✅ Get surah IDs for this page
             final surahIds = widget.cache.getSurahIdsForPage(pageNum);
             String surahName = 'Unknown Surah';
-            
+
             if (surahIds.isNotEmpty) {
               final surahData = widget.cache.getSurah(surahIds.first);
               if (surahData != null) {
                 // ✅ Use name_arabic if language is Arabic, otherwise use name_simple
-                surahName = isArabic 
-                    ? (surahData['name_arabic'] ?? surahData['name_simple'] ?? 'Unknown Surah')
+                surahName = isArabic
+                    ? (surahData['name_arabic'] ??
+                          surahData['name_simple'] ??
+                          'Unknown Surah')
                     : (surahData['name_simple'] ?? 'Unknown Surah');
               }
             }
-            
+
             final pageText = _translations.isNotEmpty
                 ? LanguageHelper.tr(_translations, "surah_list.page_text")
                 : "Page";
@@ -1313,5 +1337,3 @@ class _GlobalSliderState extends State<_GlobalSlider> {
     });
   }
 }
-
-

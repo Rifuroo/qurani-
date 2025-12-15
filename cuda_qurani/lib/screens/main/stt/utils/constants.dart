@@ -18,7 +18,7 @@ const Color skippedColor = Color(0xFF95A5A6);
 // ✅ CRITICAL: Large cache to prevent re-loading when swiping back and forth
 const int cacheRadius = 20; // Preload ±20 pages for ultra-fast swipe
 const int maxCacheSize = 500; // Increased to 500 (keep ALL visited pages in memory - no re-loading!)
-const int quranServiceCacheSize = 500; // Increased to 500 (sync with maxCacheSize - keep everything!)
+const int quranServiceCacheSize = 500; // Increased for faster preload (dynamic: 604 QPC / 610 IndoPak)
 const int cacheEvictionThreshold = 600; // Only evict when cache exceeds this (very large buffer)
 const int cacheEvictionDistance = 300; // Only evict pages > 300 pages away from current
 
