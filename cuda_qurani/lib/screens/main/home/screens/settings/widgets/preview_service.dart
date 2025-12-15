@@ -1,4 +1,3 @@
-// lib\screens\main\home\screens\settings\widgets\preview_service.dart
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/screens/main/stt/data/models.dart';
 import 'package:cuda_qurani/screens/main/stt/database/db_helper.dart';
@@ -22,25 +21,43 @@ class PreviewService {
 
     // ✅ Return cached immediately
     if (_previewCache.containsKey(cacheKey)) {
+      print('⚡ Preview cache HIT: $cacheKey');
       return _previewCache[cacheKey]!;
     }
 
+    print('📥 Loading preview: $layout page $pageNumber');
+
     // ✅ Load ONLY this page (no preloading, no background tasks)
-    final db = await _getLinesDB(layout);
-    final pageLayout = await _getPageLayout(db, pageNumber);
-    final pageLines = await _buildPageLines(db, layout, pageLayout);
+    final linesDB = await _getLinesDB(layout);
+    final wordsDB = await _getWordsDB(layout);
+    
+    final pageLayout = await _getPageLayout(linesDB, pageNumber);
+    final pageLines = await _buildPageLines(wordsDB, pageLayout);
 
     // ✅ Cache forever
     _previewCache[cacheKey] = pageLines;
+    print('✅ Preview loaded: ${pageLines.length} lines cached');
+    
     return pageLines;
   }
 
+  /// ✅ CRITICAL FIX: Get correct database based on layout
   Future<Database> _getLinesDB(MushafLayout layout) async {
     switch (layout) {
       case MushafLayout.qpc:
         return await DBHelper.ensureOpen(DBType.qpc_v1_15);
       case MushafLayout.indopak:
         return await DBHelper.ensureOpen(DBType.indopak_15);
+    }
+  }
+
+  /// ✅ CRITICAL FIX: Get WORDS database (separate from lines)
+  Future<Database> _getWordsDB(MushafLayout layout) async {
+    switch (layout) {
+      case MushafLayout.qpc:
+        return await DBHelper.ensureOpen(DBType.qpc_v1_wbw);
+      case MushafLayout.indopak:
+        return await DBHelper.ensureOpen(DBType.indopak_wbw);
     }
   }
 
@@ -58,8 +75,7 @@ class PreviewService {
   }
 
   Future<List<MushafPageLine>> _buildPageLines(
-    Database db,
-    MushafLayout layout,
+    Database wordsDB,
     List<PageLayoutData> pageLayout,
   ) async {
     final List<MushafPageLine> pageLines = [];
@@ -92,17 +108,26 @@ class PreviewService {
 
         case 'ayah':
           if (layout.firstWordId != null && layout.lastWordId != null) {
-            final words = await _getWords(db, layout.firstWordId!, layout.lastWordId!);
-            if (words.isNotEmpty) {
-              final ayahSegments = _groupWordsByAyah(words);
-              line = MushafPageLine(
-                lineNumber: layout.lineNumber,
-                lineType: layout.lineType,
-                isCentered: layout.isCentered,
-                firstWordId: layout.firstWordId,
-                lastWordId: layout.lastWordId,
-                ayahSegments: ayahSegments,
+            try {
+              final words = await _getWords(
+                wordsDB,
+                layout.firstWordId!,
+                layout.lastWordId!,
               );
+              
+              if (words.isNotEmpty) {
+                final ayahSegments = _groupWordsByAyah(words);
+                line = MushafPageLine(
+                  lineNumber: layout.lineNumber,
+                  lineType: layout.lineType,
+                  isCentered: layout.isCentered,
+                  firstWordId: layout.firstWordId,
+                  lastWordId: layout.lastWordId,
+                  ayahSegments: ayahSegments,
+                );
+              }
+            } catch (e) {
+              print('⚠️ Failed to load words $layout.firstWordId-${layout.lastWordId}: $e');
             }
           }
           break;

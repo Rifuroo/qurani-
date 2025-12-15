@@ -48,7 +48,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
       'lines': '15 Lines',
       'pages': '604 pages',
       'previewPage': 440,
-    }
+    },
   ];
 
   @override
@@ -160,9 +160,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
               ? LanguageHelper.tr(_translations, 'mushaf_type.title')
               : 'Mushaf Type',
         ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -414,7 +412,8 @@ class _OptimizedMushafPreview extends StatefulWidget {
   });
 
   @override
-  State<_OptimizedMushafPreview> createState() => _OptimizedMushafPreviewState();
+  State<_OptimizedMushafPreview> createState() =>
+      _OptimizedMushafPreviewState();
 }
 
 class _OptimizedMushafPreviewState extends State<_OptimizedMushafPreview> {
@@ -446,11 +445,14 @@ class _OptimizedMushafPreviewState extends State<_OptimizedMushafPreview> {
     try {
       // ✅ Get Yasin page number (Surah 36, Ayah 1)
       final yasinPage = await LocalDatabaseService.getPageNumber(36, 1);
-      
+
       // ✅ ULTRA-FAST: Use PreviewService (no controller overhead)
       final previewService = PreviewService();
-      final lines = await previewService.getPreviewPage(widget.layout, yasinPage);
-      
+      final lines = await previewService.getPreviewPage(
+        widget.layout,
+        yasinPage,
+      );
+
       if (mounted) {
         setState(() {
           _yasinFirstPage = yasinPage;
@@ -458,7 +460,7 @@ class _OptimizedMushafPreviewState extends State<_OptimizedMushafPreview> {
           _isLoading = false;
         });
       }
-      
+
       print('✅ Preview loaded INSTANTLY: ${lines.length} lines');
     } catch (e) {
       print('❌ Preview error: $e');
@@ -511,12 +513,11 @@ class _MushafPreviewRenderer extends StatelessWidget {
     required this.pageLines,
     required this.pageNumber,
   });
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     final fontFamily = layout.isGlyphBased
         ? 'p$pageNumber'
         : 'IndoPak-Nastaleeq';
@@ -526,16 +527,23 @@ class _MushafPreviewRenderer extends StatelessWidget {
         width: double.infinity,
         height: double.infinity,
         color: Colors.white,
-        child: SingleChildScrollView(
-          physics: const NeverScrollableScrollPhysics(),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: screenWidth * 0.03,
-              vertical: screenHeight * 0.01,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: _buildPreviewLines(screenWidth, screenHeight, fontFamily),
+        child: ClipRect(
+          // ✅ ADD: Prevent overflow
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.04,
+                vertical: screenHeight * 0.015,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: _buildPreviewLines(
+                  screenWidth,
+                  screenHeight,
+                  fontFamily,
+                ),
+              ),
             ),
           ),
         ),
@@ -549,40 +557,42 @@ class _MushafPreviewRenderer extends StatelessWidget {
     String fontFamily,
   ) {
     final widgets = <Widget>[];
-    
+
     for (final line in pageLines) {
       switch (line.lineType) {
         case 'surah_name':
           widgets.add(_buildSurahHeader(line, screenHeight));
           break;
-          
+
         case 'basmallah':
           widgets.add(_buildBasmallah(screenHeight));
           break;
-          
+
         case 'ayah':
-          widgets.add(_buildAyahLine(line, screenWidth, screenHeight, fontFamily));
+          widgets.add(
+            _buildAyahLine(line, screenWidth, screenHeight, fontFamily),
+          );
           break;
       }
     }
-    
+
     return widgets;
   }
 
   Widget _buildSurahHeader(MushafPageLine line, double screenHeight) {
     final surahId = line.surahNumber ?? 1;
     final surahGlyphCode = _formatSurahGlyph(surahId);
-    
+
     return Container(
       alignment: Alignment.center,
-      margin: EdgeInsets.symmetric(vertical: screenHeight * 0.005),
+      margin: EdgeInsets.symmetric(vertical: screenHeight * 0.008),
       child: Stack(
         alignment: Alignment.center,
         children: [
           Text(
             'header',
             style: TextStyle(
-              fontSize: screenHeight * 0.022,
+              fontSize: screenHeight * 0.028, // ✅ Slightly bigger
               fontFamily: 'Quran-Common',
               color: Colors.black87,
             ),
@@ -590,7 +600,7 @@ class _MushafPreviewRenderer extends StatelessWidget {
           Text(
             surahGlyphCode,
             style: TextStyle(
-              fontSize: screenHeight * 0.020,
+              fontSize: screenHeight * 0.024, // ✅ Proportional
               fontFamily: 'surah-name-v2',
               color: Colors.black,
             ),
@@ -604,11 +614,11 @@ class _MushafPreviewRenderer extends StatelessWidget {
   Widget _buildBasmallah(double screenHeight) {
     return Container(
       alignment: Alignment.center,
-      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.004),
+      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.006),
       child: Text(
         '﷽',
         style: TextStyle(
-          fontSize: screenHeight * 0.018,
+          fontSize: screenHeight * 0.022, // ✅ Balanced size
           fontFamily: 'Quran-Common',
           color: Colors.black87,
         ),
@@ -628,12 +638,13 @@ class _MushafPreviewRenderer extends StatelessWidget {
     }
 
     final spans = <InlineSpan>[];
-    
-    // ✅ FIXED: Font size yang sempurna untuk preview
+
+    // ✅ OPTIMIZED: Perfect font size for both layouts
     final baseFontSize = layout == MushafLayout.indopak
-        ? screenWidth * 0.032  // Indopak lebih besar
-        : screenWidth * 0.028; // QPC standard
-    
+        ? screenWidth *
+              0.035 // Indopak slightly bigger
+        : screenWidth * 0.030; // QPC standard
+
     for (final segment in line.ayahSegments!) {
       for (final word in segment.words) {
         spans.add(
@@ -644,24 +655,24 @@ class _MushafPreviewRenderer extends StatelessWidget {
               fontFamily: fontFamily,
               color: Colors.black87,
               fontWeight: FontWeight.w400,
-              height: 1.8, // ✅ FIXED: Line height untuk spacing sempurna
-              letterSpacing: layout.isGlyphBased ? -2.5 : 0,
+              height: 2.0, // ✅ FIXED: Consistent line height
+              letterSpacing: layout.isGlyphBased ? -2.0 : 0.5,
             ),
           ),
         );
-        
-        // ✅ Spacing antar kata
+
+        // ✅ Consistent word spacing
         spans.add(
           TextSpan(
             text: ' ',
-            style: TextStyle(fontSize: baseFontSize * 0.3),
+            style: TextStyle(fontSize: baseFontSize * 0.4),
           ),
         );
       }
     }
 
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.003),
+      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.004),
       child: Directionality(
         textDirection: TextDirection.rtl,
         child: RichText(
