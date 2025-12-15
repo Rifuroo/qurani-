@@ -443,8 +443,6 @@ class _PageHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Juz $juzNumber', style: TextStyle(fontSize: fontSize, color: AppColors.getTextPrimary(context), fontWeight: FontWeight.w100)),
-          Text('$pageNumber', style: TextStyle(fontSize: fontSize, color: AppColors.getTextPrimary(context), fontWeight: FontWeight.w100)),
           Text(
             'Juz $juzNumber',
             style: TextStyle(
@@ -484,8 +482,23 @@ class _SurahHeader extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Text('header', style: TextStyle(fontSize: screenHeight * 0.056, fontFamily: 'Quran-Common', color: Colors.black87)),
-          Text(surahGlyphCode, style: TextStyle(fontSize: screenHeight * 0.0475, fontFamily: 'surah-name-v2', color: Colors.black), textDirection: TextDirection.rtl),
+          Text(
+            'header',
+            style: TextStyle(
+              fontSize: screenHeight * 0.056,
+              fontFamily: 'Quran-Common',
+              color: Colors.black87,
+            ),
+          ),
+          Text(
+            surahGlyphCode,
+            style: TextStyle(
+              fontSize: screenHeight * 0.0475,
+              fontFamily: 'surah-name-v2',
+              color: Colors.black,
+            ),
+            textDirection: TextDirection.rtl,
+          ),
         ],
       ),
     );
@@ -507,7 +520,14 @@ class _Basmallah extends StatelessWidget {
     return Container(
       alignment: Alignment.center,
       padding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
-      child: Text('﷽', style: TextStyle(fontSize: screenHeight * 0.04, fontFamily: 'Quran-Common', color: Colors.black87)),
+      child: Text(
+        '﷽',
+        style: TextStyle(
+          fontSize: screenHeight * 0.04,
+          fontFamily: 'Quran-Common',
+          color: Colors.black87,
+        ),
+      ),
     );
   }
 }
@@ -544,7 +564,9 @@ class _CompleteAyahWidget extends StatelessWidget {
         return Container(
           width: double.infinity,
           decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0), width: 0.5)),
+            border: Border(
+              bottom: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+            ),
           ),
           padding: EdgeInsets.only(
             bottom: screenHeight * 0.015,
@@ -567,7 +589,9 @@ class _CompleteAyahWidget extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.transparent,
                         border: Border.all(
-                          color: state.isCurrentAyat ? AppColors.getPrimary(context) : Colors.black54,
+                          color: state.isCurrentAyat
+                              ? AppColors.getPrimary(context)
+                              : Colors.black54,
                           width: 1,
                         ),
                         borderRadius: BorderRadius.circular(4),
@@ -575,7 +599,9 @@ class _CompleteAyahWidget extends StatelessWidget {
                       child: Text(
                         '${segment.surahId}:${segment.ayahNumber}',
                         style: TextStyle(
-                          color: state.isCurrentAyat ? AppColors.getPrimary(context) : Colors.black87,
+                          color: state.isCurrentAyat
+                              ? AppColors.getPrimary(context)
+                              : Colors.black87,
                           fontWeight: FontWeight.w600,
                           fontSize: screenWidth * 0.0275,
                         ),
@@ -590,7 +616,13 @@ class _CompleteAyahWidget extends StatelessWidget {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   spacing: 1,
                   runSpacing: 4,
-                  children: _buildWords(context, segment, state, screenWidth, screenHeight),
+                  children: _buildWords(
+                    context,
+                    segment,
+                    state,
+                    screenWidth,
+                    screenHeight,
+                  ),
                 ),
               ),
             ],
@@ -663,7 +695,9 @@ class _CompleteAyahWidget extends StatelessWidget {
           border: (state.hideUnreadAyat && !isLastWordInAyah)
               ? Border(
                   bottom: BorderSide(
-                    color: AppColors.getTextPrimary(context).withValues(alpha: 0.15),
+                    color: AppColors.getTextPrimary(
+                      context,
+                    ).withValues(alpha: 0.15),
                     width: 0.3,
                   ),
                 )
@@ -683,7 +717,6 @@ class _CompleteAyahWidget extends StatelessWidget {
     }).toList();
   }
 
-  // ✅ FIX: Helper method untuk render text dengan setting yang berbeda per layout
   Widget _buildWordText(
     BuildContext context,
     String text,
@@ -691,22 +724,21 @@ class _CompleteAyahWidget extends StatelessWidget {
     bool isCurrentAyat,
     double screenWidth,
   ) {
-    // ✅ CRITICAL: Deteksi layout dari fontFamily
-    final isIndopak = fontFamily == 'IndoPak-Nastaleeq';
+    final controller = context.read<SttController>();
+    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
 
     return Text(
       text,
       style: TextStyle(
         fontSize: isIndopak
-            ? screenWidth * 0.070 // ← Sedikit lebih besar untuk Indopak
-            : screenWidth * 0.0625, // ← Original untuk QPC
+            ? screenWidth *
+                  0.0625 // IndoPak lebih besar
+            : screenWidth * 0.0625, // QPC
         fontFamily: fontFamily,
         color: isCurrentAyat ? AppColors.getInfo(context) : Colors.black87,
         fontWeight: FontWeight.w400,
-        height: 1.7,
-        letterSpacing: isIndopak
-            ? 0 // ← PENTING: Tidak ada overlap untuk Indopak!
-            : -5, // ← Overlap untuk QPC glyph fonts
+        height: isIndopak ? 1.8 : 1.7,
+        letterSpacing: isIndopak ? 0 : -5,
       ),
       textDirection: TextDirection.rtl,
     );

@@ -274,8 +274,10 @@ class _SttPageState extends State<SttPage> {
   }
 
   Widget _buildQuranText(BuildContext context, SttController controller) {
+    final controller = context.watch<SttController>();
+final isIndopak = controller.mushafLayout == MushafLayout.indopak;
     final screenWidth = MediaQuery.of(context).size.width;
-    final padding = screenWidth * 0.03;
+    final padding = isIndopak ? screenWidth * 0.011 : screenWidth * 0.03;
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: padding),

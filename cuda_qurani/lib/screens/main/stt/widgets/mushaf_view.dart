@@ -280,7 +280,9 @@ class _MushafDisplayState extends State<MushafDisplay> {
           height: MediaQuery.of(context).size.width * 0.03,
           child: CircularProgressIndicator(
             strokeWidth: 1.5,
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.getTextTertiary(context)),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              AppColors.getTextTertiary(context),
+            ),
           ),
         ),
       ),
@@ -416,9 +418,15 @@ class _JustifiedAyahLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final fontSizeMultiplier = (pageNumber == 1 || pageNumber == 2)
-        ? 0.080
-        : 0.0620;
+    final controller = context.watch<SttController>();
+    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
+
+    // Font size berbeda untuk QPC vs IndoPak
+    final fontSizeMultiplier = isIndopak
+        ? 0.0690 // IndoPak: ukuran konsisten
+        : ((pageNumber == 1 || pageNumber == 2)
+              ? 0.080
+              : 0.0690); // QPC: page 1-2 lebih besar
 
     final baseFontSize = screenWidth * fontSizeMultiplier;
     final lastWordFontMultiplier = 0.9;
@@ -427,7 +435,6 @@ class _JustifiedAyahLine extends StatelessWidget {
       return SizedBox(height: MushafRenderer.lineHeight(context));
     }
 
-    final controller = context.watch<SttController>();
     List<InlineSpan> spans = [];
 
     final fontFamily = controller.mushafLayout.isGlyphBased
@@ -510,23 +517,36 @@ class _JustifiedAyahLine extends StatelessWidget {
             : baseFontSize;
 
         for (final textSegment in segments) {
-          spans.add(
-            TextSpan(
-              text: textSegment.text,
-              style: TextStyle(
-                fontSize: effectiveFontSize,
-                fontFamily: fontFamily,
-                color: _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity),
-                backgroundColor: wordBg,
-                fontWeight: FontWeight.w400,
-                decoration: (controller.hideUnreadAyat && !isLastWord)
-                    ? TextDecoration.underline
-                    : null,
-                decorationColor: AppColors.getTextPrimary(context).withValues(alpha: 0.15),
-                decorationThickness: 0.3,
+          for (final textSegment in segments) {
+            spans.add(
+              TextSpan(
+                text: textSegment.text,
+                style: TextStyle(
+                  fontSize: effectiveFontSize,
+                  fontFamily: fontFamily,
+                  color: _getWordColor(
+                    isCurrentAyat,
+                    context,
+                  ).withValues(alpha: wordOpacity),
+                  backgroundColor: wordBg,
+                  fontWeight: FontWeight.w400,
+                  height: isIndopak
+                      ? 1.9
+                      : 1.8, // ✅ TAMBAH: Line height berbeda
+                  letterSpacing: isIndopak
+                      ? -1.2
+                      : -5, // ✅ TAMBAH: Letter spacing berbeda
+                  decoration: (controller.hideUnreadAyat && !isLastWord)
+                      ? TextDecoration.underline
+                      : null,
+                  decorationColor: AppColors.getTextPrimary(
+                    context,
+                  ).withValues(alpha: 0.15),
+                  decorationThickness: 0.3,
+                ),
               ),
-            ),
-          );
+            );
+          }
         }
       }
     }
@@ -542,7 +562,9 @@ class _JustifiedAyahLine extends StatelessWidget {
 
   // Methods tetap sama
   Color _getWordColor(bool isCurrentWord, BuildContext context) {
-    return isCurrentWord ? getListeningColor(context) : AppColors.getTextPrimary(context);
+    return isCurrentWord
+        ? getListeningColor(context)
+        : AppColors.getTextPrimary(context);
   }
 }
 
@@ -590,7 +612,9 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
 
     return Container(
       height: headerHeight,
-      color: AppColors.getBackground(context), // ✅ ADD: Background to blend when hidden
+      color: AppColors.getBackground(
+        context,
+      ), // ✅ ADD: Background to blend when hidden
       padding: EdgeInsets
           .zero, // ✅ CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
       alignment: Alignment.center,
