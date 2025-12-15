@@ -135,8 +135,6 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
     });
   }
 
-  /// ✅ NEW: Auto-fill starting & ending verse from current page
-  /// ✅ UPDATED: Auto-fill starting & ending verse from current page
   Future<void> _autoFillRangeFromPage(int pageNumber) async {
     try {
       print('🎯 Auto-filling range from page $pageNumber...');
