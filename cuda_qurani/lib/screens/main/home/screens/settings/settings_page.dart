@@ -16,7 +16,6 @@ import 'package:cuda_qurani/screens/main/home/screens/settings/submenu/session_s
 import 'package:cuda_qurani/screens/main/home/screens/settings/submenu/translation_download.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/submenu/data_usage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:cuda_qurani/screens/main/home/widgets/navigation_bar.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/widgets/app_components.dart';
@@ -66,7 +65,7 @@ class _SettingsPageState extends State<SettingsPage> {
             Icon(
               icon,
               size: AppDesignSystem.iconMedium * s,
-              color: iconColor ?? AppColors.textPrimary,
+              color: iconColor ?? AppColors.getTextPrimary(context),
             ),
             SizedBox(width: AppDesignSystem.space16 * s),
             Expanded(
@@ -75,14 +74,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 style: TextStyle(
                   fontSize: 14 * s,
                   fontWeight: AppTypography.medium,
-                  color: AppColors.textPrimary,
+                  color: AppColors.getTextPrimary(context),
                 ),
               ),
             ),
             Icon(
               Icons.arrow_forward_ios_rounded,
               size: AppDesignSystem.iconSmall * s,
-              color: AppColors.textDisabled,
+              color: AppColors.getTextDisabled(context),
             ),
           ],
         ),
@@ -100,7 +99,7 @@ class _SettingsPageState extends State<SettingsPage> {
           fontSize: 11 * s,
           fontWeight: AppTypography.bold,
           letterSpacing: 1.2,
-          color: AppColors.textTertiary,
+          color: AppColors.getTextTertiary(context),
         ),
       ),
     );
@@ -109,7 +108,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: ProfileAppBar(title: _translations.isNotEmpty 
               ? LanguageHelper.tr(_translations, 'settings.settings_text')
               : 'Settings',),
@@ -979,7 +978,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         label: _translations.isNotEmpty 
                       ? LanguageHelper.tr(_translations, 'settings.delete_all_audio_data_text')
                       : 'Delete All Audio Data',
-                        iconColor: AppColors.error,
+                        iconColor: AppColors.getError(context),
                         onTap: () {
                           AppHaptics.medium();
                           _showDeleteAudioDialog();
@@ -1023,14 +1022,14 @@ class _SettingsPageState extends State<SettingsPage> {
                     width: 48 * s,
                     height: 48 * s,
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.getError(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(
                         AppDesignSystem.radiusMedium * s,
                       ),
                     ),
                     child: Icon(
                       Icons.delete_outline,
-                      color: AppColors.error,
+                      color: AppColors.getError(context),
                       size: AppDesignSystem.iconLarge * s,
                     ),
                   ),
@@ -1058,7 +1057,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       :                 'Are you sure you want to delete all audio recordings? This action cannot be undone and will permanently remove all your recitation history.',
                 style: AppTypography.body(
                   context,
-                  color: AppColors.textSecondary,
+                  color: AppColors.getTextSecondary(context),
                 ),
               ),
 
@@ -1076,15 +1075,15 @@ class _SettingsPageState extends State<SettingsPage> {
                       AppHaptics.light();
                       Navigator.pop(context);
                     },
-                    color: AppColors.textTertiary,
+                    color: AppColors.getTextTertiary(context),
                   ),
                   AppMargin.gapHSmall(context),
                   AppButton(
                     text: _translations.isNotEmpty 
                       ? LanguageHelper.tr(_translations, 'settings.delete_text')
                       : 'Delete',
-                    backgroundColor: AppColors.error,
-                    textColor: Colors.white,
+                    backgroundColor: AppColors.getError(context),
+                    textColor: AppColors.getTextInverse(context),
                     onPressed: () {
                       AppHaptics.heavy();
                       Navigator.pop(context);

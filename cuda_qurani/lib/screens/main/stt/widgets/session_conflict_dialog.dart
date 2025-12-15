@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 
 class SessionConflictDialog extends StatelessWidget {
   final Map<String, dynamic> existingSession;
@@ -44,13 +45,21 @@ class SessionConflictDialog extends StatelessWidget {
     }
 
     return AlertDialog(
+      backgroundColor: AppColors.getSurface(context),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
-          Icon(Icons.bookmark, color: Theme.of(context).primaryColor),
+          Icon(Icons.bookmark, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 8),
-          const Expanded(
-            child: Text('Session Ditemukan', style: TextStyle(fontSize: 18)),
+          Expanded(
+            child: Text(
+              'Session Ditemukan',
+              style: TextStyle(
+                fontSize: 18,
+                color: AppColors.getTextPrimary(context),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -59,9 +68,12 @@ class SessionConflictDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Anda memiliki progress sebelumnya:',
-              style: TextStyle(fontSize: 14),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.getTextPrimary(context),
+              ),
             ),
             const SizedBox(height: 16),
             
@@ -69,31 +81,35 @@ class SessionConflictDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: AppColors.getSurfaceContainerLow(context),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow(Icons.menu_book, 'Posisi', 'Ayah $ayah, Kata ${position + 1}'),
+                  _buildInfoRow(Icons.menu_book, 'Posisi', 'Ayah $ayah, Kata ${position + 1}', context),
                   if (ayahsWithProgress > 0)
-                    _buildInfoRow(Icons.format_list_numbered, 'Ayat dibaca', '$ayahsWithProgress ayat'),
+                    _buildInfoRow(Icons.format_list_numbered, 'Ayat dibaca', '$ayahsWithProgress ayat', context),
                   if (totalWords > 0)
-                    _buildInfoRow(Icons.text_fields, 'Total kata', '$totalWords kata'),
+                    _buildInfoRow(Icons.text_fields, 'Total kata', '$totalWords kata', context),
                   if (matchedWords > 0 || mismatchedWords > 0)
-                    _buildWordStatsRow(matchedWords, mismatchedWords),
+                    _buildWordStatsRow(matchedWords, mismatchedWords, context),
                   if (accuracy > 0)
-                    _buildAccuracyRow(accuracy),
+                    _buildAccuracyRow(accuracy, context),
                   if (formattedTime.isNotEmpty)
-                    _buildInfoRow(Icons.access_time, 'Terakhir', formattedTime),
+                    _buildInfoRow(Icons.access_time, 'Terakhir', formattedTime, context),
                 ],
               ),
             ),
             
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Apa yang ingin Anda lakukan?',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.getTextPrimary(context),
+              ),
             ),
           ],
         ),
@@ -106,7 +122,10 @@ class SessionConflictDialog extends StatelessWidget {
               Navigator.of(context).pop();
               onCancel!();
             },
-            child: const Text('Batal'),
+            child: Text(
+              'Batal',
+              style: TextStyle(color: AppColors.getTextSecondary(context)),
+            ),
           ),
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -119,7 +138,7 @@ class SessionConflictDialog extends StatelessWidget {
               icon: const Icon(Icons.refresh, size: 18),
               label: const Text('Mulai Baru'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.orange,
+                foregroundColor: AppColors.getWarning(context),
               ),
             ),
             const SizedBox(width: 8),
@@ -131,8 +150,8 @@ class SessionConflictDialog extends StatelessWidget {
               icon: const Icon(Icons.play_arrow, size: 18),
               label: const Text('Lanjutkan'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: AppColors.getTextInverse(context),
               ),
             ),
           ],
@@ -141,21 +160,25 @@ class SessionConflictDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
+  Widget _buildInfoRow(IconData icon, String label, String value, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.grey[600]),
+          Icon(icon, size: 16, color: AppColors.getTextSecondary(context)),
           const SizedBox(width: 8),
           Text(
             '$label: ',
-            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            style: TextStyle(color: AppColors.getTextSecondary(context), fontSize: 13),
           ),
           Flexible(
             child: Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                color: AppColors.getTextPrimary(context),
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -164,32 +187,32 @@ class SessionConflictDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildWordStatsRow(int matched, int mismatched) {
+  Widget _buildWordStatsRow(int matched, int mismatched, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(Icons.check_circle, size: 16, color: Colors.green[600]),
+          Icon(Icons.check_circle, size: 16, color: AppColors.getSuccess(context)),
           const SizedBox(width: 4),
           Text(
             '$matched benar',
-            style: TextStyle(color: Colors.green[700], fontSize: 12, fontWeight: FontWeight.w500),
+            style: TextStyle(color: AppColors.getSuccess(context), fontSize: 12, fontWeight: FontWeight.w500),
           ),
           const SizedBox(width: 12),
-          Icon(Icons.cancel, size: 16, color: Colors.red[400]),
+          Icon(Icons.cancel, size: 16, color: AppColors.getError(context)),
           const SizedBox(width: 4),
           Text(
             '$mismatched salah',
-            style: TextStyle(color: Colors.red[600], fontSize: 12, fontWeight: FontWeight.w500),
+            style: TextStyle(color: AppColors.getError(context), fontSize: 12, fontWeight: FontWeight.w500),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAccuracyRow(dynamic accuracy) {
+  Widget _buildAccuracyRow(dynamic accuracy, BuildContext context) {
     final acc = accuracy is num ? accuracy.toDouble() : 0.0;
-    final color = acc >= 80 ? Colors.green : (acc >= 60 ? Colors.orange : Colors.red);
+    final color = acc >= 80 ? AppColors.getSuccess(context) : (acc >= 60 ? AppColors.getWarning(context) : AppColors.getError(context));
     
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -199,7 +222,7 @@ class SessionConflictDialog extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             'Akurasi: ',
-            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            style: TextStyle(color: AppColors.getTextSecondary(context), fontSize: 13),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

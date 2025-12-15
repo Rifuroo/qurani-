@@ -7,6 +7,7 @@ import '../controllers/stt_controller.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
+import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'dart:async';
 
 /// Optimized vertical Quran reading mode with aggressive background preloading
@@ -277,14 +278,14 @@ class _VerticalPageWidget extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.grey[400],
+                      color: AppColors.getTextTertiary(context),
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.015),
                   Text(
                     'Loading page $pageNumber...',
                     style: TextStyle(
-                      color: Colors.grey[400],
+                      color: AppColors.getTextTertiary(context),
                       fontSize: screenHeight * 0.016,
                     ),
                   ),
@@ -293,7 +294,7 @@ class _VerticalPageWidget extends StatelessWidget {
             : Text(
                 'Page $pageNumber',
                 style: TextStyle(
-                  color: Colors.grey[300],
+                  color: AppColors.getTextTertiary(context),
                   fontSize: screenHeight * 0.02,
                   fontWeight: FontWeight.w300,
                 ),
@@ -442,6 +443,8 @@ class _PageHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          Text('Juz $juzNumber', style: TextStyle(fontSize: fontSize, color: AppColors.getTextPrimary(context), fontWeight: FontWeight.w100)),
+          Text('$pageNumber', style: TextStyle(fontSize: fontSize, color: AppColors.getTextPrimary(context), fontWeight: FontWeight.w100)),
           Text(
             'Juz $juzNumber',
             style: TextStyle(
@@ -481,23 +484,8 @@ class _SurahHeader extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Text(
-            'header',
-            style: TextStyle(
-              fontSize: screenHeight * 0.056,
-              fontFamily: 'Quran-Common',
-              color: Colors.black87,
-            ),
-          ),
-          Text(
-            surahGlyphCode,
-            style: TextStyle(
-              fontSize: screenHeight * 0.0475,
-              fontFamily: 'surah-name-v2',
-              color: Colors.black,
-            ),
-            textDirection: TextDirection.rtl,
-          ),
+          Text('header', style: TextStyle(fontSize: screenHeight * 0.056, fontFamily: 'Quran-Common', color: Colors.black87)),
+          Text(surahGlyphCode, style: TextStyle(fontSize: screenHeight * 0.0475, fontFamily: 'surah-name-v2', color: Colors.black), textDirection: TextDirection.rtl),
         ],
       ),
     );
@@ -519,14 +507,7 @@ class _Basmallah extends StatelessWidget {
     return Container(
       alignment: Alignment.center,
       padding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
-      child: Text(
-        '﷽',
-        style: TextStyle(
-          fontSize: screenHeight * 0.04,
-          fontFamily: 'Quran-Common',
-          color: Colors.black87,
-        ),
-      ),
+      child: Text('﷽', style: TextStyle(fontSize: screenHeight * 0.04, fontFamily: 'Quran-Common', color: Colors.black87)),
     );
   }
 }
@@ -563,9 +544,7 @@ class _CompleteAyahWidget extends StatelessWidget {
         return Container(
           width: double.infinity,
           decoration: const BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
-            ),
+            border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0), width: 0.5)),
           ),
           padding: EdgeInsets.only(
             bottom: screenHeight * 0.015,
@@ -588,9 +567,7 @@ class _CompleteAyahWidget extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.transparent,
                         border: Border.all(
-                          color: state.isCurrentAyat
-                              ? primaryColor
-                              : Colors.black54,
+                          color: state.isCurrentAyat ? AppColors.getPrimary(context) : Colors.black54,
                           width: 1,
                         ),
                         borderRadius: BorderRadius.circular(4),
@@ -598,9 +575,7 @@ class _CompleteAyahWidget extends StatelessWidget {
                       child: Text(
                         '${segment.surahId}:${segment.ayahNumber}',
                         style: TextStyle(
-                          color: state.isCurrentAyat
-                              ? primaryColor
-                              : Colors.black87,
+                          color: state.isCurrentAyat ? AppColors.getPrimary(context) : Colors.black87,
                           fontWeight: FontWeight.w600,
                           fontSize: screenWidth * 0.0275,
                         ),
@@ -615,12 +590,7 @@ class _CompleteAyahWidget extends StatelessWidget {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   spacing: 1,
                   runSpacing: 4,
-                  children: _buildWords(
-                    segment,
-                    state,
-                    screenWidth,
-                    screenHeight,
-                  ),
+                  children: _buildWords(context, segment, state, screenWidth, screenHeight),
                 ),
               ),
             ],
@@ -631,6 +601,7 @@ class _CompleteAyahWidget extends StatelessWidget {
   }
 
   List<Widget> _buildWords(
+    BuildContext context,
     AyahSegment segment,
     _AyahState state,
     double screenWidth,
@@ -655,16 +626,16 @@ class _CompleteAyahWidget extends StatelessWidget {
       if (wordStatus != null) {
         switch (wordStatus) {
           case WordStatus.matched:
-            wordBg = correctColor.withOpacity(0.4);
+            wordBg = getCorrectColor(context).withValues(alpha: 0.4);
             break;
           case WordStatus.mismatched:
           case WordStatus.skipped:
-            wordBg = errorColor.withOpacity(0.4);
+            wordBg = getErrorColor(context).withValues(alpha: 0.4);
             break;
           case WordStatus.processing:
             wordBg = state.isListeningMode
-                ? Colors.grey.withOpacity(0.5)
-                : listeningColor.withOpacity(0.3);
+                ? AppColors.getTextTertiary(context).withValues(alpha: 0.5)
+                : AppColors.getInfo(context).withValues(alpha: 0.3);
             break;
           default:
             break;
@@ -692,7 +663,7 @@ class _CompleteAyahWidget extends StatelessWidget {
           border: (state.hideUnreadAyat && !isLastWordInAyah)
               ? Border(
                   bottom: BorderSide(
-                    color: Colors.black.withOpacity(0.15),
+                    color: AppColors.getTextPrimary(context).withValues(alpha: 0.15),
                     width: 0.3,
                   ),
                 )
@@ -701,6 +672,7 @@ class _CompleteAyahWidget extends StatelessWidget {
         child: Opacity(
           opacity: opacity,
           child: _buildWordText(
+            context,
             word.text,
             fontFamily,
             state.isCurrentAyat,
@@ -713,6 +685,7 @@ class _CompleteAyahWidget extends StatelessWidget {
 
   // ✅ FIX: Helper method untuk render text dengan setting yang berbeda per layout
   Widget _buildWordText(
+    BuildContext context,
     String text,
     String fontFamily,
     bool isCurrentAyat,
@@ -728,7 +701,7 @@ class _CompleteAyahWidget extends StatelessWidget {
             ? screenWidth * 0.070 // ← Sedikit lebih besar untuk Indopak
             : screenWidth * 0.0625, // ← Original untuk QPC
         fontFamily: fontFamily,
-        color: isCurrentAyat ? listeningColor : Colors.black87,
+        color: isCurrentAyat ? AppColors.getInfo(context) : Colors.black87,
         fontWeight: FontWeight.w400,
         height: 1.7,
         letterSpacing: isIndopak

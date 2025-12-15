@@ -82,7 +82,7 @@ class _RecitationPageState extends State<RecitationPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(
@@ -118,7 +118,7 @@ class _RecitationPageState extends State<RecitationPage> {
                 // Mistake Detection Container
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: AppColors.getSurface(context),
                     borderRadius: BorderRadius.circular(
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
@@ -140,7 +140,7 @@ class _RecitationPageState extends State<RecitationPage> {
                             Icon(
                               Icons.error_outline,
                               size: 20 * s * 0.9,
-                              color: AppColors.textPrimary,
+                              color: AppColors.getTextPrimary(context),
                             ),
                             SizedBox(width: AppDesignSystem.space12 * s * 0.9),
                             Expanded(
@@ -154,7 +154,7 @@ class _RecitationPageState extends State<RecitationPage> {
                                 style: TextStyle(
                                   fontSize: 16 * s * 0.9,
                                   fontWeight: AppTypography.regular,
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.getTextPrimary(context),
                                 ),
                               ),
                             ),
@@ -173,7 +173,7 @@ class _RecitationPageState extends State<RecitationPage> {
                       Divider(
                         height: 1,
                         thickness: 1 * s * 0.9,
-                        color: AppColors.borderLight,
+                        color: AppColors.getBorderLight(context),
                       ),
 
                       // Detect Tashkeel (diacritics) mistakes
@@ -192,7 +192,7 @@ class _RecitationPageState extends State<RecitationPage> {
                                   style: TextStyle(
                                     fontSize: 20 * s * 0.9,
                                     fontWeight: AppTypography.semiBold,
-                                    color: AppColors.textPrimary,
+                                    color: AppColors.getTextPrimary(context),
                                   ),
                                 ),
                                 SizedBox(
@@ -209,7 +209,7 @@ class _RecitationPageState extends State<RecitationPage> {
                                     style: TextStyle(
                                       fontSize: 16 * s * 0.9,
                                       fontWeight: AppTypography.regular,
-                                      color: AppColors.textPrimary,
+                                      color: AppColors.getTextPrimary(context),
                                     ),
                                   ),
                                 ),
@@ -248,7 +248,7 @@ class _RecitationPageState extends State<RecitationPage> {
                       Divider(
                         height: 1,
                         thickness: 1 * s * 0.9,
-                        color: AppColors.borderLight,
+                        color: AppColors.getBorderLight(context),
                       ),
 
                       // Don't progress until mistake is fixed
@@ -265,7 +265,7 @@ class _RecitationPageState extends State<RecitationPage> {
                                 Icon(
                                   Icons.cancel_outlined,
                                   size: 20 * s * 0.9,
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.getTextPrimary(context),
                                 ),
                                 SizedBox(
                                   width: AppDesignSystem.space12 * s * 0.9,
@@ -281,16 +281,17 @@ class _RecitationPageState extends State<RecitationPage> {
                                     style: TextStyle(
                                       fontSize: 16 * s * 0.9,
                                       fontWeight: AppTypography.regular,
-                                      color: AppColors.textPrimary,
+                                      color: AppColors.getTextPrimary(context),
                                     ),
                                   ),
                                 ),
                                 Switch(
                                   value: _dontProgressUntilFixed,
                                   onChanged: _toggleDontProgress,
-                                  activeColor: Color(0xFF4CAF50),
-                                  inactiveThumbColor: AppColors.borderMedium,
-                                  inactiveTrackColor: AppColors.borderLight,
+                                  activeTrackColor: AppColors.getSuccess(context),
+                                  activeThumbColor: AppColors.getSuccess(context),
+                                  inactiveThumbColor: AppColors.getBorderMedium(context),
+                                  inactiveTrackColor: AppColors.getBorderLight(context),
                                 ),
                               ],
                             ),
@@ -307,7 +308,7 @@ class _RecitationPageState extends State<RecitationPage> {
                                 style: TextStyle(
                                   fontSize: 13 * s * 0.9,
                                   fontWeight: AppTypography.regular,
-                                  color: AppColors.textSecondary,
+                                  color: AppColors.getTextSecondary(context),
                                   height: 1.4,
                                 ),
                               ),
@@ -332,7 +333,7 @@ class _RecitationPageState extends State<RecitationPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.medium,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
 
@@ -345,12 +346,12 @@ class _RecitationPageState extends State<RecitationPage> {
                     vertical: AppDesignSystem.space16 * s * 0.5,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: AppColors.getSurface(context),
                     borderRadius: BorderRadius.circular(
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
                     border: Border.all(
-                      color: AppColors.borderLight,
+                      color: AppColors.getBorderLight(context),
                       width: 1.0 * s * 0.9,
                     ),
                   ),
@@ -362,7 +363,7 @@ class _RecitationPageState extends State<RecitationPage> {
                           Icon(
                             Icons.pause_circle_outline,
                             size: 20 * s * 0.9,
-                            color: AppColors.textPrimary,
+                            color: AppColors.getTextPrimary(context),
                           ),
                           SizedBox(width: AppDesignSystem.space12 * s * 0.9),
                           Expanded(
@@ -376,7 +377,7 @@ class _RecitationPageState extends State<RecitationPage> {
                               style: TextStyle(
                                 fontSize: 16 * s * 0.9,
                                 fontWeight: AppTypography.regular,
-                                color: AppColors.textPrimary,
+                                color: AppColors.getTextPrimary(context),
                               ),
                             ),
                           ),
@@ -402,7 +403,7 @@ class _RecitationPageState extends State<RecitationPage> {
                           style: TextStyle(
                             fontSize: 13 * s * 0.9,
                             fontWeight: AppTypography.regular,
-                            color: AppColors.textSecondary,
+                            color: AppColors.getTextSecondary(context),
                             height: 1.4,
                           ),
                         ),
@@ -441,7 +442,7 @@ class _RecitationPageState extends State<RecitationPage> {
               margin: EdgeInsets.only(right: 8 * s),
               padding: EdgeInsets.symmetric(horizontal: 6 * s, vertical: 2 * s),
               decoration: BoxDecoration(
-                color: const Color(0xFFF39C12).withValues(alpha: 0.15),
+                color: AppColors.warning.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4 * s),
               ),
               child: Row(
@@ -450,7 +451,7 @@ class _RecitationPageState extends State<RecitationPage> {
                   Icon(
                     Icons.lock,
                     size: 10 * s,
-                    color: const Color(0xFFF39C12),
+                    color: AppColors.warning,
                   ),
                   SizedBox(width: 2 * s),
                   Text(
@@ -458,7 +459,7 @@ class _RecitationPageState extends State<RecitationPage> {
                     style: TextStyle(
                       fontSize: 8 * s,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFFF39C12),
+                      color: AppColors.warning,
                     ),
                   ),
                 ],
@@ -471,7 +472,8 @@ class _RecitationPageState extends State<RecitationPage> {
           onChanged: canAccess
               ? onChanged
               : (_) => showPremiumFeatureDialog(context, feature),
-          activeColor: const Color(0xFF4CAF50),
+          activeTrackColor: AppColors.getSuccess(context),
+          activeThumbColor: AppColors.getSuccess(context),
           inactiveThumbColor: AppColors.borderMedium,
           inactiveTrackColor: AppColors.borderLight,
         ),

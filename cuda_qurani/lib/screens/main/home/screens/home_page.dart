@@ -12,7 +12,6 @@ import 'package:cuda_qurani/services/auth_service.dart';
 import 'package:cuda_qurani/screens/main/stt/stt_page.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
@@ -45,6 +44,7 @@ class _HomePageState extends State<HomePage> {
   int _completionPercentage = 0;
   int _memorizedPercentage = 0;
   String _engagementTime = "0:00:00";
+  // ignore: unused_field
   bool _isLoadingStats = true;
 
   // Today's Goal data
@@ -60,6 +60,7 @@ class _HomePageState extends State<HomePage> {
   int _totalBadgesCount = 0;
 
   // Continue Reading & Recent Progress
+  // ignore: unused_field
   Map<String, dynamic>? _continueReading;
   List<Map<String, dynamic>> _recentProgress = [];
 
@@ -183,12 +184,12 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.getBackground(context),
       appBar: const MenuAppBar(selectedIndex: 0),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refreshAllData,
-          color: AppColors.primary,
+          color: AppColors.getPrimary(context),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
@@ -274,9 +275,9 @@ class _HomePageState extends State<HomePage> {
       return Container(
         padding: AppPadding.card(context),
         decoration: AppComponentStyles.card(
-          color: AppColors.surface,
+          color: AppColors.getSurface(context),
           borderRadius: AppDesignSystem.radiusLarge,
-          borderColor: AppColors.borderLight,
+          borderColor: AppColors.getBorderLight(context),
           borderWidth: AppDesignSystem.borderNormal,
           shadow: true,
         ),
@@ -288,23 +289,23 @@ class _HomePageState extends State<HomePage> {
       return Container(
         padding: AppPadding.card(context),
         decoration: AppComponentStyles.card(
-          color: AppColors.surface,
+          color: AppColors.getSurface(context),
           borderRadius: AppDesignSystem.radiusLarge,
-          borderColor: AppColors.borderLight,
+          borderColor: AppColors.getBorderLight(context),
           borderWidth: AppDesignSystem.borderNormal,
           shadow: true,
         ),
         child: Column(
           children: [
-            const Icon(
+            Icon(
               Icons.book_outlined,
               size: 48,
-              color: AppColors.textTertiary,
+              color: AppColors.getTextTertiary(context),
             ),
             AppMargin.gapSmall(context),
             Text(
               _t('home.no_recent_session_text'),
-              style: AppTypography.body(context, color: AppColors.textTertiary),
+              style: AppTypography.body(context, color: AppColors.getTextTertiary(context)),
             ),
             AppMargin.gapSmall(context),
             Text(
@@ -362,9 +363,9 @@ class _HomePageState extends State<HomePage> {
         child: Container(
           padding: AppPadding.card(context),
           decoration: AppComponentStyles.card(
-            color: AppColors.surface,
+            color: AppColors.getSurface(context),
             borderRadius: AppDesignSystem.radiusLarge,
-            borderColor: AppColors.borderLight,
+            borderColor: AppColors.getBorderLight(context),
             borderWidth: AppDesignSystem.borderNormal,
             shadow: true,
           ),
@@ -382,8 +383,8 @@ class _HomePageState extends State<HomePage> {
                         height: AppDesignSystem.space6,
                         decoration: BoxDecoration(
                           color: status == 'paused'
-                              ? AppColors.warning
-                              : AppColors.primary,
+                              ? AppColors.getWarning(context)
+                              : AppColors.getPrimary(context),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -432,7 +433,7 @@ class _HomePageState extends State<HomePage> {
                             Icon(
                               Icons.history_rounded,
                               size: AppDesignSystem.iconSmall,
-                              color: AppColors.textTertiary,
+                              color: AppColors.getTextTertiary(context),
                             ),
                           ],
                         ),
@@ -462,9 +463,9 @@ class _HomePageState extends State<HomePage> {
                     _resumeSession();
                   },
                   style: AppComponentStyles.secondaryButton(context).copyWith(
-                    side: MaterialStateProperty.all(
-                      const BorderSide(
-                        color: AppColors.textPrimary,
+                    side: WidgetStateProperty.all(
+                      BorderSide(
+                        color: AppColors.getTextPrimary(context),
                         width: AppDesignSystem.borderThick,
                       ),
                     ),
@@ -473,7 +474,7 @@ class _HomePageState extends State<HomePage> {
                     _t('home.continue_reading_text'),
                     style: AppTypography.label(
                       context,
-                      color: AppColors.textPrimary,
+                      color: AppColors.getTextPrimary(context),
                       weight: AppTypography.semiBold,
                     ),
                   ),
@@ -534,13 +535,15 @@ class _HomePageState extends State<HomePage> {
       }
     } catch (e) {
       print('❌ Failed to resume session: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${_t('home.failed_to_resume_text')}: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${_t('home.failed_to_resume_text')}: $e'),
+            backgroundColor: AppColors.getError(context),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -592,9 +595,9 @@ class _HomePageState extends State<HomePage> {
     return Container(
       padding: AppPadding.card(context),
       decoration: AppComponentStyles.card(
-        color: AppColors.surface,
+        color: AppColors.getSurface(context),
         borderRadius: AppDesignSystem.radiusLarge,
-        borderColor: AppColors.borderLight,
+        borderColor: AppColors.getBorderLight(context),
         borderWidth: AppDesignSystem.borderNormal,
         shadow: false,
       ),
@@ -643,7 +646,7 @@ class _HomePageState extends State<HomePage> {
                 context: context,
                 label: _t('home.completion_text'),
                 value: '${context.formatNumber(_completionPercentage)}%',
-                color: AppColors.primary,
+                color: AppColors.getPrimary(context),
               ),
             ),
             AppMargin.gapH(context),
@@ -652,7 +655,7 @@ class _HomePageState extends State<HomePage> {
                 context: context,
                 label: _t('home.memorized_text'),
                 value: '${context.formatNumber(_memorizedPercentage)}%',
-                color: AppColors.accent,
+                color: Theme.of(context).colorScheme.secondary,
               ),
             ),
           ],
@@ -665,7 +668,7 @@ class _HomePageState extends State<HomePage> {
                 context: context,
                 label: _t('home.time_text'),
                 value: _formatEngagementTime(context, _engagementTime, isArabic),
-                color: AppColors.info,
+                color: AppColors.getInfo(context),
               ),
             ),
             AppMargin.gapH(context),
@@ -676,7 +679,7 @@ class _HomePageState extends State<HomePage> {
                     ? _t('home.verses_text')
                     : _t('home.verse_text'),
                 value: context.formatNumber(_versesRecited),
-                color: AppColors.success,
+                color: AppColors.getSuccess(context),
               ),
             ),
           ],
@@ -713,9 +716,9 @@ class _HomePageState extends State<HomePage> {
     return Container(
       padding: AppPadding.card(context),
       decoration: AppComponentStyles.card(
-        color: AppColors.surface,
+        color: AppColors.getSurface(context),
         borderRadius: AppDesignSystem.radiusLarge,
-        borderColor: AppColors.borderLight,
+        borderColor: AppColors.getBorderLight(context),
         borderWidth: AppDesignSystem.borderNormal,
         shadow: false,
       ),
@@ -778,9 +781,9 @@ class _HomePageState extends State<HomePage> {
             child: Container(
               padding: AppPadding.card(context),
               decoration: AppComponentStyles.card(
-                color: AppColors.surface,
+                color: AppColors.getSurface(context),
                 borderRadius: AppDesignSystem.radiusLarge,
-                borderColor: AppColors.borderLight,
+                borderColor: AppColors.getBorderLight(context),
                 borderWidth: AppDesignSystem.borderNormal,
                 shadow: false,
               ),
@@ -794,8 +797,8 @@ class _HomePageState extends State<HomePage> {
                               height: AppDesignSystem.iconHuge,
                               decoration: BoxDecoration(
                                 color: _goalCompleted
-                                    ? AppColors.success
-                                    : AppColors.primary,
+                                    ? AppColors.getSuccess(context)
+                                    : AppColors.getPrimary(context),
                                 borderRadius: BorderRadius.circular(
                                   AppDesignSystem.radiusMedium,
                                 ),
@@ -830,8 +833,8 @@ class _HomePageState extends State<HomePage> {
                                     style: AppTypography.caption(
                                       context,
                                       color: _goalCompleted
-                                          ? AppColors.success
-                                          : AppColors.textTertiary,
+                                          ? AppColors.getSuccess(context)
+                                          : AppColors.getTextTertiary(context),
                                     ),
                                   ),
                                 ],
@@ -840,14 +843,14 @@ class _HomePageState extends State<HomePage> {
                             if (_goalCompleted)
                               Icon(
                                 Icons.check_circle_rounded,
-                                color: AppColors.success,
+                                color: AppColors.getSuccess(context),
                                 size: AppDesignSystem.iconLarge,
                               )
                             else
                               Icon(
                                 Icons.arrow_forward_ios_rounded,
                                 size: AppDesignSystem.iconSmall,
-                                color: AppColors.textDisabled,
+                                color: AppColors.getTextDisabled(context),
                               ),
                           ],
                         ),
@@ -859,9 +862,9 @@ class _HomePageState extends State<HomePage> {
                             ),
                             child: LinearProgressIndicator(
                               value: progressPercent,
-                              backgroundColor: AppColors.borderLight,
+                              backgroundColor: AppColors.getBorderLight(context),
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.primary,
+                                AppColors.getPrimary(context),
                               ),
                               minHeight: AppDesignSystem.scale(context, 6),
                             ),
@@ -875,14 +878,14 @@ class _HomePageState extends State<HomePage> {
                           width: AppDesignSystem.iconHuge,
                           height: AppDesignSystem.iconHuge,
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceContainerLow,
+                            color: AppColors.getSurfaceContainerLow(context),
                             borderRadius: BorderRadius.circular(
                               AppDesignSystem.radiusMedium,
                             ),
                           ),
                           child: Icon(
                             Icons.add_rounded,
-                            color: AppColors.textTertiary,
+                            color: AppColors.getTextTertiary(context),
                             size: AppDesignSystem.iconLarge,
                           ),
                         ),
@@ -909,7 +912,7 @@ class _HomePageState extends State<HomePage> {
                         Icon(
                           Icons.arrow_forward_ios_rounded,
                           size: AppDesignSystem.iconSmall,
-                          color: AppColors.textDisabled,
+                          color: AppColors.getTextDisabled(context),
                         ),
                       ],
                     ),
@@ -945,7 +948,7 @@ class _HomePageState extends State<HomePage> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryContainer,
+                      color: AppColors.getPrimaryContainer(context),
                       borderRadius: BorderRadius.circular(
                         AppDesignSystem.radiusSmall,
                       ),
@@ -954,7 +957,7 @@ class _HomePageState extends State<HomePage> {
                       '${context.formatNumber(_earnedBadgesCount)}/${context.formatNumber(_totalBadgesCount)}',
                       style: AppTypography.captionSmall(
                         context,
-                        color: AppColors.primary,
+                        color: AppColors.getPrimary(context),
                         weight: AppTypography.bold,
                       ),
                     ),
@@ -1009,7 +1012,7 @@ class _HomePageState extends State<HomePage> {
                 _t('home.more_text'),
                 style: AppTypography.caption(
                   context,
-                  color: AppColors.textPrimary,
+                  color: AppColors.getTextPrimary(context),
                 ),
               ),
             ),
@@ -1048,7 +1051,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             Icon(
               Icons.emoji_events_outlined,
-              color: AppColors.textDisabled,
+              color: AppColors.getTextDisabled(context),
               size: AppDesignSystem.iconLarge,
             ),
             AppMargin.gapHSmall(context),
@@ -1056,7 +1059,7 @@ class _HomePageState extends State<HomePage> {
               _t('home.complete_sessions_to_earn_badges_text'),
               style: AppTypography.caption(
                 context,
-                color: AppColors.textTertiary,
+                color: AppColors.getTextTertiary(context),
               ),
             ),
           ],
@@ -1078,9 +1081,9 @@ class _HomePageState extends State<HomePage> {
       ),
       padding: AppPadding.card(context),
       decoration: AppComponentStyles.card(
-        color: AppColors.surface,
+        color: AppColors.getSurface(context),
         borderRadius: AppDesignSystem.radiusLarge,
-        borderColor: AppColors.borderLight,
+        borderColor: AppColors.getBorderLight(context),
         borderWidth: AppDesignSystem.borderNormal,
         shadow: false,
       ),
@@ -1100,8 +1103,8 @@ class _HomePageState extends State<HomePage> {
                   right: AppDesignSystem.scale(context, -4),
                   child: Container(
                     padding: AppPadding.all(context, AppDesignSystem.space4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.warning,
+                    decoration: BoxDecoration(
+                      color: AppColors.getWarning(context),
                       shape: BoxShape.circle,
                     ),
                     constraints: BoxConstraints(
@@ -1113,7 +1116,7 @@ class _HomePageState extends State<HomePage> {
                         context.formatNumber(count),
                         style: AppTypography.captionSmall(
                           context,
-                          color: Colors.white,
+                          color: AppColors.getTextInverse(context),
                           weight: AppTypography.bold,
                         ),
                       ),

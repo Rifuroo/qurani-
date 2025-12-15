@@ -206,8 +206,11 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Download failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            content: Text(
+              'Download failed: ${e.toString()}',
+              style: TextStyle(color: AppColors.getTextInverse(context)),
+            ),
+            backgroundColor: AppColors.getError(context),
           ),
         );
       }
@@ -274,7 +277,7 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.getError(context)),
             child: Text(
               _translations.isNotEmpty
                   ? LanguageHelper.tr(
@@ -304,9 +307,12 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cache cleared successfully'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text(
+              'Cache cleared successfully',
+              style: TextStyle(color: AppColors.getTextInverse(context)),
+            ),
+            backgroundColor: AppColors.getSuccess(context),
           ),
         );
       }
@@ -334,108 +340,108 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
         horizontal: AppDesignSystem.space16 * s,
         vertical: AppDesignSystem.space12 * s,
       ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          bottom: BorderSide(color: AppColors.borderLight, width: 1.0 * s),
+        decoration: BoxDecoration(
+          color: AppColors.getSurface(context),
+          border: Border(
+            bottom: BorderSide(color: AppColors.getBorderLight(context), width: 1.0 * s),
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  surahName,
-                  style: TextStyle(
-                    fontSize: 16 * s,
-                    fontWeight: AppTypography.regular,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                if (isDownloading && downloadSpeed != null) ...[
-                  SizedBox(height: 4 * s),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    downloadSpeed,
+                    surahName,
                     style: TextStyle(
-                      fontSize: 12 * s,
-                      color: AppColors.textSecondary,
+                      fontSize: 16 * s,
+                      fontWeight: AppTypography.regular,
+                      color: AppColors.getTextPrimary(context),
                     ),
                   ),
-                ],
-              ],
-            ),
-          ),
-          SizedBox(width: AppDesignSystem.space12 * s),
-
-          // Progress indicator
-          if (isDownloading) ...[
-            SizedBox(
-              width: 40 * s,
-              child: Text(
-                '${(progress * 100).toInt()}%',
-                style: TextStyle(
-                  fontSize: 12 * s,
-                  fontWeight: AppTypography.medium,
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.right,
-              ),
-            ),
-          ] else ...[
-            SizedBox(
-              width: 40 * s,
-              child: Text(
-                isDownloaded ? '100%' : '0%',
-                style: TextStyle(
-                  fontSize: 12 * s,
-                  fontWeight: AppTypography.regular,
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.right,
-              ),
-            ),
-          ],
-
-          SizedBox(width: AppDesignSystem.space8 * s),
-
-          // Download button
-          InkWell(
-            onTap: isDownloaded || isDownloading
-                ? null
-                : () => _downloadSurah(surahId),
-            borderRadius: BorderRadius.circular(50),
-            child: Container(
-              width: 32 * s,
-              height: 32 * s,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDownloaded
-                    ? const Color(0xFF4CAF50)
-                    : AppColors.borderLight,
-              ),
-              child: Center(
-                child: isDownloading
-                    ? SizedBox(
-                        width: 16 * s,
-                        height: 16 * s,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2 * s,
-                          color: Colors.white,
-                          value: progress,
-                        ),
-                      )
-                    : Icon(
-                        isDownloaded ? Icons.check : Icons.arrow_downward,
-                        size: 16 * s,
-                        color: isDownloaded
-                            ? Colors.white
-                            : AppColors.textSecondary,
+                  if (isDownloading && downloadSpeed != null) ...[
+                    SizedBox(height: 4 * s),
+                    Text(
+                      downloadSpeed,
+                      style: TextStyle(
+                        fontSize: 12 * s,
+                        color: AppColors.getTextSecondary(context),
                       ),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ),
+            SizedBox(width: AppDesignSystem.space12 * s),
+
+            // Progress indicator
+            if (isDownloading) ...[
+              SizedBox(
+                width: 40 * s,
+                child: Text(
+                  '${(progress * 100).toInt()}%',
+                  style: TextStyle(
+                    fontSize: 12 * s,
+                    fontWeight: AppTypography.medium,
+                    color: AppColors.getTextSecondary(context),
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ] else ...[
+              SizedBox(
+                width: 40 * s,
+                child: Text(
+                  isDownloaded ? '100%' : '0%',
+                  style: TextStyle(
+                    fontSize: 12 * s,
+                    fontWeight: AppTypography.regular,
+                    color: AppColors.getTextSecondary(context),
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+
+            SizedBox(width: AppDesignSystem.space8 * s),
+
+            // Download button
+            InkWell(
+              onTap: isDownloaded || isDownloading
+                  ? null
+                  : () => _downloadSurah(surahId),
+              borderRadius: BorderRadius.circular(50),
+              child: Container(
+                width: 32 * s,
+                height: 32 * s,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDownloaded
+                      ? AppColors.getSuccess(context)
+                      : AppColors.getBorderLight(context),
+                ),
+                child: Center(
+                  child: isDownloading
+                      ? SizedBox(
+                          width: 16 * s,
+                          height: 16 * s,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2 * s,
+                            color: AppColors.getTextInverse(context),
+                            value: progress,
+                          ),
+                        )
+                      : Icon(
+                          isDownloaded ? Icons.check : Icons.arrow_downward,
+                          size: 16 * s,
+                          color: isDownloaded
+                              ? AppColors.getTextInverse(context)
+                              : AppColors.getTextSecondary(context),
+                        ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -446,7 +452,7 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(
@@ -463,8 +469,8 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ?               Center(
+              child: CircularProgressIndicator(color: AppColors.getPrimary(context)),
             )
           : SafeArea(
               child: Column(
@@ -481,7 +487,7 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
                           style: TextStyle(
                             fontSize: 18 * s,
                             fontWeight: AppTypography.semiBold,
-                            color: AppColors.textPrimary,
+                            color: AppColors.getTextPrimary(context),
                           ),
                         ),
                         SizedBox(height: AppDesignSystem.space8 * s),
@@ -490,7 +496,7 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
                             Icon(
                               Icons.storage,
                               size: 16 * s,
-                              color: AppColors.textSecondary,
+                              color: AppColors.getTextSecondary(context),
                             ),
                             SizedBox(width: AppDesignSystem.space8 * s),
                             Text(
@@ -500,7 +506,7 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
                               style: TextStyle(
                                 fontSize: 14 * s,
                                 fontWeight: AppTypography.regular,
-                                color: AppColors.textSecondary,
+                                color: AppColors.getTextSecondary(context),
                               ),
                             ),
                           ],
@@ -525,13 +531,13 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
                         ),
                         decoration: BoxDecoration(
                           color: _isDownloadingAll
-                              ? AppColors.borderLight
-                              : AppColors.surface,
+                              ? AppColors.getBorderLight(context)
+                              : AppColors.getSurface(context),
                           borderRadius: BorderRadius.circular(
                             AppDesignSystem.radiusRound * s,
                           ),
                           border: Border.all(
-                            color: AppColors.borderLight,
+                            color: AppColors.getBorderLight(context),
                             width: 1.0 * s,
                           ),
                         ),
@@ -544,14 +550,14 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
                                 height: 16 * s,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2 * s,
-                                  color: AppColors.textSecondary,
+                                  color: AppColors.getTextSecondary(context),
                                 ),
                               )
                             else
                               Icon(
                                 Icons.download,
                                 size: 20 * s,
-                                color: AppColors.textSecondary,
+                                color: AppColors.getTextSecondary(context),
                               ),
                             SizedBox(width: AppDesignSystem.space8 * s),
                             Text(
@@ -571,7 +577,7 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
                               style: TextStyle(
                                 fontSize: 16 * s,
                                 fontWeight: AppTypography.regular,
-                                color: AppColors.textSecondary,
+                                color: AppColors.getTextSecondary(context),
                               ),
                             ),
                           ],
@@ -586,10 +592,10 @@ class _AudioManagerPageState extends State<AudioManagerPage> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: AppColors.getSurface(context),
                         border: Border(
                           top: BorderSide(
-                            color: AppColors.borderLight,
+                            color: AppColors.getBorderLight(context),
                             width: 1.0 * s,
                           ),
                         ),

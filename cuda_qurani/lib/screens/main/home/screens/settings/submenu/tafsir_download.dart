@@ -173,7 +173,7 @@ class _TafsirDownloadPageState extends State<TafsirDownloadPage> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.getSurface(context),
         borderRadius: BorderRadius.circular(
           AppDesignSystem.radiusMedium * s * 0.9,
         ),
@@ -290,7 +290,7 @@ class _TafsirDownloadPageState extends State<TafsirDownloadPage> {
               child: Icon(
                 Icons.arrow_downward,
                 size: 20 * s * 0.9,
-                color: AppColors.surface,
+                color: AppColors.getSurface(context),
               ),
             ),
           ),
@@ -304,7 +304,7 @@ class _TafsirDownloadPageState extends State<TafsirDownloadPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'tafsir.tafsir_text')

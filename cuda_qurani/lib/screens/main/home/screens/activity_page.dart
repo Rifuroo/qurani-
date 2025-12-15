@@ -440,7 +440,7 @@ class _ActivityPageState extends State<ActivityPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.getBackground(context),
       appBar: const MenuAppBar(selectedIndex: 4),
       body: SafeArea(
         child: RefreshIndicator(
@@ -487,12 +487,12 @@ class _ActivityPageState extends State<ActivityPage> {
     return AppCard(
       padding: EdgeInsets.symmetric(horizontal: 12 * s, vertical: 8 * s),
       shadow: false,
-      borderColor: AppColors.borderLight,
+      borderColor: AppColors.getBorderLight(context),
       child: Row(
         children: [
           Icon(
             Icons.filter_list_rounded,
-            color: AppColors.textSecondary,
+            color: AppColors.getTextSecondary(context),
             size: 15 * s,
           ),
           SizedBox(width: 6 * s),
@@ -503,14 +503,14 @@ class _ActivityPageState extends State<ActivityPage> {
             style: TextStyle(
               fontSize: 12 * s,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: AppColors.getTextSecondary(context),
             ),
           ),
           const Spacer(),
           Container(
             padding: EdgeInsets.symmetric(horizontal: 10 * s, vertical: 2 * s),
             decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLowest,
+              color: AppColors.getSurfaceContainerLowest(context),
               borderRadius: BorderRadius.circular(6 * s),
             ),
             child: DropdownButton<String>(
@@ -518,15 +518,15 @@ class _ActivityPageState extends State<ActivityPage> {
               underline: const SizedBox(),
               icon: Icon(
                 Icons.keyboard_arrow_down_rounded,
-                color: AppColors.textPrimary,
+                color: AppColors.getTextPrimary(context),
                 size: 16 * s,
               ),
               style: TextStyle(
                 fontSize: 11 * s,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: AppColors.getTextPrimary(context),
               ),
-              dropdownColor: AppColors.surface,
+              dropdownColor: AppColors.getSurface(context),
               borderRadius: BorderRadius.circular(6 * s),
               items: _globalFilterOptions.entries
                   .map(
@@ -537,7 +537,7 @@ class _ActivityPageState extends State<ActivityPage> {
                         style: TextStyle(
                           fontSize: 11 * s,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: AppColors.getTextPrimary(context),
                         ),
                       ),
                     ),
@@ -586,7 +586,7 @@ class _ActivityPageState extends State<ActivityPage> {
                 style: TextStyle(
                   fontSize: 16 * s,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: AppColors.getTextPrimary(context),
                   letterSpacing: -0.3,
                 ),
               ),
@@ -597,7 +597,7 @@ class _ActivityPageState extends State<ActivityPage> {
         AppCard(
           padding: EdgeInsets.all(16 * s),
           shadow: false,
-          borderColor: AppColors.borderLight,
+          borderColor: AppColors.getBorderLight(context),
           child: SizedBox(
             height: 180 * s,
             child: _isLoading
@@ -641,7 +641,7 @@ class _ActivityPageState extends State<ActivityPage> {
                 style: TextStyle(
                   fontSize: 16 * s,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: AppColors.getTextPrimary(context),
                   letterSpacing: -0.3,
                 ),
               ),
@@ -652,7 +652,7 @@ class _ActivityPageState extends State<ActivityPage> {
         AppCard(
           padding: EdgeInsets.all(16 * s),
           shadow: false,
-          borderColor: AppColors.borderLight,
+          borderColor: AppColors.getBorderLight(context),
           child: SizedBox(
             height: 180 * s,
             child: _isLoading
@@ -696,7 +696,7 @@ class _ActivityPageState extends State<ActivityPage> {
                 style: TextStyle(
                   fontSize: 16 * s,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: AppColors.getTextPrimary(context),
                   letterSpacing: -0.3,
                 ),
               ),
@@ -707,7 +707,7 @@ class _ActivityPageState extends State<ActivityPage> {
         AppCard(
           padding: EdgeInsets.all(16 * s),
           shadow: false,
-          borderColor: AppColors.borderLight,
+          borderColor: AppColors.getBorderLight(context),
           child: SizedBox(
             height: 180 * s,
             child: _isLoading
@@ -754,7 +754,7 @@ class _ActivityPageState extends State<ActivityPage> {
             ),
             belowBarData: BarAreaData(
               show: true,
-              color: AppColors.success.withOpacity(0.08),
+              color: AppColors.success.withValues(alpha: 0.08),
             ),
           ),
         ],
@@ -768,7 +768,7 @@ class _ActivityPageState extends State<ActivityPage> {
                 context.formatNumber(value.toInt()),
                 style: TextStyle(
                   fontSize: 9 * s,
-                  color: AppColors.textTertiary,
+                  color: AppColors.getTextTertiary(context),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -794,7 +794,7 @@ class _ActivityPageState extends State<ActivityPage> {
                       xLabels[index],
                       style: TextStyle(
                         fontSize: 8.5 * s,
-                        color: AppColors.success.withOpacity(0.7),
+                        color: AppColors.success.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -810,7 +810,7 @@ class _ActivityPageState extends State<ActivityPage> {
           drawVerticalLine: false,
           horizontalInterval: 25,
           getDrawingHorizontalLine: (value) =>
-              FlLine(color: AppColors.borderLight, strokeWidth: 1 * s),
+              FlLine(color: AppColors.getBorderLight(context), strokeWidth: 1 * s),
         ),
         borderData: FlBorderData(show: false),
         lineTouchData: const LineTouchData(enabled: false),
@@ -839,7 +839,7 @@ class _ActivityPageState extends State<ActivityPage> {
           SizedBox(height: 8 * s),
           Text(
             loadingText,
-            style: TextStyle(fontSize: 11 * s, color: AppColors.textTertiary),
+            style: TextStyle(fontSize: 11 * s, color: AppColors.getTextTertiary(context)),
           ),
         ],
       ),
@@ -851,7 +851,7 @@ class _ActivityPageState extends State<ActivityPage> {
     return Center(
       child: Text(
         message,
-        style: TextStyle(fontSize: 12 * s, color: AppColors.textTertiary),
+        style: TextStyle(fontSize: 12 * s, color: AppColors.getTextTertiary(context)),
       ),
     );
   }
@@ -875,7 +875,7 @@ class _ActivityPageState extends State<ActivityPage> {
           style: TextStyle(
             fontSize: 12 * s,
             fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+            color: AppColors.getTextPrimary(context),
           ),
         ),
         SizedBox(width: 10 * s),
@@ -904,10 +904,10 @@ class _ActivityPageState extends State<ActivityPage> {
         width: 28 * s,
         height: 28 * s,
         decoration: BoxDecoration(
-          color: AppColors.surfaceContainerLowest,
+          color: AppColors.getSurfaceContainerLowest(context),
           borderRadius: BorderRadius.circular(6 * s),
         ),
-        child: Icon(icon, size: 16 * s, color: AppColors.textSecondary),
+        child: Icon(icon, size: 16 * s, color: AppColors.getTextSecondary(context)),
       ),
     );
   }
@@ -954,7 +954,7 @@ class _ActivityPageState extends State<ActivityPage> {
                 context.formatNumber(value.toInt()),
                 style: TextStyle(
                   fontSize: 9 * s,
-                  color: AppColors.textTertiary,
+                  color: AppColors.getTextTertiary(context),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -980,7 +980,7 @@ class _ActivityPageState extends State<ActivityPage> {
                       xLabels[index],
                       style: TextStyle(
                         fontSize: 8.5 * s,
-                        color: AppColors.primary.withOpacity(0.7),
+                        color: AppColors.primary.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -996,7 +996,7 @@ class _ActivityPageState extends State<ActivityPage> {
           drawVerticalLine: false,
           horizontalInterval: maxY / 3,
           getDrawingHorizontalLine: (value) =>
-              FlLine(color: AppColors.borderLight, strokeWidth: 1 * s),
+              FlLine(color: AppColors.getBorderLight(context), strokeWidth: 1 * s),
         ),
         borderData: FlBorderData(show: false),
         lineTouchData: const LineTouchData(enabled: false),
@@ -1018,7 +1018,7 @@ class _ActivityPageState extends State<ActivityPage> {
             style: TextStyle(
               fontSize: 16 * s,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: AppColors.getTextPrimary(context),
               letterSpacing: -0.3,
             ),
           ),
@@ -1026,7 +1026,7 @@ class _ActivityPageState extends State<ActivityPage> {
         AppCard(
           padding: EdgeInsets.all(16 * s),
           shadow: false,
-          borderColor: AppColors.borderLight,
+          borderColor: AppColors.getBorderLight(context),
           child: Column(
             children: [
               _buildStatisticsTabs(context),
@@ -1087,12 +1087,12 @@ class _ActivityPageState extends State<ActivityPage> {
                     vertical: 6 * s,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : Colors.transparent,
+                    color: isSelected ? AppColors.primary : Colors.transparent, // Primary is constant
                     borderRadius: BorderRadius.circular(6 * s),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.primary
-                          : AppColors.borderMedium,
+                          : AppColors.getBorderMedium(context),
                       width: 1 * s,
                     ),
                   ),
@@ -1102,8 +1102,8 @@ class _ActivityPageState extends State<ActivityPage> {
                       fontSize: 9.5 * s,
                       fontWeight: FontWeight.w600,
                       color: isSelected
-                          ? AppColors.textInverse
-                          : AppColors.textTertiary,
+                          ? AppColors.getTextInverse(context)
+                          : AppColors.getTextTertiary(context),
                       letterSpacing: 0.3,
                     ),
                   ),
@@ -1248,9 +1248,9 @@ class _ActivityPageState extends State<ActivityPage> {
     return Container(
       padding: EdgeInsets.all(12 * s),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
+        color: AppColors.getSurfaceVariant(context),
         borderRadius: BorderRadius.circular(10 * s),
-        border: Border.all(color: AppColors.borderLight, width: 1 * s),
+        border: Border.all(color: AppColors.getBorderLight(context), width: 1 * s),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1259,7 +1259,7 @@ class _ActivityPageState extends State<ActivityPage> {
             width: 28 * s,
             height: 28 * s,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6 * s),
             ),
             child: Icon(icon, color: color, size: 16 * s),
@@ -1270,7 +1270,7 @@ class _ActivityPageState extends State<ActivityPage> {
             style: TextStyle(
               fontSize: 18 * s,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: AppColors.getTextPrimary(context),
               height: 1.1,
             ),
             maxLines: 1,
@@ -1281,7 +1281,7 @@ class _ActivityPageState extends State<ActivityPage> {
             label,
             style: TextStyle(
               fontSize: 10 * s,
-              color: AppColors.textTertiary,
+                  color: AppColors.getTextTertiary(context),
               fontWeight: FontWeight.w500,
             ),
             maxLines: 1,
@@ -1293,7 +1293,7 @@ class _ActivityPageState extends State<ActivityPage> {
               subtitle,
               style: TextStyle(
                 fontSize: 8 * s,
-                color: AppColors.textTertiary.withOpacity(0.7),
+                color: AppColors.getTextTertiary(context).withValues(alpha: 0.7),
                 fontStyle: FontStyle.italic,
               ),
             ),

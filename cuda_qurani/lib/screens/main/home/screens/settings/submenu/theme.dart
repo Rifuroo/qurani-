@@ -3,11 +3,13 @@ import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
+import 'package:cuda_qurani/providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 /// ==================== THEME SETTINGS PAGE ====================
 /// Halaman untuk memilih tema aplikasi: Auto, Light, Dark
 
-enum ThemeMode { auto, light, dark }
+enum CustomThemeMode { auto, light, dark }
 
 class ThemePage extends StatefulWidget {
   const ThemePage({Key? key}) : super(key: key);
@@ -33,25 +35,46 @@ class _ThemePageState extends State<ThemePage> {
     });
   }
 
-  // Default selected theme (dummy state)
-  ThemeMode _selectedTheme = ThemeMode.light;
-
-  void _selectTheme(ThemeMode theme) {
-    setState(() {
-      _selectedTheme = theme;
-    });
+  void _selectTheme(CustomThemeMode theme) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
+    // Convert custom enum to Flutter's ThemeMode
+    ThemeMode flutterMode;
+    switch (theme) {
+      case CustomThemeMode.auto:
+        flutterMode = ThemeMode.system;
+        break;
+      case CustomThemeMode.light:
+        flutterMode = ThemeMode.light;
+        break;
+      case CustomThemeMode.dark:
+        flutterMode = ThemeMode.dark;
+        break;
+    }
+    
+    themeProvider.setThemeMode(flutterMode);
     AppHaptics.selection();
-
-    // TODO: Implement theme change logic
-    // Example: Provider.of<ThemeProvider>(context, listen: false).setTheme(theme);
+  }
+  
+  CustomThemeMode _getCurrentThemeMode(ThemeProvider themeProvider) {
+    switch (themeProvider.themeMode) {
+      case ThemeMode.system:
+        return CustomThemeMode.auto;
+      case ThemeMode.light:
+        return CustomThemeMode.light;
+      case ThemeMode.dark:
+        return CustomThemeMode.dark;
+    }
   }
 
   Widget _buildThemeOption({
     required String label,
-    required ThemeMode themeMode,
+    required CustomThemeMode themeMode,
     required bool isSelected,
   }) {
     final s = AppDesignSystem.getScaleFactor(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return InkWell(
       onTap: () => _selectTheme(themeMode),
@@ -64,12 +87,12 @@ class _ThemePageState extends State<ThemePage> {
           vertical: AppDesignSystem.space16 * s * 0.9,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.getSurface(context),
           borderRadius: BorderRadius.circular(
             AppDesignSystem.radiusMedium * s * 0.9,
           ),
           border: Border.all(
-            color: isSelected ? Colors.black : AppColors.borderLight,
+            color: isSelected ? colorScheme.primary : AppColors.getBorderLight(context),
             width: isSelected ? 1.5 * s * 0.9 : 1.0 * s * 0.9,
           ),
         ),
@@ -84,8 +107,8 @@ class _ThemePageState extends State<ThemePage> {
                       ? AppTypography.semiBold
                       : AppTypography.regular,
                   color: isSelected
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
+                      ? AppColors.getTextPrimary(context)
+                      : AppColors.getTextSecondary(context),
                 ),
               ),
             ),
@@ -96,7 +119,7 @@ class _ThemePageState extends State<ThemePage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? Colors.black : AppColors.borderMedium,
+                  color: isSelected ? colorScheme.primary : AppColors.getBorderMedium(context),
                   width: isSelected ? 2.0 * s * 0.9 : 1.5 * s * 0.9,
                 ),
                 color: Colors.transparent,
@@ -108,7 +131,7 @@ class _ThemePageState extends State<ThemePage> {
                         height: 10 * s * 0.9,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.black,
+                          color: colorScheme.primary,
                         ),
                       ),
                     )
@@ -123,9 +146,11 @@ class _ThemePageState extends State<ThemePage> {
   @override
   Widget build(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final currentMode = _getCurrentThemeMode(themeProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'theme_page.theme_text')
@@ -141,8 +166,8 @@ class _ThemePageState extends State<ThemePage> {
                 label: _translations.isNotEmpty
                     ? LanguageHelper.tr(_translations, 'theme_page.auto_text')
                     : 'Auto (Light/Dark)',
-                themeMode: ThemeMode.auto,
-                isSelected: _selectedTheme == ThemeMode.auto,
+                themeMode: CustomThemeMode.auto,
+                isSelected: currentMode == CustomThemeMode.auto,
               ),
 
               SizedBox(height: AppDesignSystem.space16 * s * 0.9),
@@ -152,8 +177,8 @@ class _ThemePageState extends State<ThemePage> {
                 label: _translations.isNotEmpty
                     ? LanguageHelper.tr(_translations, 'theme_page.light_text')
                     : 'Light',
-                themeMode: ThemeMode.light,
-                isSelected: _selectedTheme == ThemeMode.light,
+                themeMode: CustomThemeMode.light,
+                isSelected: currentMode == CustomThemeMode.light,
               ),
 
               SizedBox(height: AppDesignSystem.space16 * s * 0.9),
@@ -163,8 +188,8 @@ class _ThemePageState extends State<ThemePage> {
                 label: _translations.isNotEmpty
                     ? LanguageHelper.tr(_translations, 'theme_page.dark_text')
                     : 'Dark',
-                themeMode: ThemeMode.dark,
-                isSelected: _selectedTheme == ThemeMode.dark,
+                themeMode: CustomThemeMode.dark,
+                isSelected: currentMode == CustomThemeMode.dark,
               ),
             ],
           ),

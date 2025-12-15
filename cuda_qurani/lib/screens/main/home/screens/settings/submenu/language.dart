@@ -62,7 +62,7 @@ class _LanguagePageState extends State<LanguagePage> {
               AppDesignSystem.space24 * AppDesignSystem.getScaleFactor(context),
             ),
             decoration: BoxDecoration(
-              color: Colors.white,
+          color: AppColors.getSurface(context),
               borderRadius: BorderRadius.circular(
                 AppDesignSystem.radiusMedium *
                     AppDesignSystem.getScaleFactor(context),
@@ -84,6 +84,9 @@ class _LanguagePageState extends State<LanguagePage> {
                           'language_page.changing_text',
                         )
                       : 'Changing language...',
+                  style: TextStyle(
+                    color: AppColors.getTextPrimary(context),
+                  ),
                 ),
               ],
             ),
@@ -123,12 +126,12 @@ class _LanguagePageState extends State<LanguagePage> {
           vertical: AppDesignSystem.space16 * s * 0.9,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.getSurface(context),
           borderRadius: BorderRadius.circular(
             AppDesignSystem.radiusMedium * s * 0.9,
           ),
           border: Border.all(
-            color: isSelected ? Colors.black : AppColors.borderLight,
+            color: isSelected ? Theme.of(context).colorScheme.primary : AppColors.getBorderLight(context),
             width: isSelected ? 1.5 * s * 0.9 : 1.0 * s * 0.9,
           ),
         ),
@@ -154,8 +157,8 @@ class _LanguagePageState extends State<LanguagePage> {
                           ? AppTypography.semiBold
                           : AppTypography.regular,
                       color: isSelected
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
+                          ? AppColors.getTextPrimary(context)
+                          : AppColors.getTextSecondary(context),
                     ),
                   ),
                   // English name (e.g., "Indonesian") - jika berbeda
@@ -166,7 +169,7 @@ class _LanguagePageState extends State<LanguagePage> {
                       style: TextStyle(
                         fontSize: 13 * s * 0.9,
                         fontWeight: AppTypography.regular,
-                        color: AppColors.textTertiary,
+                        color: AppColors.getTextTertiary(context),
                       ),
                     ),
                   ],
@@ -181,7 +184,7 @@ class _LanguagePageState extends State<LanguagePage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? Colors.black : AppColors.borderMedium,
+                  color: isSelected ? Theme.of(context).colorScheme.primary : AppColors.getBorderMedium(context),
                   width: isSelected ? 2.0 * s * 0.9 : 1.5 * s * 0.9,
                 ),
                 color: Colors.transparent,
@@ -191,9 +194,9 @@ class _LanguagePageState extends State<LanguagePage> {
                       child: Container(
                         width: 11 * s * 0.9,
                         height: 11 * s * 0.9,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     )
@@ -210,7 +213,7 @@ class _LanguagePageState extends State<LanguagePage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'language_page.language_text')
@@ -231,7 +234,7 @@ class _LanguagePageState extends State<LanguagePage> {
                       'Loading languages...',
                       style: TextStyle(
                         fontSize: 14 * s,
-                        color: AppColors.textSecondary,
+                        color: AppColors.getTextSecondary(context),
                       ),
                     ),
                   ],
@@ -250,7 +253,7 @@ class _LanguagePageState extends State<LanguagePage> {
                       Icon(
                         Icons.error_outline,
                         size: 48 * s,
-                        color: Colors.red,
+                        color: AppColors.getError(context),
                       ),
                       SizedBox(height: AppDesignSystem.space16 * s),
                       Text(
@@ -258,7 +261,7 @@ class _LanguagePageState extends State<LanguagePage> {
                         style: TextStyle(
                           fontSize: 16 * s,
                           fontWeight: AppTypography.semiBold,
-                          color: AppColors.textPrimary,
+                          color: AppColors.getTextPrimary(context),
                         ),
                       ),
                       SizedBox(height: AppDesignSystem.space8 * s),
@@ -266,7 +269,7 @@ class _LanguagePageState extends State<LanguagePage> {
                         provider.error!,
                         style: TextStyle(
                           fontSize: 14 * s,
-                          color: AppColors.textSecondary,
+                          color: AppColors.getTextSecondary(context),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -276,8 +279,8 @@ class _LanguagePageState extends State<LanguagePage> {
                         icon: const Icon(Icons.refresh),
                         label: const Text('Retry'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
+                          backgroundColor: AppColors.getPrimary(context),
+                          foregroundColor: AppColors.getTextInverse(context),
                           padding: EdgeInsets.symmetric(
                             horizontal: AppDesignSystem.space24 * s,
                             vertical: AppDesignSystem.space12 * s,
@@ -308,14 +311,14 @@ class _LanguagePageState extends State<LanguagePage> {
                     Icon(
                       Icons.language,
                       size: 48 * s,
-                      color: AppColors.textTertiary,
+                      color: AppColors.getTextTertiary(context),
                     ),
                     SizedBox(height: AppDesignSystem.space16 * s),
                     Text(
                       'No languages available',
                       style: TextStyle(
                         fontSize: 16 * s,
-                        color: AppColors.textSecondary,
+                        color: AppColors.getTextSecondary(context),
                       ),
                     ),
                   ],

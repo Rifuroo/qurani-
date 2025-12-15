@@ -35,7 +35,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
   final Map<int, bool> _expandedStates = {};
 
   // Tajweed rules data
-  List<TajweedRule> _getRules() {
+  List<TajweedRule> _getRules(BuildContext context) {
     return [
       TajweedRule(
         color: Color(0xFF8B2D2D), // Dark red
@@ -87,7 +87,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
         descriptionKey: 'emphatic_desc',
       ),
       TajweedRule(
-        color: Color(0xFF9E9E9E), // Grey
+        color: AppColors.getTextTertiary(context), // Grey - theme-aware
         titleKey: 'silent_text',
         titleSuffix: '',
         subtitleKey: 'unannounced_pronunciation_text',
@@ -103,7 +103,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
     AppHaptics.selection();
   }
 
-  Widget _buildRuleItem(TajweedRule rule, int index) {
+  Widget _buildRuleItem(TajweedRule rule, int index, BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
     final isExpanded = _expandedStates[index] ?? false;
 
@@ -197,7 +197,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
           ),
         ],
         // Divider between items (except last item)
-        if (index < _getRules().length - 1)
+        if (index < _getRules(context).length - 1)
           Divider(
             height: 1,
             thickness: 1 * s * 0.9,
@@ -210,7 +210,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
   @override
   Widget build(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
-    final rules = _getRules();
+    final rules = _getRules(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -323,7 +323,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
               ),
               child: Column(
                 children: List.generate(rules.length, (index) {
-                  return _buildRuleItem(rules[index], index);
+                  return _buildRuleItem(rules[index], index, context);
                 }),
               ),
             ),
