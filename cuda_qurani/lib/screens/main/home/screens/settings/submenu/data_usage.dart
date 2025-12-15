@@ -69,16 +69,16 @@ class _DataUsagePageState extends State<DataUsagePage> {
         vertical: AppDesignSystem.space16 * s * 0.9,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.getSurface(context),
         borderRadius: BorderRadius.circular(
           AppDesignSystem.radiusMedium * s * 0.9,
         ),
-        border: Border.all(color: AppColors.borderLight, width: 1.0 * s * 0.9),
+        border: Border.all(color: AppColors.getBorderLight(context), width: 1.0 * s * 0.9),
       ),
       child: Row(
         children: [
           // Icon
-          Icon(icon, size: 24 * s * 0.9, color: AppColors.textPrimary),
+          Icon(icon, size: 24 * s * 0.9, color: AppColors.getTextPrimary(context)),
           SizedBox(width: AppDesignSystem.space12 * s * 0.9),
           // Label
           Expanded(
@@ -87,7 +87,7 @@ class _DataUsagePageState extends State<DataUsagePage> {
               style: TextStyle(
                 fontSize: 16 * s * 0.9,
                 fontWeight: AppTypography.regular,
-                color: AppColors.textPrimary,
+                color: AppColors.getTextPrimary(context),
               ),
             ),
           ),
@@ -95,8 +95,9 @@ class _DataUsagePageState extends State<DataUsagePage> {
           Switch(
             value: isEnabled,
             onChanged: onChanged,
-            activeColor: Color(0xFF4CAF50),
-            inactiveThumbColor: AppColors.borderMedium,
+            activeTrackColor: AppColors.getSuccess(context),
+            activeThumbColor: AppColors.getSuccess(context),
+            inactiveThumbColor: AppColors.getBorderMedium(context),
             inactiveTrackColor: AppColors.borderLight,
           ),
         ],
@@ -123,7 +124,7 @@ class _DataUsagePageState extends State<DataUsagePage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'data_usage.data_usage_text')

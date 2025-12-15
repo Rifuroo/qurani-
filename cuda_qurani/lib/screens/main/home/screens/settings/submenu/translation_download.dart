@@ -151,7 +151,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
             vertical: AppDesignSystem.space16 * s * 0.9,
           ),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.getSurface(context),
             borderRadius: BorderRadius.circular(
               AppDesignSystem.radiusMedium * s * 0.9,
             ),
@@ -230,7 +230,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.getSurface(context),
         borderRadius: BorderRadius.circular(
           AppDesignSystem.radiusMedium * s * 0.9,
         ),
@@ -350,7 +350,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
               child: Icon(
                 Icons.arrow_downward,
                 size: 20 * s * 0.9,
-                color: AppColors.surface,
+                color: AppColors.getSurface(context),
               ),
             ),
           ),
@@ -364,7 +364,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'translation.translation_text')

@@ -131,10 +131,10 @@ class _MenuAppBarState extends State<MenuAppBar>
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.getSurface(context),
         border: Border(
           bottom: BorderSide(
-            color: AppColors.borderLight,
+            color: AppColors.getBorderLight(context),
             width: AppDesignSystem.borderNormal,
           ),
         ),
@@ -289,7 +289,7 @@ class _MenuAppBarState extends State<MenuAppBar>
           ),
           child: Icon(
             icon,
-            color: isSelected ? AppColors.primary : AppColors.textSecondary,
+            color: isSelected ? AppColors.primary : AppColors.getTextSecondary(context),
             size: AppDesignSystem.iconLarge * s,
           ),
         ),
@@ -371,7 +371,7 @@ class _MenuAppBarState extends State<MenuAppBar>
                   context,
                   color: isSelected
                       ? AppColors.primary
-                      : AppColors.textDisabled,
+                      : AppColors.getTextDisabled(context),
                   weight: isSelected
                       ? AppTypography.semiBold
                       : AppTypography.medium,
@@ -495,8 +495,8 @@ class ProfileAppBar extends StatelessWidget implements PreferredSizeWidget {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return AppBar(
-      backgroundColor: AppColors.surface,
-      foregroundColor: AppColors.textPrimary,
+      backgroundColor: AppColors.getSurface(context),
+      foregroundColor: AppColors.getTextPrimary(context),
       elevation: 0,
       centerTitle: true,
       automaticallyImplyLeading: false,
@@ -519,7 +519,7 @@ class ProfileAppBar extends StatelessWidget implements PreferredSizeWidget {
                   child: Icon(
                     Icons.arrow_back_ios_rounded,
                     size: AppDesignSystem.iconMedium * s,
-                    color: AppColors.textPrimary,
+                    color: AppColors.getTextPrimary(context),
                   ),
                 ),
               ),
@@ -537,7 +537,7 @@ class ProfileAppBar extends StatelessWidget implements PreferredSizeWidget {
         preferredSize: const Size.fromHeight(1.0),
         child: Container(
           height: AppDesignSystem.borderNormal,
-          color: AppColors.borderLight,
+          color: AppColors.getBorderLight(context),
         ),
       ),
     );

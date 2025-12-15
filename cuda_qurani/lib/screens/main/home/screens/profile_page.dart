@@ -38,7 +38,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.getBackground(context),
       appBar: ProfileAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'profile.account_text')
@@ -84,7 +84,7 @@ class _ProfilePageState extends State<ProfilePage> {
               width: AppDesignSystem.scale(context, 64),
               height: AppDesignSystem.scale(context, 64),
               decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLowest,
+                color: AppColors.getSurfaceContainerLowest(context),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -110,7 +110,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     height: AppDesignSystem.scale(context, 20),
                     width: AppDesignSystem.scale(context, 120),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLowest,
+                      color: AppColors.getSurfaceContainerLowest(context),
                       borderRadius: BorderRadius.circular(
                         AppDesignSystem.scale(context, 4),
                       ),
@@ -121,7 +121,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     height: AppDesignSystem.scale(context, 16),
                     width: AppDesignSystem.scale(context, 160),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLowest,
+                      color: AppColors.getSurfaceContainerLowest(context),
                       borderRadius: BorderRadius.circular(
                         AppDesignSystem.scale(context, 4),
                       ),
@@ -155,8 +155,8 @@ class _ProfilePageState extends State<ProfilePage> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.primary.withOpacity(0.2),
-                  AppColors.primary.withOpacity(0.1),
+                  AppColors.getPrimary(context).withValues(alpha: 0.2),
+                  AppColors.getPrimary(context).withValues(alpha: 0.1),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -168,7 +168,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 avatarLetter,
                 style: AppTypography.h2(
                   context,
-                  color: AppColors.primary,
+                  color: AppColors.getPrimary(context),
                   weight: AppTypography.semiBold,
                 ),
               ),
@@ -191,7 +191,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   user.email,
                   style: AppTypography.body(
                     context,
-                    color: AppColors.textTertiary,
+                    color: AppColors.getTextTertiary(context),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -262,7 +262,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       padding: AppPadding.all(context, AppDesignSystem.space16),
       decoration: showDivider
-          ? AppComponentStyles.divider(color: AppColors.borderLight)
+          ? AppComponentStyles.divider(color: AppColors.getBorderLight(context))
           : null,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -270,7 +270,7 @@ class _ProfilePageState extends State<ProfilePage> {
           Text(label, style: AppTypography.body(context)),
           Text(
             value,
-            style: AppTypography.body(context, color: AppColors.textTertiary),
+            style: AppTypography.body(context, color: AppColors.getTextTertiary(context)),
           ),
         ],
       ),
@@ -281,7 +281,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       padding: AppPadding.all(context, AppDesignSystem.space16),
       decoration: showDivider
-          ? AppComponentStyles.divider(color: AppColors.borderLight)
+          ? AppComponentStyles.divider(color: AppColors.getBorderLight(context))
           : null,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -290,7 +290,7 @@ class _ProfilePageState extends State<ProfilePage> {
             height: AppDesignSystem.scale(context, 16),
             width: AppDesignSystem.scale(context, 80),
             decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLowest,
+              color: AppColors.getSurfaceContainerLowest(context),
               borderRadius: BorderRadius.circular(
                 AppDesignSystem.scale(context, 4),
               ),
@@ -300,7 +300,7 @@ class _ProfilePageState extends State<ProfilePage> {
             height: AppDesignSystem.scale(context, 16),
             width: AppDesignSystem.scale(context, 100),
             decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLowest,
+              color: AppColors.getSurfaceContainerLowest(context),
               borderRadius: BorderRadius.circular(
                 AppDesignSystem.scale(context, 4),
               ),
@@ -349,11 +349,11 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       height: AppDesignSystem.scale(context, 48),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.getSurface(context),
         border: Border.all(
           color: isDisabled
-              ? AppColors.borderLight
-              : AppColors.textPrimary.withOpacity(0.75),
+              ? AppColors.getBorderLight(context)
+              : AppColors.getTextPrimary(context).withValues(alpha: 0.75),
           width: AppDesignSystem.scale(context, 1.5),
         ),
         borderRadius: BorderRadius.circular(
@@ -379,10 +379,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 ? SizedBox(
                     width: AppDesignSystem.scale(context, 20),
                     height: AppDesignSystem.scale(context, 20),
-                    child: const CircularProgressIndicator(
+                    child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primary,
+                        AppColors.getPrimary(context),
                       ),
                     ),
                   )
@@ -391,8 +391,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     style: AppTypography.label(
                       context,
                       color: isDisabled
-                          ? AppColors.textDisabled
-                          : AppColors.textPrimary,
+                          ? AppColors.getTextDisabled(context)
+                          : AppColors.getTextPrimary(context),
                       weight: AppTypography.semiBold,
                     ).copyWith(letterSpacing: 0.5),
                   ),
@@ -487,7 +487,7 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Container(
         padding: AppPadding.all(context, AppDesignSystem.space16),
         decoration: showDivider
-            ? AppComponentStyles.divider(color: AppColors.borderLight)
+            ? AppComponentStyles.divider(color: AppColors.getBorderLight(context))
             : null,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -497,14 +497,14 @@ class _ProfilePageState extends State<ProfilePage> {
               style: AppTypography.body(
                 context,
                 color: _isLoggingOut
-                    ? AppColors.textDisabled
-                    : AppColors.textPrimary,
+                    ? AppColors.getTextDisabled(context)
+                    : AppColors.getTextPrimary(context),
               ),
             ),
             Icon(
               icon,
               size: AppDesignSystem.scale(context, AppDesignSystem.iconSmall),
-              color: AppColors.textDisabled,
+              color: AppColors.getTextDisabled(context),
             ),
           ],
         ),
@@ -521,8 +521,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 AppHaptics.light();
                 _showDeleteAccountDialog();
               },
-        splashColor: AppColors.error.withOpacity(0.05),
-        highlightColor: AppColors.error.withOpacity(0.02),
+        splashColor: AppColors.getError(context).withValues(alpha: 0.05),
+        highlightColor: AppColors.getError(context).withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(
           AppDesignSystem.scale(context, AppDesignSystem.radiusMedium),
         ),
@@ -537,7 +537,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 : 'Delete Account',
             style: AppTypography.body(
               context,
-              color: _isLoggingOut ? AppColors.textDisabled : AppColors.error,
+              color: _isLoggingOut ? AppColors.getTextDisabled(context) : AppColors.error,
               weight: AppTypography.medium,
             ),
           ),
@@ -555,7 +555,7 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: AppColors.overlay,
+      barrierColor: AppColors.getScrim(context),
       builder: (context) => _SwitchAccountBottomSheet(),
     );
   }
@@ -564,7 +564,7 @@ class _ProfilePageState extends State<ProfilePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.getSurface(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(
             AppDesignSystem.scale(context, AppDesignSystem.radiusLarge),
@@ -591,7 +591,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   : 'Cancel',
               style: AppTypography.label(
                 context,
-                color: AppColors.textTertiary,
+                color: AppColors.getTextTertiary(context),
                 weight: AppTypography.medium,
               ),
             ),
@@ -621,7 +621,7 @@ class _ProfilePageState extends State<ProfilePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.getSurface(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(
             AppDesignSystem.scale(context, AppDesignSystem.radiusLarge),
@@ -651,7 +651,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   : 'Cancel',
               style: AppTypography.label(
                 context,
-                color: AppColors.textTertiary,
+                color: AppColors.getTextTertiary(context),
                 weight: AppTypography.medium,
               ),
             ),
@@ -757,7 +757,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.getSurface(context),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(
             AppDesignSystem.scale(context, AppDesignSystem.radiusXLarge),
@@ -776,7 +776,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
             width: AppDesignSystem.scale(context, 40),
             height: AppDesignSystem.scale(context, 4),
             decoration: BoxDecoration(
-              color: AppColors.borderMedium,
+              color: AppColors.getBorderMedium(context),
               borderRadius: BorderRadius.circular(
                 AppDesignSystem.scale(context, AppDesignSystem.radiusRound),
               ),
@@ -826,9 +826,9 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
             child: Container(
               height: AppDesignSystem.scale(context, 48),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: AppColors.getSurface(context),
                 border: Border.all(
-                  color: AppColors.textPrimary.withOpacity(0.50),
+                  color: AppColors.getTextPrimary(context).withOpacity(0.50),
                   width: AppDesignSystem.scale(context, 1.5),
                 ),
                 borderRadius: BorderRadius.circular(
@@ -861,7 +861,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                             context,
                             AppDesignSystem.iconMedium,
                           ),
-                          color: AppColors.textPrimary.withOpacity(0.85),
+                          color: AppColors.getTextPrimary(context).withValues(alpha: 0.85),
                         ),
                         AppMargin.gapHSmall(context),
                         Text(
@@ -873,7 +873,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                               : 'ADD ACCOUNT',
                           style: AppTypography.label(
                             context,
-                            color: AppColors.textPrimary.withOpacity(0.85),
+                            color: AppColors.getTextPrimary(context).withValues(alpha: 0.85),
                             weight: AppTypography.semiBold,
                           ).copyWith(letterSpacing: 1.5),
                         ),
@@ -949,11 +949,11 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
         child: Container(
           padding: AppPadding.all(context, AppDesignSystem.space16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.getSurface(context),
             border: Border.all(
               color: isActive
-                  ? AppColors.textPrimary.withOpacity(0.50)
-                  : AppColors.borderMedium,
+                  ? AppColors.getTextPrimary(context).withValues(alpha: 0.50)
+                  : AppColors.getBorderMedium(context),
               width: AppDesignSystem.scale(context, isActive ? 1.5 : 1),
             ),
             borderRadius: BorderRadius.circular(
@@ -968,8 +968,8 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primary.withOpacity(0.2),
-                      AppColors.primary.withOpacity(0.1),
+                      AppColors.getPrimary(context).withValues(alpha: 0.2),
+                      AppColors.getPrimary(context).withValues(alpha: 0.1),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -981,7 +981,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                     avatarLetter,
                     style: AppTypography.titleLarge(
                       context,
-                      color: AppColors.primary,
+                      color: AppColors.getPrimary(context),
                       weight: AppTypography.semiBold,
                     ),
                   ),
@@ -1007,7 +1007,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                       email,
                       style: AppTypography.caption(
                         context,
-                        color: AppColors.textTertiary,
+                        color: AppColors.getTextTertiary(context),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1019,7 +1019,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                 AppMargin.gapHSmall(context),
                 Icon(
                   Icons.check_circle,
-                  color: AppColors.secondaryDark.withOpacity(0.80),
+                  color: AppColors.getSecondary(context).withValues(alpha: 0.80),
                   size: AppDesignSystem.scale(
                     context,
                     AppDesignSystem.iconLarge,
@@ -1044,13 +1044,13 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
               width: AppDesignSystem.scale(context, 80),
               height: AppDesignSystem.scale(context, 80),
               decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLowest,
+                color: AppColors.getSurfaceContainerLowest(context),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.person_outline,
                 size: AppDesignSystem.scale(context, 40),
-                color: AppColors.textDisabled,
+                color: AppColors.getTextDisabled(context),
               ),
             ),
             AppMargin.gapLarge(context),
@@ -1058,7 +1058,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
             AppMargin.gapSmall(context),
             Text(
               'Add an account to get started',
-              style: AppTypography.body(context, color: AppColors.textTertiary),
+              style: AppTypography.body(context, color: AppColors.getTextTertiary(context)),
             ),
           ],
         ),
@@ -1070,7 +1070,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.getSurface(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(
             AppDesignSystem.scale(context, AppDesignSystem.radiusLarge),
@@ -1095,7 +1095,7 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
               'OK',
               style: AppTypography.label(
                 context,
-                color: AppColors.primary,
+                color: AppColors.getPrimary(context),
                 weight: AppTypography.semiBold,
               ),
             ),

@@ -1,6 +1,7 @@
 import 'package:cuda_qurani/screens/main/auth/login/login_page.dart';
 import 'package:cuda_qurani/screens/main/stt/utils/constants.dart' as constants;
 import 'package:flutter/material.dart';
+import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 // import 'package:cuda_qurani/screens/main/home/surah_list_page.dart'; // Tidak terpakai
 
 class SplashScreen extends StatefulWidget {
@@ -80,16 +81,16 @@ class _SplashScreenState extends State<SplashScreen>
     // --- End Responsive Setup ---
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.getBackground(context),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white,
-              Colors.grey.shade50,
-              Colors.grey.shade100,
+              AppColors.getBackground(context),
+              AppColors.getBackground(context).withOpacity(0.98),
+              AppColors.getBackground(context).withOpacity(0.95),
             ],
           ),
         ),

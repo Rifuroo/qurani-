@@ -136,12 +136,12 @@ class _ListeningPageState extends State<ListeningPage> {
           vertical: AppDesignSystem.space10 * s * 0.9,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black : AppColors.surface,
+          color: isSelected ? Theme.of(context).colorScheme.primary : AppColors.getSurface(context),
           borderRadius: BorderRadius.circular(
             AppDesignSystem.radiusMedium * s * 0.9,
           ),
           border: Border.all(
-            color: isSelected ? Colors.black : AppColors.borderLight,
+            color: isSelected ? Theme.of(context).colorScheme.primary : AppColors.getBorderLight(context),
             width: 1.0 * s * 0.9,
           ),
         ),
@@ -152,7 +152,7 @@ class _ListeningPageState extends State<ListeningPage> {
             fontWeight: isSelected
                 ? AppTypography.semiBold
                 : AppTypography.regular,
-            color: isSelected ? Colors.white : AppColors.textPrimary,
+            color: isSelected ? AppColors.textInverse : AppColors.getTextPrimary(context),
           ),
         ),
       ),
@@ -164,7 +164,7 @@ class _ListeningPageState extends State<ListeningPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(
@@ -200,7 +200,7 @@ class _ListeningPageState extends State<ListeningPage> {
                 // Reciter Container
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: AppColors.getSurface(context),
                     borderRadius: BorderRadius.circular(
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
@@ -287,7 +287,7 @@ class _ListeningPageState extends State<ListeningPage> {
                                 onTap: () => _selectReciter(reciter),
                                 child: Container(
                                   color: isSelected
-                                      ? AppColors.borderLight.withOpacity(0.3)
+                                      ? AppColors.getBorderLight(context).withValues(alpha: 0.3)
                                       : Colors.transparent,
                                   padding: EdgeInsets.symmetric(
                                     horizontal:
@@ -302,7 +302,7 @@ class _ListeningPageState extends State<ListeningPage> {
                                         fontWeight: isSelected
                                             ? AppTypography.medium
                                             : AppTypography.regular,
-                                        color: AppColors.textPrimary,
+                                        color: AppColors.getTextPrimary(context),
                                       ),
                                     ),
                                   ),
@@ -360,12 +360,12 @@ class _ListeningPageState extends State<ListeningPage> {
                                   height: 24 * s * 0.9,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.black,
+                                    color: AppColors.getTextPrimary(context),
                                   ),
                                   child: Icon(
                                     Icons.arrow_downward,
                                     size: 14 * s * 0.9,
-                                    color: Colors.white,
+                                    color: AppColors.textInverse,
                                   ),
                                 ),
                               ],

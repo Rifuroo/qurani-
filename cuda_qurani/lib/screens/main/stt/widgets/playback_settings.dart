@@ -647,13 +647,13 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                         ),
                         Container(
                           padding: EdgeInsets.all(AppDesignSystem.space4 * s),
-                          decoration: const BoxDecoration(
-                            color: Colors.black,
+                          decoration: BoxDecoration(
+                            color: AppColors.getTextPrimary(context),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.arrow_downward,
-                            color: Colors.white,
+                            color: AppColors.textInverse,
                             size: AppDesignSystem.iconSmall * s,
                           ),
                         ),
@@ -731,7 +731,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                       style: AppTypography.labelSmall(
                         context,
                         color: isSelected
-                            ? Colors.white
+                            ? AppColors.textInverse
                             : AppColors.textPrimary,
                         weight: isSelected
                             ? AppTypography.semiBold
@@ -926,7 +926,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
               ),
               icon: Icon(
                 Icons.play_arrow,
-                color: Colors.white,
+                color: AppColors.textInverse,
                 size: AppDesignSystem.iconMedium * s,
               ),
               label: Text(
@@ -938,7 +938,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                     : 'Play Audio',
                 style: AppTypography.label(
                   context,
-                  color: Colors.white,
+                  color: AppColors.textInverse,
                   weight: AppTypography.semiBold,
                 ),
               ),

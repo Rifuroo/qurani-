@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 
 class AchievementUnlockedDialog extends StatefulWidget {
   final String emoji;
@@ -92,15 +93,15 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.amber.shade100,
-                  Colors.amber.shade50,
-                  Colors.white,
+                  AppColors.getWarning(context).withValues(alpha: 0.2),
+                  AppColors.getWarningLight(context).withValues(alpha: 0.1),
+                  AppColors.getSurface(context),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.amber.withOpacity(0.3),
+                  color: AppColors.getWarning(context).withValues(alpha: 0.3),
                   blurRadius: 20,
                   spreadRadius: 5,
                 ),
@@ -117,39 +118,39 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
                 const SizedBox(height: 8),
                 
                 // Achievement Unlocked text
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade700,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'ACHIEVEMENT UNLOCKED!',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.getWarning(context),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'ACHIEVEMENT UNLOCKED!',
+                      style: TextStyle(
+                        color: AppColors.getTextInverse(context),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ),
-                ),
                 const SizedBox(height: 20),
 
                 // Emoji with glow effect
                 Container(
                   width: 80,
                   height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.amber.withOpacity(0.5),
-                        blurRadius: 20,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.getSurface(context),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.getWarning(context).withValues(alpha: 0.5),
+                          blurRadius: 20,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
                   child: Center(
                     child: Text(
                       widget.emoji,
@@ -162,10 +163,10 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
                 // Title
                 Text(
                   widget.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: AppColors.getTextPrimary(context),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -176,7 +177,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
                   widget.subtitle,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade600,
+                    color: AppColors.getTextSecondary(context),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -188,7 +189,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
                     widget.description!,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.grey.shade500,
+                      color: AppColors.getTextTertiary(context),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -202,11 +203,11 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
                     if (widget.onShare != null) ...[
                       OutlinedButton.icon(
                         onPressed: widget.onShare,
-                        icon: const Icon(Icons.share, size: 18),
-                        label: const Text('Share'),
+                        icon: Icon(Icons.share, size: 18, color: AppColors.getWarning(context)),
+                        label: Text('Share', style: TextStyle(color: AppColors.getWarning(context))),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.amber.shade700,
-                          side: BorderSide(color: Colors.amber.shade700),
+                          foregroundColor: AppColors.getWarning(context),
+                          side: BorderSide(color: AppColors.getWarning(context)),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -217,8 +218,8 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
                     ElevatedButton(
                       onPressed: widget.onDismiss ?? () => Navigator.of(context).pop(),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber.shade700,
-                        foregroundColor: Colors.white,
+                        backgroundColor: AppColors.getWarning(context),
+                        foregroundColor: AppColors.getTextInverse(context),
                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),

@@ -55,7 +55,7 @@ class PremiumGate extends StatelessWidget {
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: AppColors.getTextPrimary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
               ),
               child: Column(
@@ -64,12 +64,12 @@ class PremiumGate extends StatelessWidget {
                   Container(
                     padding: EdgeInsets.all(8 * s),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF39C12).withValues(alpha: 0.2),
+                      color: AppColors.getWarning(context).withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.lock_rounded,
-                      color: const Color(0xFFF39C12),
+                      color: AppColors.getWarning(context),
                       size: 20 * s,
                     ),
                   ),
@@ -80,7 +80,7 @@ class PremiumGate extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 10 * s,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFFF39C12),
+                        color: AppColors.getWarning(context),
                       ),
                     ),
                   ],
@@ -129,13 +129,13 @@ class PremiumBadge extends StatelessWidget {
                 right: -4 * s,
                 child: Container(
                   padding: EdgeInsets.all(4 * s),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF39C12),
+                  decoration: BoxDecoration(
+                    color: AppColors.getWarning(context),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.lock,
-                    color: Colors.white,
+                    color: AppColors.getTextInverse(context),
                     size: 10 * s,
                   ),
                 ),
@@ -178,7 +178,7 @@ class PremiumSwitch extends StatelessWidget {
                   label!,
                   style: TextStyle(
                     fontSize: 14 * s,
-                    color: canAccess ? AppColors.textPrimary : AppColors.textTertiary,
+                    color: canAccess ? AppColors.getTextPrimary(context) : AppColors.getTextTertiary(context),
                   ),
                 ),
               ),
@@ -191,7 +191,7 @@ class PremiumSwitch extends StatelessWidget {
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 6 * s, vertical: 2 * s),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF39C12).withValues(alpha: 0.15),
+                      color: AppColors.getWarning(context).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4 * s),
                     ),
                     child: Row(
@@ -200,7 +200,7 @@ class PremiumSwitch extends StatelessWidget {
                         Icon(
                           Icons.lock,
                           size: 10 * s,
-                          color: const Color(0xFFF39C12),
+                          color: AppColors.getWarning(context),
                         ),
                         SizedBox(width: 2 * s),
                         Text(
@@ -208,7 +208,7 @@ class PremiumSwitch extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 8 * s,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFFF39C12),
+                            color: AppColors.getWarning(context),
                           ),
                         ),
                       ],
@@ -221,8 +221,9 @@ class PremiumSwitch extends StatelessWidget {
               onChanged: canAccess
                   ? onChanged
                   : (_) => showPremiumFeatureDialog(context, feature),
-              activeColor: const Color(0xFF4CAF50),
-              inactiveThumbColor: AppColors.borderMedium,
+              activeTrackColor: AppColors.getSuccess(context),
+              activeThumbColor: AppColors.getSuccess(context),
+              inactiveThumbColor: AppColors.getBorderMedium(context),
             ),
           ],
         );
