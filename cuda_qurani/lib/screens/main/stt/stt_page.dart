@@ -3,7 +3,7 @@
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/slider_guide_popup.dart';
 
-import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
+import 'controllers/stt_controller.dart';
 import 'services/quran_service.dart';
 import 'utils/constants.dart';
 import 'widgets/quran_widgets.dart';
@@ -13,7 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/widgets/achievement_popup.dart';
 import 'package:cuda_qurani/core/widgets/rate_limit_banner.dart';
-import 'package:cuda_qurani/screens/main/home/screens/premium_offer_page.dart';
+import 'package:cuda_qurani/screens/main/home/screens/premium_offer_page.dart'; // ✅ NEW: Rate Limit
+import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 
 class SttPage extends StatefulWidget {
   final int? suratId;
@@ -95,7 +96,7 @@ class _SttPageState extends State<SttPage> {
           }
 
           return Scaffold(
-            backgroundColor: backgroundColor,
+            backgroundColor: AppColors.getBackground(context),
             extendBodyBehindAppBar: true, // ✅ Key: Body extends behind AppBar
             appBar: const QuranAppBar(),
             body: controller.isLoading
@@ -111,12 +112,12 @@ class _SttPageState extends State<SttPage> {
                           horizontal: MediaQuery.of(context).size.width * 0.04,
                           vertical: MediaQuery.of(context).size.height * 0.015,
                         ),
-                        color: errorColor.withValues(alpha: 0.9),
+                        color: AppColors.getError(context).withValues(alpha: 0.9),
                         child: Row(
                           children: [
                             Icon(
                               Icons.warning,
-                              color: Colors.white,
+                              color: AppColors.textInverse,
                               size: MediaQuery.of(context).size.width * 0.05,
                             ),
                             SizedBox(
@@ -126,7 +127,7 @@ class _SttPageState extends State<SttPage> {
                               child: Text(
                                 controller.errorMessage ?? 'An error occurred',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.textInverse,
                                   fontSize:
                                       MediaQuery.of(context).size.width * 0.035,
                                 ),
@@ -135,7 +136,7 @@ class _SttPageState extends State<SttPage> {
                             IconButton(
                               icon: Icon(
                                 Icons.close,
-                                color: Colors.white,
+                                color: AppColors.textInverse,
                                 size: MediaQuery.of(context).size.width * 0.05,
                               ),
                               onPressed: controller.clearError,
@@ -273,13 +274,15 @@ class _SttPageState extends State<SttPage> {
   }
 
   Widget _buildQuranText(BuildContext context, SttController controller) {
+    final controller = context.watch<SttController>();
+final isIndopak = controller.mushafLayout == MushafLayout.indopak;
     final screenWidth = MediaQuery.of(context).size.width;
-    final padding = screenWidth * 0.03;
+    final padding = isIndopak ? screenWidth * 0.011 : screenWidth * 0.03;
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: padding),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.getSurface(context),
         borderRadius: BorderRadius.circular(8),
       ),
       child: AnimatedSwitcher(

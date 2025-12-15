@@ -60,7 +60,7 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(
@@ -87,7 +87,7 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.regular,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
 
@@ -96,12 +96,12 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
                 // Layout Options Container
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: AppColors.getSurface(context),
                     borderRadius: BorderRadius.circular(
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
                     border: Border.all(
-                      color: AppColors.borderLight,
+                      color: AppColors.getBorderLight(context),
                       width: 1.0 * s * 0.9,
                     ),
                   ),
@@ -133,7 +133,7 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
                       Divider(
                         height: 1,
                         thickness: 1 * s * 0.9,
-                        color: AppColors.borderLight,
+                        color: AppColors.getBorderLight(context),
                       ),
 
                       // Translation/Transliteration Option
@@ -172,12 +172,12 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
                       vertical: AppDesignSystem.space16 * s * 0.9,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.getSurface(context),
                       borderRadius: BorderRadius.circular(
                         AppDesignSystem.radiusMedium * s * 0.9,
                       ),
                       border: Border.all(
-                        color: AppColors.borderLight,
+                        color: AppColors.getBorderLight(context),
                         width: 1.0 * s * 0.9,
                       ),
                     ),
@@ -197,7 +197,7 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
                                 style: TextStyle(
                                   fontSize: 11 * s * 0.9,
                                   fontWeight: AppTypography.semiBold,
-                                  color: AppColors.textSecondary,
+                                  color: AppColors.getTextSecondary(context),
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -212,7 +212,7 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
                                 style: TextStyle(
                                   fontSize: 14 * s * 0.9,
                                   fontWeight: AppTypography.regular,
-                                  color: AppColors.textSecondary,
+                                  color: AppColors.getTextSecondary(context),
                                 ),
                               ),
                             ],
@@ -221,7 +221,7 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
                         Icon(
                           Icons.chevron_right,
                           size: 24 * s * 0.9,
-                          color: AppColors.textTertiary,
+                          color: AppColors.getTextTertiary(context),
                         ),
                       ],
                     ),
@@ -241,7 +241,7 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.regular,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
 
@@ -293,7 +293,7 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
         child: Row(
           children: [
             // Icon
-            Icon(icon, size: 24 * s * 0.9, color: AppColors.textPrimary),
+            Icon(icon, size: 24 * s * 0.9, color: AppColors.getTextPrimary(context)),
 
             SizedBox(width: AppDesignSystem.space12 * s * 0.9),
 
@@ -307,7 +307,7 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
                     style: TextStyle(
                       fontSize: 16 * s * 0.9,
                       fontWeight: AppTypography.regular,
-                      color: AppColors.textPrimary,
+                      color: AppColors.getTextPrimary(context),
                     ),
                   ),
                   SizedBox(height: 2 * s * 0.9),
@@ -316,7 +316,7 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
                     style: TextStyle(
                       fontSize: 13 * s * 0.9,
                       fontWeight: AppTypography.regular,
-                      color: AppColors.textSecondary,
+                      color: AppColors.getTextSecondary(context),
                     ),
                   ),
                 ],
@@ -331,8 +331,8 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: isSelected
-                      ? AppColors.textPrimary
-                      : AppColors.borderMedium,
+                      ? AppColors.getTextPrimary(context)
+                      : AppColors.getBorderMedium(context),
                   width: isSelected ? 6 * s * 0.9 : 2 * s * 0.9,
                 ),
               ),
@@ -350,11 +350,11 @@ class _MushafLayoutPageState extends State<MushafLayoutPage> {
     return Container(
       height: screenHeight * 0.45, // Fixed preview height
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
+        color: AppColors.getSurfaceContainerLowest(context),
         borderRadius: BorderRadius.circular(
           AppDesignSystem.radiusMedium * s * 0.9,
         ),
-        border: Border.all(color: AppColors.borderLight, width: 1.0 * s * 0.9),
+        border: Border.all(color: AppColors.getBorderLight(context), width: 1.0 * s * 0.9),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(

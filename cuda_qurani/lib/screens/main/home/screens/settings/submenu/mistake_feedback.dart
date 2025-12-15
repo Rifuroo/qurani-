@@ -97,7 +97,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(title: _translations.isNotEmpty 
                       ? LanguageHelper.tr(_translations, 'sound_and_haptics.mistake_feedback.mistake_feedback_text')
                       : 'Mistake Feedback'),
@@ -116,7 +116,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.medium,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
 
@@ -125,12 +125,12 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                 // Sound Container
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: AppColors.getSurface(context),
                     borderRadius: BorderRadius.circular(
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
                     border: Border.all(
-                      color: AppColors.borderLight,
+                      color: AppColors.getBorderLight(context),
                       width: 1.0 * s * 0.9,
                     ),
                   ),
@@ -147,7 +147,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                             Icon(
                               Icons.volume_up,
                               size: 20 * s * 0.9,
-                              color: AppColors.textPrimary,
+                              color: AppColors.getTextPrimary(context),
                             ),
                             SizedBox(width: AppDesignSystem.space12 * s * 0.9),
                             Expanded(
@@ -158,16 +158,17 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                                 style: TextStyle(
                                   fontSize: 16 * s * 0.9,
                                   fontWeight: AppTypography.regular,
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.getTextPrimary(context),
                                 ),
                               ),
                             ),
                             Switch(
                               value: _playSound,
                               onChanged: _togglePlaySound,
-                              activeTrackColor: Color(0xFF4CAF50),
-                              inactiveThumbColor: AppColors.borderMedium,
-                              inactiveTrackColor: AppColors.borderLight,
+                              activeTrackColor: AppColors.getSuccess(context),
+                              activeThumbColor: AppColors.getSuccess(context),
+                              inactiveThumbColor: AppColors.getBorderMedium(context),
+                              inactiveTrackColor: AppColors.getBorderLight(context),
                             ),
                           ],
                         ),
@@ -177,7 +178,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                       Divider(
                         height: 1,
                         thickness: 1 * s * 0.9,
-                        color: AppColors.borderLight,
+                        color: AppColors.getBorderLight(context),
                       ),
 
                       // Sound effect
@@ -198,7 +199,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                                   style: TextStyle(
                                     fontSize: 16 * s * 0.9,
                                     fontWeight: AppTypography.regular,
-                                    color: AppColors.textPrimary,
+                                    color: AppColors.getTextPrimary(context),
                                   ),
                                 ),
                               ),
@@ -207,7 +208,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                                 style: TextStyle(
                                   fontSize: 16 * s * 0.9,
                                   fontWeight: AppTypography.regular,
-                                  color: AppColors.textSecondary,
+                                  color: AppColors.getTextSecondary(context),
                                 ),
                               ),
                               SizedBox(
@@ -215,7 +216,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                               Icon(
                                 Icons.chevron_right,
                                 size: 20 * s * 0.9,
-                                color: AppColors.textSecondary,
+                                color: AppColors.getTextSecondary(context),
                               ),
                             ],
                           ),
@@ -239,7 +240,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                     style: TextStyle(
                       fontSize: 14 * s * 0.9,
                       fontWeight: AppTypography.regular,
-                      color: AppColors.textSecondary,
+                      color: AppColors.getTextSecondary(context),
                       height: 1.4,
                     ),
                   ),
@@ -255,7 +256,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.medium,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
 
@@ -268,12 +269,12 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                     vertical: AppDesignSystem.space16 * s * 0.9,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: AppColors.getSurface(context),
                     borderRadius: BorderRadius.circular(
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
                     border: Border.all(
-                      color: AppColors.borderLight,
+                      color: AppColors.getBorderLight(context),
                       width: 1.0 * s * 0.9,
                     ),
                   ),
@@ -282,7 +283,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                       Icon(
                         Icons.vibration,
                         size: 20 * s * 0.9,
-                        color: AppColors.textPrimary,
+                        color: AppColors.getTextPrimary(context),
                       ),
                       SizedBox(width: AppDesignSystem.space12 * s * 0.9),
                       Expanded(
@@ -293,16 +294,17 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                           style: TextStyle(
                             fontSize: 16 * s * 0.9,
                             fontWeight: AppTypography.regular,
-                            color: AppColors.textPrimary,
+                            color: AppColors.getTextPrimary(context),
                           ),
                         ),
                       ),
                       Switch(
                         value: _vibrateDevice,
                         onChanged: _toggleVibrateDevice,
-                        activeTrackColor: Color(0xFF4CAF50),
-                        inactiveThumbColor: AppColors.borderMedium,
-                        inactiveTrackColor: AppColors.borderLight,
+                        activeTrackColor: AppColors.getSuccess(context),
+                        activeThumbColor: AppColors.getSuccess(context),
+                        inactiveThumbColor: AppColors.getBorderMedium(context),
+                        inactiveTrackColor: AppColors.getBorderLight(context),
                       ),
                     ],
                   ),
@@ -322,7 +324,7 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                     style: TextStyle(
                       fontSize: 14 * s * 0.9,
                       fontWeight: AppTypography.regular,
-                      color: AppColors.textSecondary,
+                      color: AppColors.getTextSecondary(context),
                       height: 1.4,
                     ),
                   ),
@@ -335,5 +337,3 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
     );
   }
 }
-
-

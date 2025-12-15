@@ -58,7 +58,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(
@@ -85,7 +85,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.medium,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
 
@@ -94,7 +94,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                 // Ayah Adjustments Container
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: AppColors.getSurface(context),
                     borderRadius: BorderRadius.circular(
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
@@ -137,7 +137,8 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                             Switch(
                               value: _hideVerses,
                               onChanged: _toggleHideVerses,
-                              activeTrackColor: Color(0xFF4CAF50),
+                              activeTrackColor: AppColors.getSuccess(context),
+                              activeThumbColor: AppColors.getSuccess(context),
                               inactiveThumbColor: AppColors.borderMedium,
                               inactiveTrackColor: AppColors.borderLight,
                             ),
@@ -184,7 +185,8 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                             Switch(
                               value: _hideVerseMarkers,
                               onChanged: _toggleHideVerseMarkers,
-                              activeTrackColor: Color(0xFF4CAF50),
+                              activeTrackColor: AppColors.getSuccess(context),
+                              activeThumbColor: AppColors.getSuccess(context),
                               inactiveThumbColor: AppColors.borderMedium,
                               inactiveTrackColor: AppColors.borderLight,
                             ),
@@ -225,6 +227,3 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
     );
   }
 }
-
-
-

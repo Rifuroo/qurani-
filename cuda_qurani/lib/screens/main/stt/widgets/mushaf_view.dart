@@ -9,6 +9,7 @@ import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
+import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 
 class MushafRenderer {
   static double pageHeight(BuildContext context) {
@@ -101,16 +102,9 @@ class MushafRenderer {
       totalTextWidth += width;
     }
 
-    // Calculate spacing needed to fill the line
-    final remainingSpace = maxWidth - totalTextWidth;
-    final numberOfGaps = wordSpans.length - 1;
-
-    double spacing = numberOfGaps > 0
-        ? (remainingSpace / numberOfGaps).clamp(
-            WORD_SPACING_MIN,
-            WORD_SPACING_MAX,
-          )
-        : 0;
+    // Calculate spacing needed to fill the line (for future use if needed)
+    // final remainingSpace = maxWidth - totalTextWidth;
+    // final numberOfGaps = wordSpans.length - 1;
 
     // Build justified row with proper centering and tight spacing
     return SizedBox(
@@ -130,14 +124,8 @@ class MushafRenderer {
               text: wordSpans[i] as TextSpan,
             ),
             if (i < wordSpans.length - 1)
-              SizedBox(
-                width: () {
-                  final nextSpan = wordSpans[i + 1] as TextSpan;
-                  final isNextArabicNumber = nextSpan.text!.contains(
-                    RegExp(r'[٠-٩]'),
-                  );
-                  return 0.0; // No spacing for any words to prevent overflow
-                }(),
+              const SizedBox(
+                width: 0.0, // No spacing for any words to prevent overflow
               ),
           ],
         ],
@@ -291,7 +279,9 @@ class _MushafDisplayState extends State<MushafDisplay> {
           height: MediaQuery.of(context).size.width * 0.03,
           child: CircularProgressIndicator(
             strokeWidth: 1.5,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.grey.shade400),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              AppColors.getTextTertiary(context),
+            ),
           ),
         ),
       ),
@@ -370,7 +360,7 @@ class _SurahNameLine extends StatelessWidget {
             style: TextStyle(
               fontSize: headerSize - 1.5,
               fontFamily: 'Quran-Common',
-              color: Colors.black87,
+              color: AppColors.getTextPrimary(context),
               height: MediaQuery.of(context).size.height * 0.0010,
             ),
             textAlign: TextAlign.center,
@@ -380,7 +370,7 @@ class _SurahNameLine extends StatelessWidget {
             style: TextStyle(
               fontSize: surahNameSize - 1,
               fontFamily: 'surah-name-v2',
-              color: Colors.black,
+              color: AppColors.getTextPrimary(context),
             ),
             textAlign: TextAlign.center,
             textDirection: TextDirection.rtl,
@@ -405,7 +395,7 @@ class _BasmallahLine extends StatelessWidget {
         style: TextStyle(
           fontSize: basmallahSize,
           fontFamily: 'Quran-Common',
-          color: Colors.black87,
+          color: AppColors.getTextPrimary(context),
           fontWeight: FontWeight.normal,
         ),
         textAlign: TextAlign.center,
@@ -427,9 +417,15 @@ class _JustifiedAyahLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final fontSizeMultiplier = (pageNumber == 1 || pageNumber == 2)
-        ? 0.080
-        : 0.0620;
+    final controller = context.watch<SttController>();
+    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
+
+    // Font size berbeda untuk QPC vs IndoPak
+    final fontSizeMultiplier = isIndopak
+        ? 0.0690 // IndoPak: ukuran konsisten
+        : ((pageNumber == 1 || pageNumber == 2)
+              ? 0.080
+              : 0.0690); // QPC: page 1-2 lebih besar
 
     final baseFontSize = screenWidth * fontSizeMultiplier;
     final lastWordFontMultiplier = 0.9;
@@ -438,7 +434,6 @@ class _JustifiedAyahLine extends StatelessWidget {
       return SizedBox(height: MushafRenderer.lineHeight(context));
     }
 
-    final controller = context.watch<SttController>();
     List<InlineSpan> spans = [];
 
     final fontFamily = controller.mushafLayout.isGlyphBased
@@ -484,15 +479,15 @@ class _JustifiedAyahLine extends StatelessWidget {
         if (wordStatus != null && !hasArabicNumber) {
           switch (wordStatus) {
             case WordStatus.matched:
-              wordBg = correctColor.withValues(alpha: 0.4);
+              wordBg = getCorrectColor(context).withValues(alpha: 0.4);
               break;
             case WordStatus.mismatched:
             case WordStatus.skipped:
-              wordBg = errorColor.withValues(alpha: 0.4);
+              wordBg = getErrorColor(context).withValues(alpha: 0.4);
               break;
             case WordStatus.processing:
               if (controller.isRecording || controller.isListeningMode) {
-                wordBg = Colors.blue.withValues(alpha: 0.4);
+                wordBg = AppColors.getInfo(context).withValues(alpha: 0.4);
               } else {
                 wordBg = Colors.transparent;
               }
@@ -521,25 +516,36 @@ class _JustifiedAyahLine extends StatelessWidget {
             : baseFontSize;
 
         for (final textSegment in segments) {
-          spans.add(
-            TextSpan(
-              text: textSegment.text,
-              style: TextStyle(
-                fontSize: effectiveFontSize,
-                fontFamily: fontFamily,
-                color: _getWordColor(
-                  isCurrentAyat,
-                ).withValues(alpha: wordOpacity),
-                backgroundColor: wordBg,
-                fontWeight: FontWeight.w400,
-                decoration: (controller.hideUnreadAyat && !isLastWord)
-                    ? TextDecoration.underline
-                    : null,
-                decorationColor: Colors.black.withValues(alpha: 0.15),
-                decorationThickness: 0.3,
+          for (final textSegment in segments) {
+            spans.add(
+              TextSpan(
+                text: textSegment.text,
+                style: TextStyle(
+                  fontSize: effectiveFontSize,
+                  fontFamily: fontFamily,
+                  color: _getWordColor(
+                    isCurrentAyat,
+                    context,
+                  ).withValues(alpha: wordOpacity),
+                  backgroundColor: wordBg,
+                  fontWeight: FontWeight.w400,
+                  height: isIndopak
+                      ? 1.9
+                      : 1.8, // ✅ TAMBAH: Line height berbeda
+                  letterSpacing: isIndopak
+                      ? -1.2
+                      : -5, // ✅ TAMBAH: Letter spacing berbeda
+                  decoration: (controller.hideUnreadAyat && !isLastWord)
+                      ? TextDecoration.underline
+                      : null,
+                  decorationColor: AppColors.getTextPrimary(
+                    context,
+                  ).withValues(alpha: 0.15),
+                  decorationThickness: 0.3,
+                ),
               ),
-            ),
-          );
+            );
+          }
         }
       }
     }
@@ -554,8 +560,10 @@ class _JustifiedAyahLine extends StatelessWidget {
   }
 
   // Methods tetap sama
-  Color _getWordColor(bool isCurrentWord) {
-    return isCurrentWord ? listeningColor : Colors.black87;
+  Color _getWordColor(bool isCurrentWord, BuildContext context) {
+    return isCurrentWord
+        ? getListeningColor(context)
+        : AppColors.getTextPrimary(context);
   }
 }
 
@@ -603,7 +611,9 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
 
     return Container(
       height: headerHeight,
-      color: Colors.white, // ✅ ADD: Background to blend when hidden
+      color: AppColors.getBackground(
+        context,
+      ), // ✅ ADD: Background to blend when hidden
       padding: EdgeInsets
           .zero, // ✅ CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
       alignment: Alignment.center,
@@ -614,7 +624,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             '$juzText ${context.formatNumber(juzNumber)}',
             style: TextStyle(
               fontSize: headerFontSize,
-              color: Colors.grey.shade700,
+              color: AppColors.getTextSecondary(context),
               fontWeight: FontWeight.w500,
             ),
             textDirection: TextDirection.rtl,
@@ -672,7 +682,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             '${context.formatNumber(controller.currentPage)}',
             style: TextStyle(
               fontSize: headerFontSize,
-              color: Colors.grey.shade700,
+              color: AppColors.getTextSecondary(context),
               fontWeight: FontWeight.w500,
             ),
           ),

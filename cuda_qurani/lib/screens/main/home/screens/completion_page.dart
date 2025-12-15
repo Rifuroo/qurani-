@@ -374,7 +374,7 @@ class _CompletionPageState extends State<CompletionPage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: AppColors.surfaceVariant,
+        backgroundColor: AppColors.getSurfaceVariant(context),
         appBar: MenuAppBar(selectedIndex: 2),
         body: AppLoadingIndicator(
           message: _translations.isNotEmpty
@@ -385,7 +385,7 @@ class _CompletionPageState extends State<CompletionPage> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceVariant,
+      backgroundColor: AppColors.getSurfaceVariant(context),
       appBar: MenuAppBar(selectedIndex: 2),
       body: SafeArea(
         child: RefreshIndicator(
@@ -530,7 +530,7 @@ class _CompletionPageState extends State<CompletionPage> {
                             remainingText,
                             style: AppTypography.captionSmall(
                               context,
-                              color: AppColors.textTertiary,
+                              color: AppColors.getTextTertiary(context),
                             ),
                           ),
                         ),
@@ -541,7 +541,7 @@ class _CompletionPageState extends State<CompletionPage> {
                     _isRTL
                         ? Icons.chevron_left_rounded
                         : Icons.chevron_right_rounded,
-                    color: AppColors.borderDark,
+                    color: AppColors.getBorderMedium(context),
                     size: AppDesignSystem.iconMedium * s,
                   ),
                 ],
@@ -559,15 +559,15 @@ class _CompletionPageState extends State<CompletionPage> {
                   child: LinearProgressIndicator(
                     value: percentage / 100,
                     minHeight: 6 * s,
-                    backgroundColor: AppColors.surfaceContainerLowest,
+                    backgroundColor: AppColors.getSurfaceContainerLowest(context),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       percentage >= 100
-                          ? AppColors.success
+                          ? AppColors.getSuccess(context)
                           : percentage >= 50
-                          ? AppColors.primary
+                          ? AppColors.getPrimary(context)
                           : percentage > 0
-                          ? AppColors.warning
-                          : AppColors.borderLight,
+                          ? AppColors.getWarning(context)
+                          : AppColors.getBorderLight(context),
                     ),
                   ),
                 ),
@@ -588,13 +588,13 @@ class _CompletionPageState extends State<CompletionPage> {
       margin: EdgeInsets.all(AppDesignSystem.space16 * s),
       padding: EdgeInsets.all(AppDesignSystem.space12 * s),
       decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.1),
+        color: AppColors.getError(context).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.getError(context).withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_rounded, color: AppColors.error, size: 20 * s),
+          Icon(Icons.warning_rounded, color: AppColors.getError(context), size: 20 * s),
           SizedBox(width: AppDesignSystem.space8 * s),
           Expanded(
             child: Text(
@@ -604,7 +604,7 @@ class _CompletionPageState extends State<CompletionPage> {
                       'completion.error_offline_text',
                     )
                   : 'Using offline data. Pull to refresh.',
-              style: AppTypography.caption(context, color: AppColors.error),
+              style: AppTypography.caption(context, color: AppColors.getError(context)),
             ),
           ),
         ],
@@ -635,13 +635,13 @@ class _CompletionPageState extends State<CompletionPage> {
                     sections: [
                       PieChartSectionData(
                         value: percentage > 0 ? percentage : 0.1,
-                        color: AppColors.primary,
+                        color: AppColors.getPrimary(context),
                         radius: 24 * s,
                         showTitle: false,
                       ),
                       PieChartSectionData(
                         value: percentage < 100 ? (100 - percentage) : 0.1,
-                        color: AppColors.primaryWithOpacity(0.15),
+                        color: AppColors.getPrimary(context).withValues(alpha: 0.15),
                         radius: 24 * s,
                         showTitle: false,
                       ),
@@ -689,7 +689,7 @@ class _CompletionPageState extends State<CompletionPage> {
                     : '(khatm)',
                 style: AppTypography.body(
                   context,
-                  color: AppColors.textSecondary,
+                  color: AppColors.getTextSecondary(context),
                 ),
               ),
             ],
@@ -754,7 +754,7 @@ class _CompletionPageState extends State<CompletionPage> {
         vertical: AppDesignSystem.space12 * s,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
+        color: AppColors.getSurfaceContainerLowest(context),
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
       ),
       child: Column(
@@ -763,7 +763,7 @@ class _CompletionPageState extends State<CompletionPage> {
             label,
             style: AppTypography.captionSmall(
               context,
-              color: AppColors.textTertiary,
+              color: AppColors.getTextTertiary(context),
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -821,7 +821,7 @@ class _CompletionPageState extends State<CompletionPage> {
               child: Container(
                 padding: EdgeInsets.all(AppDesignSystem.space16 * s),
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
+                  color: AppColors.getPrimary(context),
                   borderRadius: BorderRadius.circular(
                     AppDesignSystem.radiusMedium * s,
                   ),
@@ -830,7 +830,7 @@ class _CompletionPageState extends State<CompletionPage> {
                   children: [
                     Icon(
                       Icons.auto_stories,
-                      color: Colors.white,
+                      color: AppColors.getTextInverse(context),
                       size: AppDesignSystem.iconXLarge * s,
                     ),
                     SizedBox(width: AppDesignSystem.space12 * s),
@@ -846,27 +846,21 @@ class _CompletionPageState extends State<CompletionPage> {
                               '${_lastRead.surahName}, ${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'completion.page_text') : 'Ayah'} ${context.formatNumber(_lastRead.ayah)}',
                               style: AppTypography.body(
                                 context,
-                                color: Colors.white,
+                                color: AppColors.getTextInverse(context),
                                 weight: AppTypography.semiBold,
                               ),
                             ),
                           ),
                           SizedBox(height: AppDesignSystem.space2 * s),
-                          Text(
-                            'Surah ${context.formatNumber(_lastRead.surahId)}',
-                            style: AppTypography.captionSmall(
-                              context,
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                          ),
                           Directionality(
                             textDirection: _isRTL
                                 ? TextDirection.rtl
                                 : TextDirection.ltr,
-                            child: Text('${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'completion.surah_text') : 'Surah'} ${context.formatNumber(_lastRead.surahId)}',
+                            child: Text(
+                              '${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'completion.surah_text') : 'Surah'} ${context.formatNumber(_lastRead.surahId)}',
                               style: AppTypography.captionSmall(
                                 context,
-                                color: Colors.white.withOpacity(0.9),
+                                color: AppColors.getTextInverse(context).withValues(alpha: 0.9),
                               ),
                             ),
                           ),
@@ -877,7 +871,7 @@ class _CompletionPageState extends State<CompletionPage> {
                       _isRTL
                           ? Icons.arrow_back_ios_rounded
                           : Icons.arrow_forward_ios_rounded,
-                      color: Colors.white,
+                      color: AppColors.getTextInverse(context),
                       size: AppDesignSystem.iconSmall * s,
                     ),
                   ],
@@ -904,14 +898,14 @@ class _CompletionPageState extends State<CompletionPage> {
           // Search Bar
           Container(
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: AppColors.getSurface(context),
               borderRadius: BorderRadius.circular(
                 AppDesignSystem.radiusMedium * s,
               ),
               border: Border.all(
                 color: _searchController.text.isNotEmpty
-                    ? AppColors.borderFocus
-                    : AppColors.borderLight,
+                    ? AppColors.getBorderFocus(context)
+                    : AppColors.getBorderLight(context),
                 width: AppDesignSystem.borderNormal * s,
               ),
             ),
@@ -925,7 +919,7 @@ class _CompletionPageState extends State<CompletionPage> {
                     : 'Search by surah',
                 hintStyle: AppTypography.body(
                   context,
-                  color: AppColors.textHint,
+                  color: AppColors.getTextHint(context),
                 ),
                 prefixIcon: Padding(
                   padding: EdgeInsets.only(
@@ -937,8 +931,8 @@ class _CompletionPageState extends State<CompletionPage> {
                   child: Icon(
                     Icons.search_rounded,
                     color: _searchController.text.isNotEmpty
-                        ? AppColors.primary
-                        : AppColors.textTertiary,
+                        ? AppColors.getPrimary(context)
+                        : AppColors.getTextTertiary(context),
                     size: AppDesignSystem.iconMedium * s,
                   ),
                 ),
@@ -1036,13 +1030,13 @@ class _CompletionPageState extends State<CompletionPage> {
           ),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primary
-                : AppColors.surfaceContainerLowest,
+                ? AppColors.getPrimary(context)
+                : AppColors.getSurfaceContainerLowest(context),
             borderRadius: BorderRadius.circular(
               AppDesignSystem.radiusSmall * s,
             ),
             border: Border.all(
-              color: isSelected ? AppColors.primary : AppColors.borderMedium,
+              color: isSelected ? AppColors.getPrimary(context) : AppColors.getBorderMedium(context),
               width: AppDesignSystem.borderNormal * s,
             ),
           ),
@@ -1052,14 +1046,14 @@ class _CompletionPageState extends State<CompletionPage> {
               Icon(
                 isSelected ? Icons.check_circle : Icons.circle_outlined,
                 size: AppDesignSystem.iconSmall * s,
-                color: isSelected ? Colors.white : AppColors.textTertiary,
+                color: isSelected ? AppColors.getTextInverse(context) : AppColors.getTextTertiary(context),
               ),
               SizedBox(width: AppDesignSystem.space4 * s),
               Text(
                 label,
                 style: AppTypography.labelSmall(
                   context,
-                  color: isSelected ? Colors.white : AppColors.textSecondary,
+                  color: isSelected ? AppColors.getTextInverse(context) : AppColors.getTextSecondary(context),
                   weight: AppTypography.medium,
                 ),
               ),
@@ -1069,141 +1063,4 @@ class _CompletionPageState extends State<CompletionPage> {
       ),
     );
   }
-
-  // ==================== SECTION HEADER ====================
-
-  // Widget _buildSectionHeader() {
-  //   final s = AppDesignSystem.getScaleFactor(context);
-
-  //   return Padding(
-  //     padding: EdgeInsets.fromLTRB(
-  //       AppDesignSystem.space16 * s,
-  //       AppDesignSystem.space8 * s,
-  //       AppDesignSystem.space16 * s,
-  //       AppDesignSystem.space8 * s,
-  //     ),
-  //     child: Text(
-  //       (_translations.isNotEmpty
-  //               ? LanguageHelper.tr(
-  //                 _translations,
-  //                 'completion.completion_by_chapter_text',
-  //               )
-  //               : 'COMPLETION BY CHAPTER')
-  //           .toUpperCase(),
-  //       style: AppTypography.overline(context),
-  //     ),
-  //   );
-  // }
-
-  // ==================== SURAH COMPLETION TILE ====================
-
-//   Widget _buildSurahCompletionTile(Map<String, dynamic> surah) {
-//     final s = AppDesignSystem.getScaleFactor(context);
-//     final int id = surah['id'] as int;
-//     final String name = surah['name_simple'] ?? 'Surah $id';
-//     final int totalVerses = surah['verses_count'] ?? 0;
-
-//     final completion = _getCompletion(id);
-//     final percentage = completion?.percentage ?? 0.0;
-//     final versesRead = completion?.versesRead ?? 0;
-
-//     // Calculate remaining ranges
-//     String remainingText =
-//         _translations.isNotEmpty
-//             ? LanguageHelper.tr(_translations, 'completion.incomplete_text')
-//             : 'Not started';
-
-//     if (versesRead > 0 && versesRead < totalVerses) {
-//       final remLabel =
-//           _translations.isNotEmpty
-//               ? LanguageHelper.tr(_translations, 'completion.remaining_text')
-//               : 'Remaining';
-//       remainingText = '$remLabel: ${context.formatNumber(versesRead + 1)}-${context.formatNumber(totalVerses)}';
-//     } else if (versesRead >= totalVerses) {
-//       remainingText =
-//           _translations.isNotEmpty
-//               ? LanguageHelper.tr(
-//                 _translations,
-//                 'completion.none_remaining_text',
-//               )
-//               : 'Completed';
-//     }
-
-//     return Material(
-//       color: Colors.transparent,
-//       child: InkWell(
-//         onTap: () => _navigateToSurah(id),
-//         splashColor: AppComponentStyles.rippleColor,
-//         child: Container(
-//           padding: EdgeInsets.symmetric(
-//             horizontal: AppDesignSystem.space16 * s,
-//             vertical: AppDesignSystem.space12 * s,
-//           ),
-//           decoration: AppComponentStyles.divider(),
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               // Header Row
-//               Row(
-//                 children: [
-//                   Expanded(
-//                     child: Column(
-//                       crossAxisAlignment: CrossAxisAlignment.start,
-//                       children: [
-//                         Text(
-//                           '$name - ${context.formatNumber(percentage.toStringAsFixed(0))}% (${context.formatNumber(versesRead)}/${context.formatNumber(totalVerses)})',
-//                           style: AppTypography.body(
-//                             context,
-//                             weight: AppTypography.semiBold,
-//                           ),
-//                         ),
-//                         SizedBox(height: AppDesignSystem.space2 * s),
-//                         Text(
-//                           remainingText,
-//                           style: AppTypography.captionSmall(
-//                             context,
-//                             color: AppColors.textTertiary,
-//                           ),
-//                         ),
-//                       ],
-//                     ),
-//                   ),
-//                   Icon(
-//                     Icons.chevron_right_rounded,
-//                     color: AppColors.borderDark,
-//                     size: AppDesignSystem.iconMedium * s,
-//                   ),
-//                 ],
-//               ),
-
-//               SizedBox(height: AppDesignSystem.space8 * s),
-
-//               // Progress Bar
-//               ClipRRect(
-//                 borderRadius: BorderRadius.circular(
-//                   AppDesignSystem.radiusRound * s,
-//                 ),
-//                 child: LinearProgressIndicator(
-//                   value: percentage / 100,
-//                   minHeight: 6 * s,
-//                   backgroundColor: AppColors.surfaceContainerLowest,
-//                   valueColor: AlwaysStoppedAnimation<Color>(
-//                     percentage >= 100
-//                         ? AppColors.success
-//                         : percentage >= 50
-//                         ? AppColors.primary
-//                         : percentage > 0
-//                         ? AppColors.warning
-//                         : AppColors.borderLight,
-//                   ),
-//                 ),
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
 }
-

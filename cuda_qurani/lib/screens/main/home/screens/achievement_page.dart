@@ -77,7 +77,7 @@ class _AchievementPageState extends State<AchievementPage> {
             subtitle: lb['subtitle'] ?? '',
             description: lb['description'] ?? '',
             emoji: lb['emoji'] ?? '🏆',
-            color: _parseColor(lb['color']),
+            color: _parseColor(lb['color'], context),
             badgeType: lb['category'],
             isEarned: true,
             isLocked: false,
@@ -92,7 +92,7 @@ class _AchievementPageState extends State<AchievementPage> {
           subtitle: b['subtitle'] ?? '',
           description: b['description'] ?? '',
           emoji: b['emoji'] ?? '🏆',
-          color: _parseColor(b['color']),
+          color: _parseColor(b['color'], context),
           badgeType: b['category'],
           isEarned: true,
           isLocked: false,
@@ -106,7 +106,7 @@ class _AchievementPageState extends State<AchievementPage> {
           subtitle: b['subtitle'] ?? '',
           description: b['description'] ?? '',
           emoji: b['emoji'] ?? '🔒',
-          color: _parseColor(b['color']),
+          color: _parseColor(b['color'], context),
           badgeType: b['category'],
           isEarned: false,
           isLocked: true,
@@ -127,12 +127,12 @@ class _AchievementPageState extends State<AchievementPage> {
     }
   }
 
-  Color _parseColor(String? hexColor) {
-    if (hexColor == null) return Colors.grey;
+  Color _parseColor(String? hexColor, BuildContext context) {
+    if (hexColor == null) return AppColors.getTextTertiary(context);
     try {
       return Color(int.parse(hexColor.replaceFirst('#', '0xFF')));
     } catch (e) {
-      return Colors.grey;
+      return AppColors.getTextTertiary(context);
     }
   }
 
@@ -153,13 +153,13 @@ class _AchievementPageState extends State<AchievementPage> {
   }
 
   // Fallback badge if no data
-  AchievementModel get _fallbackBadge => AchievementModel(
+  AchievementModel _fallbackBadge(BuildContext context) => AchievementModel(
     title: 'No Badges Yet',
     subtitle: 'Start reading!',
     badgeType: 'Beginner',
     description: 'Complete your first session to earn a badge.',
     emoji: '🎯',
-    color: Colors.grey,
+    color: AppColors.getTextTertiary(context),
     isEarned: false,
     isLocked: true,
   );
@@ -169,14 +169,14 @@ class _AchievementPageState extends State<AchievementPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: const ProfileAppBar(title: 'Achievements', showBackButton: true),
       body: SafeArea(
         child: _isLoading 
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: AppColors.getPrimary(context)))
           : RefreshIndicator(
               onRefresh: _loadAchievements,
-              color: AppColors.primary,
+              color: AppColors.getPrimary(context),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                 padding: EdgeInsets.only(bottom: AppDesignSystem.space40 * s),
@@ -201,7 +201,7 @@ class _AchievementPageState extends State<AchievementPage> {
 
   // ==================== LATEST BADGE CARD (HERO) ====================
   Widget _buildLatestBadgeSection(BuildContext context, double s) {
-    final badge = _latestBadge ?? _fallbackBadge;
+    final badge = _latestBadge ?? _fallbackBadge(context);
     
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: AppDesignSystem.space20 * s),
@@ -645,7 +645,7 @@ class _AchievementPageState extends State<AchievementPage> {
                       child: Text(
                         item.count.toString(),
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textInverse,
                           fontSize: 10 * s,
                           fontWeight: FontWeight.bold,
                         ),
@@ -856,7 +856,7 @@ class _AchievementPageState extends State<AchievementPage> {
                         Container(
                           padding: EdgeInsets.all(6 * s),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: AppColors.textInverse,
                             borderRadius: BorderRadius.circular(30 * s),
                           ),
                           child: Image.asset(

@@ -55,7 +55,7 @@ class AppListTile extends StatelessWidget {
                       title,
                       style: AppTypography.title(
                         context,
-                        color: enabled ? null : AppColors.textDisabled,
+                        color: enabled ? null : AppColors.getTextDisabled(context),
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -64,7 +64,7 @@ class AppListTile extends StatelessWidget {
                         subtitle!,
                         style: AppTypography.caption(
                           context,
-                          color: enabled ? null : AppColors.textDisabled,
+                          color: enabled ? null : AppColors.getTextDisabled(context),
                         ),
                       ),
                     ],
@@ -182,7 +182,7 @@ class AppNumberBadge extends StatelessWidget {
             : null,
         color: gradient
             ? null
-            : (backgroundColor ?? AppColors.surfaceContainerLowest),
+            : (backgroundColor ?? AppColors.getSurfaceContainerLowest(context)),
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
       ),
       alignment: Alignment.center,
@@ -284,7 +284,7 @@ class AppEmptyState extends StatelessWidget {
               width: (iconSize ?? 80) * s,
               height: (iconSize ?? 80) * s,
               decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLowest,
+                color: AppColors.getSurfaceContainerLowest(context),
                 borderRadius: BorderRadius.circular(
                   AppDesignSystem.radiusRound * s,
                 ),
@@ -369,7 +369,7 @@ class AppErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppTypography.body(context, color: AppColors.textTertiary),
+              style: AppTypography.body(context, color: AppColors.getTextTertiary(context)),
             ),
             if (onRetry != null) ...[
               AppMargin.gapXLarge(context),
@@ -378,7 +378,7 @@ class AppErrorState extends StatelessWidget {
                 onPressed: onRetry,
                 child: Text(
                   'Try Again',
-                  style: AppTypography.label(context, color: Colors.white),
+                  style: AppTypography.label(context, color: AppColors.textInverse),
                 ),
               ),
             ],
@@ -543,7 +543,7 @@ class AppCard extends StatelessWidget {
       margin: margin,
       padding: padding ?? AppPadding.card(context),
       decoration: AppComponentStyles.card(
-        color: color,
+        color: color ?? AppColors.getSurface(context),
         borderRadius: borderRadius,
         shadow: shadow,
         borderColor: borderColor,
@@ -597,7 +597,7 @@ class AppButton extends StatelessWidget {
             width: 20,
             height: 20,
             child: CircularProgressIndicator(
-              color: textColor ?? Colors.white,
+              color: textColor ?? AppColors.getTextInverse(context),
               strokeWidth: 2,
             ),
           )
@@ -762,7 +762,7 @@ class AppIconButton extends StatelessWidget {
           icon,
           color: isSelected
               ? AppColors.primary
-              : (iconColor ?? AppColors.textSecondary),
+              : (iconColor ?? AppColors.getTextSecondary(context)),
           size: (size ?? 40) * 0.5 * s,
         ),
       ),
@@ -921,9 +921,9 @@ class AppBadge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: AppTypography.captionSmall(
+        style:         AppTypography.captionSmall(
           context,
-          color: textColor ?? Colors.white,
+          color: textColor ?? AppColors.getTextInverse(context),
           weight: AppTypography.bold,
         ),
       ),
@@ -962,7 +962,7 @@ class AppAvatar extends StatelessWidget {
       avatarChild = CircleAvatar(
         radius: avatarSize / 2,
         backgroundImage: NetworkImage(imageUrl!),
-        backgroundColor: backgroundColor ?? AppColors.surfaceContainerLow,
+        backgroundColor: backgroundColor ?? AppColors.getSurfaceContainerLow(context),
       );
     } else if (initials != null) {
       avatarChild = CircleAvatar(
@@ -972,7 +972,7 @@ class AppAvatar extends StatelessWidget {
           initials!,
           style: AppTypography.title(
             context,
-            color: foregroundColor ?? Colors.white,
+            color: foregroundColor ?? AppColors.getTextInverse(context),
             weight: AppTypography.semiBold,
           ),
         ),
@@ -980,10 +980,10 @@ class AppAvatar extends StatelessWidget {
     } else {
       avatarChild = CircleAvatar(
         radius: avatarSize / 2,
-        backgroundColor: backgroundColor ?? AppColors.surfaceContainerLow,
+        backgroundColor: backgroundColor ?? AppColors.getSurfaceContainerLow(context),
         child: Icon(
           icon ?? Icons.person,
-          color: foregroundColor ?? AppColors.textTertiary,
+          color: foregroundColor ?? AppColors.getTextTertiary(context),
           size: avatarSize * 0.5,
         ),
       );

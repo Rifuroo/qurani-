@@ -100,7 +100,7 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.getError(context)),
             child: Text(
               _translations.isNotEmpty
                   ? LanguageHelper.tr(_translations, 'reciters.delete_all_text')
@@ -177,9 +177,9 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
           vertical: AppDesignSystem.space16 * s,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.getSurface(context),
           border: Border(
-            bottom: BorderSide(color: AppColors.borderLight, width: 1.0 * s),
+            bottom: BorderSide(color: AppColors.getBorderLight(context), width: 1.0 * s),
           ),
         ),
         child: Row(
@@ -193,7 +193,7 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
                     style: TextStyle(
                       fontSize: 16 * s,
                       fontWeight: AppTypography.regular,
-                      color: AppColors.textPrimary,
+                      color: AppColors.getTextPrimary(context),
                     ),
                   ),
                   if (hasDownloads) ...[
@@ -203,14 +203,14 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
                         Icon(
                           Icons.storage,
                           size: 12 * s,
-                          color: AppColors.textSecondary,
+                          color: AppColors.getTextSecondary(context),
                         ),
                         SizedBox(width: 4 * s),
                         Text(
                           context.formatNumber(storageSize),
                           style: TextStyle(
                             fontSize: 12 * s,
-                            color: AppColors.textSecondary,
+                            color: AppColors.getTextSecondary(context),
                           ),
                         ),
                       ],
@@ -222,7 +222,7 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
             Icon(
               Icons.chevron_right,
               size: 24 * s,
-              color: AppColors.textSecondary,
+              color: AppColors.getTextSecondary(context),
             ),
           ],
         ),
@@ -250,7 +250,7 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
         : '${(totalBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'reciters.manage_downloads_text')
@@ -264,8 +264,8 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: CircularProgressIndicator(color: AppColors.getPrimary(context)),
             )
           : SafeArea(
               child: Column(
@@ -276,7 +276,7 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
                     Container(
                       width: double.infinity,
                       padding: EdgeInsets.all(AppDesignSystem.space20 * s),
-                      color: AppColors.surface,
+                      color: AppColors.getSurface(context),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -290,7 +290,7 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
                             style: TextStyle(
                               fontSize: 14 * s,
                               fontWeight: AppTypography.medium,
-                              color: AppColors.textSecondary,
+                              color: AppColors.getTextSecondary(context),
                             ),
                           ),
                           SizedBox(height: AppDesignSystem.space8 * s),
@@ -299,7 +299,7 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
                               Icon(
                                 Icons.storage,
                                 size: 20 * s,
-                                color: AppColors.primary,
+                                color: AppColors.getPrimary(context),
                               ),
                               SizedBox(width: AppDesignSystem.space8 * s),
                               Text(
@@ -307,7 +307,7 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
                                 style: TextStyle(
                                   fontSize: 24 * s,
                                   fontWeight: AppTypography.bold,
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.getTextPrimary(context),
                                 ),
                               ),
                               SizedBox(width: AppDesignSystem.space8 * s),
@@ -317,7 +317,7 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
                                     : '$totalFiles files',
                                 style: TextStyle(
                                   fontSize: 14 * s,
-                                  color: AppColors.textSecondary,
+                                  color: AppColors.getTextSecondary(context),
                                 ),
                               ),
                             ],
@@ -344,7 +344,7 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
                       style: TextStyle(
                         fontSize: 14 * s,
                         fontWeight: AppTypography.medium,
-                        color: AppColors.textSecondary,
+                        color: AppColors.getTextSecondary(context),
                       ),
                     ),
                   ),
@@ -353,10 +353,10 @@ class _RecitersDownloadPageState extends State<RecitersDownloadPage> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: AppColors.getSurface(context),
                         border: Border(
                           top: BorderSide(
-                            color: AppColors.borderLight,
+                            color: AppColors.getBorderLight(context),
                             width: 1.0 * s,
                           ),
                         ),

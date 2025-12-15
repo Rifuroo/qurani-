@@ -107,7 +107,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -198,7 +198,7 @@ class _RegisterPageState extends State<RegisterPage> {
               : 'Register',
           style: AppTypography.displaySmall(
             context,
-            color: AppColors.textPrimary,
+            color: AppColors.getTextPrimary(context),
             weight: AppTypography.bold,
           ),
         ),
@@ -314,7 +314,7 @@ class _RegisterPageState extends State<RegisterPage> {
           : TextCapitalization.none,
       style: AppTypography.body(
         context,
-        color: AppColors.textPrimary,
+        color: AppColors.getTextPrimary(context),
         weight: AppTypography.medium,
       ),
       decoration: AppComponentStyles.inputDecoration(
@@ -327,7 +327,7 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
           child: Icon(
             icon,
-            color: AppColors.textTertiary,
+            color: AppColors.getTextTertiary(context),
             size: AppDesignSystem.iconLarge * s,
           ),
         ),
@@ -349,7 +349,7 @@ class _RegisterPageState extends State<RegisterPage> {
       obscureText: !isVisible,
       style: AppTypography.body(
         context,
-        color: AppColors.textPrimary,
+        color: AppColors.getTextPrimary(context),
         weight: AppTypography.medium,
       ),
       decoration: AppComponentStyles.inputDecoration(
@@ -362,7 +362,7 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
           child: Icon(
             Icons.lock_outline_rounded,
-            color: AppColors.textTertiary,
+            color: AppColors.getTextTertiary(context),
             size: AppDesignSystem.iconLarge * s,
           ),
         ),
@@ -371,7 +371,7 @@ class _RegisterPageState extends State<RegisterPage> {
             isVisible
                 ? Icons.visibility_outlined
                 : Icons.visibility_off_outlined,
-            color: AppColors.textTertiary,
+            color: AppColors.getTextTertiary(context),
             size: AppDesignSystem.iconLarge * s,
           ),
           onPressed: () => onToggle(!isVisible),
@@ -409,7 +409,15 @@ class _RegisterPageState extends State<RegisterPage> {
             value: _agreeToTerms,
             onChanged: (value) =>
                 setState(() => _agreeToTerms = value ?? false),
-            activeColor: AppColors.primary,
+            fillColor: WidgetStateProperty.resolveWith<Color?>(
+              (Set<WidgetState> states) {
+                if (states.contains(WidgetState.selected)) {
+                  return AppColors.getPrimary(context);
+                }
+                return null;
+              },
+            ),
+            checkColor: AppColors.getTextInverse(context),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(4 * s),
             ),
@@ -423,7 +431,7 @@ class _RegisterPageState extends State<RegisterPage> {
             text: TextSpan(
               style: AppTypography.bodySmall(
                 context,
-                color: AppColors.textSecondary,
+                color: AppColors.getTextSecondary(context),
               ),
               children: [
                 TextSpan(
@@ -523,7 +531,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   'register.not_null_account_text',
                 )
               : 'Already have an account?',
-          style: AppTypography.body(context, color: AppColors.textSecondary),
+          style: AppTypography.body(context, color: AppColors.getTextSecondary(context)),
         ),
         AppTextButton(
           text: _translations.isNotEmpty

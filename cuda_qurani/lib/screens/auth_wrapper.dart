@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/premium_provider.dart';
 import './main/auth/login/login_page.dart';
+import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -30,20 +31,20 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (auth.isLoading) {
           print('   → Showing LOADING screen');
           return Scaffold(
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.getBackground(context),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF247C64)),
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                   ),
                   const SizedBox(height: 20),
                   Text(
                     'Memuat...',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: AppColors.getTextSecondary(context),
                       fontWeight: FontWeight.w500,
                     ),
                   ),

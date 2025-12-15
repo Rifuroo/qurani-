@@ -47,7 +47,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: ProfileAppBar(
         title: _t('premium_offer.title'),
         showBackButton: true,
@@ -86,9 +86,9 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF2D9A7E),
-            const Color(0xFF3FCCB8),
-            const Color(0xFF52E8D4),
+            AppColors.getPrimaryLight(context),
+            AppColors.getPrimaryLight(context),
+            AppColors.getPrimaryLight(context),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -107,7 +107,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
           Image.asset(
             'assets/images/qurani-white-text.png',
             height: 28 * s,
-            color: Colors.white,
+            color: AppColors.getTextInverse(context),
             fit: BoxFit.contain,
           ),
 
@@ -122,7 +122,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
                   style: TextStyle(
                     fontSize: 19 * s,
                     fontWeight: AppTypography.bold,
-                    color: Colors.white,
+                    color: AppColors.getTextInverse(context),
                     height: 1.0,
                     letterSpacing: 1.0,
                   ),
@@ -145,11 +145,11 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
         vertical: AppDesignSystem.space16 * s,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.getSurface(context),
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadowLight,
+            color: AppColors.getShadowLight(context),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -420,7 +420,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: AppColors.borderLight,
+            color: AppColors.getBorderLight(context),
             width: AppDesignSystem.borderNormal * s,
           ),
         ),
@@ -434,7 +434,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
               style: TextStyle(
                 fontSize: 14 * s,
                 fontWeight: AppTypography.medium,
-                color: AppColors.textTertiary,
+                color: AppColors.getTextTertiary(context),
                 height: 1.3,
               ),
             ),
@@ -447,7 +447,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
                 style: TextStyle(
                   fontSize: 12 * s,
                   fontWeight: AppTypography.bold,
-                  color: AppColors.textPrimary,
+                  color: AppColors.getTextPrimary(context),
                   letterSpacing: 0.5,
                 ),
               ),
@@ -463,7 +463,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
                 ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [const Color(0xFFF39C12), const Color(0xFFF5B041)],
+                    colors: [AppColors.getWarning(context), AppColors.getWarningLight(context)],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
@@ -476,7 +476,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
                   style: TextStyle(
                     fontSize: 9 * s,
                     fontWeight: AppTypography.bold,
-                    color: Colors.white,
+                    color: AppColors.getTextInverse(context),
                     letterSpacing: 0.5,
                   ),
                   textAlign: TextAlign.center,
@@ -511,10 +511,10 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
             AppDesignSystem.space10 * s,
           ),
           decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLowest,
+            color: AppColors.getSurfaceContainerLowest(context),
             border: Border(
               bottom: BorderSide(
-                color: AppColors.borderLight,
+                color: AppColors.getBorderLight(context),
                 width: AppDesignSystem.borderNormal * s,
               ),
             ),
@@ -524,7 +524,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
             style: TextStyle(
               fontSize: 14 * s,
               fontWeight: AppTypography.bold,
-              color: AppColors.textPrimary,
+              color: AppColors.getTextPrimary(context),
             ),
           ),
         ),
@@ -562,7 +562,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
           ? BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: AppColors.borderLight,
+                  color: AppColors.getBorderLight(context),
                   width: AppDesignSystem.borderNormal * s,
                 ),
               ),
@@ -578,7 +578,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
               style: TextStyle(
                 fontSize: 14 * s,
                 fontWeight: AppTypography.regular,
-                color: AppColors.textPrimary,
+                color: AppColors.getTextPrimary(context),
                 height: 1.3,
               ),
             ),
@@ -625,10 +625,10 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
         width: 24 * s,
         height: 24 * s,
         decoration: BoxDecoration(
-          color: const Color(0xFF27AE60).withValues(alpha: 0.15),
+          color: AppColors.getSuccess(context).withValues(alpha: 0.15),
           shape: BoxShape.circle,
         ),
-        child: Icon(Icons.check, color: const Color(0xFF27AE60), size: 16 * s),
+        child: Icon(Icons.check, color: AppColors.getSuccess(context), size: 16 * s),
       );
     }
 
@@ -638,7 +638,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
         style: TextStyle(
           fontSize: 11 * s,
           fontWeight: AppTypography.semiBold,
-          color: AppColors.textPrimary,
+          color: AppColors.getTextPrimary(context),
           height: 1.2,
         ),
         textAlign: TextAlign.center,
@@ -650,7 +650,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
       width: 24 * s,
       height: 24 * s,
       decoration: BoxDecoration(
-        color: AppColors.blackWithOpacity(0.08),
+        color: AppColors.getTextPrimary(context).withValues(alpha: 0.08),
         shape: BoxShape.circle,
       ),
     );
@@ -668,16 +668,16 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
         AppDesignSystem.space10 * s,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.getSurface(context),
         border: Border(
           top: BorderSide(
-            color: AppColors.borderLight,
+            color: AppColors.getBorderLight(context),
             width: AppDesignSystem.borderNormal * s,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadowLight,
+            color: AppColors.getShadowLight(context),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -689,7 +689,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
           height: 52 * s,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [const Color(0xFF3FCCB8), const Color(0xFF52E8D4)],
+              colors: [AppColors.getPrimaryLight(context), AppColors.getPrimaryLight(context)],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
@@ -698,7 +698,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF3FCCB8).withValues(alpha: 0.3),
+                color: AppColors.getPrimaryLight(context).withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -714,15 +714,15 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
               borderRadius: BorderRadius.circular(
                 AppDesignSystem.radiusXXLarge * s,
               ),
-              splashColor: Colors.white.withValues(alpha: 0.2),
-              highlightColor: Colors.white.withValues(alpha: 0.1),
+              splashColor: AppColors.getTextInverse(context).withValues(alpha: 0.2),
+              highlightColor: AppColors.getTextInverse(context).withValues(alpha: 0.1),
               child: Center(
                 child: Text(
                   _t('premium_offer.plans.subscribe_button'),
                   style: TextStyle(
                     fontSize: 16 * s,
                     fontWeight: AppTypography.bold,
-                    color: Colors.white,
+                    color: AppColors.getTextInverse(context),
                     letterSpacing: 1.5,
                   ),
                 ),
@@ -766,8 +766,8 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFFF39C12).withValues(alpha: 0.2),
-                      const Color(0xFFF5B041).withValues(alpha: 0.1),
+                      AppColors.getWarning(context).withValues(alpha: 0.2),
+                      AppColors.getWarningLight(context).withValues(alpha: 0.1),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -776,7 +776,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
                 ),
                 child: Icon(
                   Icons.star,
-                  color: const Color(0xFFF39C12),
+                  color: AppColors.getWarning(context),
                   size: 32 * s,
                 ),
               ),
@@ -797,7 +797,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
                 _t('premium_offer.plans.dialog_message'),
                 style: AppTypography.body(
                   context,
-                  color: AppColors.textSecondary,
+                  color: AppColors.getTextSecondary(context),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -808,7 +808,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
               Container(
                 padding: EdgeInsets.all(12 * s),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLowest,
+                  color: AppColors.getSurfaceContainerLowest(context),
                   borderRadius: BorderRadius.circular(
                     AppDesignSystem.radiusMedium * s,
                   ),
@@ -861,14 +861,14 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
         children: [
           Icon(
             Icons.check_circle,
-            color: const Color(0xFF4CAF50),
+            color: AppColors.getSuccess(context),
             size: 16 * s,
           ),
           SizedBox(width: 8 * s),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(fontSize: 13 * s, color: AppColors.textPrimary),
+              style: TextStyle(fontSize: 13 * s, color: AppColors.getTextPrimary(context)),
             ),
           ),
         ],
@@ -893,12 +893,12 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
                 width: 64 * s,
                 height: 64 * s,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withValues(alpha: 0.2),
+                  color: AppColors.getSuccess(context).withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.check_circle,
-                  color: const Color(0xFF4CAF50),
+                  color: AppColors.getSuccess(context),
                   size: 32 * s,
                 ),
               ),
@@ -913,7 +913,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
                 'You already have access to all premium features. Enjoy!',
                 style: AppTypography.body(
                   context,
-                  color: AppColors.textSecondary,
+                  color: AppColors.getTextSecondary(context),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -947,6 +947,3 @@ class _FeatureRow {
     this.checkPremium = false,
   });
 }
-
-
-

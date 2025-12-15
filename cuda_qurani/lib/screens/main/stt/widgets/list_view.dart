@@ -3,10 +3,11 @@ import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
+import '../controllers/stt_controller.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
+import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'dart:async';
 
 /// Optimized vertical Quran reading mode with aggressive background preloading
@@ -277,14 +278,14 @@ class _VerticalPageWidget extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.grey[400],
+                      color: AppColors.getTextTertiary(context),
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.015),
                   Text(
                     'Loading page $pageNumber...',
                     style: TextStyle(
-                      color: Colors.grey[400],
+                      color: AppColors.getTextTertiary(context),
                       fontSize: screenHeight * 0.016,
                     ),
                   ),
@@ -293,7 +294,7 @@ class _VerticalPageWidget extends StatelessWidget {
             : Text(
                 'Page $pageNumber',
                 style: TextStyle(
-                  color: Colors.grey[300],
+                  color: AppColors.getTextTertiary(context),
                   fontSize: screenHeight * 0.02,
                   fontWeight: FontWeight.w300,
                 ),
@@ -589,7 +590,7 @@ class _CompleteAyahWidget extends StatelessWidget {
                         color: Colors.transparent,
                         border: Border.all(
                           color: state.isCurrentAyat
-                              ? primaryColor
+                              ? AppColors.getPrimary(context)
                               : Colors.black54,
                           width: 1,
                         ),
@@ -599,7 +600,7 @@ class _CompleteAyahWidget extends StatelessWidget {
                         '${segment.surahId}:${segment.ayahNumber}',
                         style: TextStyle(
                           color: state.isCurrentAyat
-                              ? primaryColor
+                              ? AppColors.getPrimary(context)
                               : Colors.black87,
                           fontWeight: FontWeight.w600,
                           fontSize: screenWidth * 0.0275,
@@ -616,6 +617,7 @@ class _CompleteAyahWidget extends StatelessWidget {
                   spacing: 1,
                   runSpacing: 4,
                   children: _buildWords(
+                    context,
                     segment,
                     state,
                     screenWidth,
@@ -631,6 +633,7 @@ class _CompleteAyahWidget extends StatelessWidget {
   }
 
   List<Widget> _buildWords(
+    BuildContext context,
     AyahSegment segment,
     _AyahState state,
     double screenWidth,
@@ -655,16 +658,16 @@ class _CompleteAyahWidget extends StatelessWidget {
       if (wordStatus != null) {
         switch (wordStatus) {
           case WordStatus.matched:
-            wordBg = correctColor.withValues(alpha: 0.4);
+            wordBg = getCorrectColor(context).withValues(alpha: 0.4);
             break;
           case WordStatus.mismatched:
           case WordStatus.skipped:
-            wordBg = errorColor.withValues(alpha: 0.4);
+            wordBg = getErrorColor(context).withValues(alpha: 0.4);
             break;
           case WordStatus.processing:
             wordBg = state.isListeningMode
-                ? Colors.grey.withValues(alpha: 0.5)
-                : listeningColor.withValues(alpha: 0.3);
+                ? AppColors.getTextTertiary(context).withValues(alpha: 0.5)
+                : AppColors.getInfo(context).withValues(alpha: 0.3);
             break;
           default:
             break;
@@ -692,7 +695,9 @@ class _CompleteAyahWidget extends StatelessWidget {
           border: (state.hideUnreadAyat && !isLastWordInAyah)
               ? Border(
                   bottom: BorderSide(
-                    color: Colors.black.withValues(alpha: 0.15),
+                    color: AppColors.getTextPrimary(
+                      context,
+                    ).withValues(alpha: 0.15),
                     width: 0.3,
                   ),
                 )
@@ -701,6 +706,7 @@ class _CompleteAyahWidget extends StatelessWidget {
         child: Opacity(
           opacity: opacity,
           child: _buildWordText(
+            context,
             word.text,
             fontFamily,
             state.isCurrentAyat,
@@ -711,29 +717,28 @@ class _CompleteAyahWidget extends StatelessWidget {
     }).toList();
   }
 
-  // ✅ FIX: Helper method untuk render text dengan setting yang berbeda per layout
   Widget _buildWordText(
+    BuildContext context,
     String text,
     String fontFamily,
     bool isCurrentAyat,
     double screenWidth,
   ) {
-    // ✅ CRITICAL: Deteksi layout dari fontFamily
-    final isIndopak = fontFamily == 'IndoPak-Nastaleeq';
+    final controller = context.read<SttController>();
+    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
 
     return Text(
       text,
       style: TextStyle(
         fontSize: isIndopak
-            ? screenWidth * 0.070 // ← Sedikit lebih besar untuk Indopak
-            : screenWidth * 0.0625, // ← Original untuk QPC
+            ? screenWidth *
+                  0.0625 // IndoPak lebih besar
+            : screenWidth * 0.0625, // QPC
         fontFamily: fontFamily,
-        color: isCurrentAyat ? listeningColor : Colors.black87,
+        color: isCurrentAyat ? AppColors.getInfo(context) : Colors.black87,
         fontWeight: FontWeight.w400,
-        height: 1.7,
-        letterSpacing: isIndopak
-            ? 0 // ← PENTING: Tidak ada overlap untuk Indopak!
-            : -5, // ← Overlap untuk QPC glyph fonts
+        height: isIndopak ? 1.8 : 1.7,
+        letterSpacing: isIndopak ? 0 : -5,
       ),
       textDirection: TextDirection.rtl,
     );

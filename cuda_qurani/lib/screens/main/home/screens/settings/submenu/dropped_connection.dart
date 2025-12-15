@@ -57,7 +57,7 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(title: _translations.isNotEmpty 
                       ? LanguageHelper.tr(_translations, 'sound_and_haptics.dropped_connection.dropped_connection_text')
                       : 'Dropped Connection'),
@@ -76,7 +76,7 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.medium,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
 
@@ -89,12 +89,12 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
                     vertical: AppDesignSystem.space16 * s * 0.9,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: AppColors.getSurface(context),
                     borderRadius: BorderRadius.circular(
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
                     border: Border.all(
-                      color: AppColors.borderLight,
+                      color: AppColors.getBorderLight(context),
                       width: 1.0 * s * 0.9,
                     ),
                   ),
@@ -103,7 +103,7 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
                       Icon(
                         Icons.volume_up,
                         size: 20 * s * 0.9,
-                        color: AppColors.textPrimary,
+                        color: AppColors.getTextPrimary(context),
                       ),
                       SizedBox(width: AppDesignSystem.space12 * s * 0.9),
                       Expanded(
@@ -114,16 +114,17 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
                           style: TextStyle(
                             fontSize: 16 * s * 0.9,
                             fontWeight: AppTypography.regular,
-                            color: AppColors.textPrimary,
+                            color: AppColors.getTextPrimary(context),
                           ),
                         ),
                       ),
                       Switch(
                         value: _playSound,
                         onChanged: _togglePlaySound,
-                        activeTrackColor: Color(0xFF4CAF50),
-                        inactiveThumbColor: AppColors.borderMedium,
-                        inactiveTrackColor: AppColors.borderLight,
+                        activeTrackColor: AppColors.getSuccess(context),
+                        activeThumbColor: AppColors.getSuccess(context),
+                        inactiveThumbColor: AppColors.getBorderMedium(context),
+                        inactiveTrackColor: AppColors.getBorderLight(context),
                       ),
                     ],
                   ),
@@ -143,7 +144,7 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
                     style: TextStyle(
                       fontSize: 14 * s * 0.9,
                       fontWeight: AppTypography.regular,
-                      color: AppColors.textSecondary,
+                      color: AppColors.getTextSecondary(context),
                       height: 1.4,
                     ),
                   ),
@@ -159,7 +160,7 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.medium,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
 
@@ -172,12 +173,12 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
                     vertical: AppDesignSystem.space16 * s * 0.9,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: AppColors.getSurface(context),
                     borderRadius: BorderRadius.circular(
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
                     border: Border.all(
-                      color: AppColors.borderLight,
+                      color: AppColors.getBorderLight(context),
                       width: 1.0 * s * 0.9,
                     ),
                   ),
@@ -186,7 +187,7 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
                       Icon(
                         Icons.vibration,
                         size: 20 * s * 0.9,
-                        color: AppColors.textPrimary,
+                        color: AppColors.getTextPrimary(context),
                       ),
                       SizedBox(width: AppDesignSystem.space12 * s * 0.9),
                       Expanded(
@@ -197,16 +198,17 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
                           style: TextStyle(
                             fontSize: 16 * s * 0.9,
                             fontWeight: AppTypography.regular,
-                            color: AppColors.textPrimary,
+                            color: AppColors.getTextPrimary(context),
                           ),
                         ),
                       ),
                       Switch(
                         value: _vibrateDevice,
                         onChanged: _toggleVibrateDevice,
-                        activeTrackColor: Color(0xFF4CAF50),
-                        inactiveThumbColor: AppColors.borderMedium,
-                        inactiveTrackColor: AppColors.borderLight,
+                        activeTrackColor: AppColors.getSuccess(context),
+                        activeThumbColor: AppColors.getSuccess(context),
+                        inactiveThumbColor: AppColors.getBorderMedium(context),
+                        inactiveTrackColor: AppColors.getBorderLight(context),
                       ),
                     ],
                   ),
@@ -226,7 +228,7 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
                     style: TextStyle(
                       fontSize: 14 * s * 0.9,
                       fontWeight: AppTypography.regular,
-                      color: AppColors.textSecondary,
+                      color: AppColors.getTextSecondary(context),
                       height: 1.4,
                     ),
                   ),
@@ -239,5 +241,3 @@ class _DroppedConnectionPageState extends State<DroppedConnectionPage> {
     );
   }
 }
-
-

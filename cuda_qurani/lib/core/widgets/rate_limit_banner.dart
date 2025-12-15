@@ -1,6 +1,7 @@
 // lib/core/widgets/rate_limit_banner.dart
 
 import 'package:flutter/material.dart';
+import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 
 /// Red banner widget to show rate limit warnings
 class RateLimitBanner extends StatelessWidget {
@@ -46,15 +47,15 @@ class RateLimitBanner extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.red.shade700,
-            Colors.red.shade900,
+            AppColors.getError(context),
+            AppColors.getErrorDark(context),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withValues(alpha: 0.3),
+            color: AppColors.getError(context).withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -67,12 +68,12 @@ class RateLimitBanner extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: AppColors.getTextInverse(context).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.block_rounded,
-                color: Colors.white,
+                color: AppColors.getTextInverse(context),
                 size: 24,
               ),
             ),
@@ -82,10 +83,10 @@ class RateLimitBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'Batas Harian Tercapai',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.getTextInverse(context),
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -94,7 +95,7 @@ class RateLimitBanner extends StatelessWidget {
                   Text(
                     'Reset dalam $resetTime',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: AppColors.getTextInverse(context).withValues(alpha: 0.9),
                       fontSize: 12,
                     ),
                   ),
@@ -105,8 +106,8 @@ class RateLimitBanner extends StatelessWidget {
               TextButton(
                 onPressed: onUpgradePressed,
                 style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.red.shade700,
+                  backgroundColor: AppColors.getTextInverse(context),
+                  foregroundColor: AppColors.getError(context),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -146,15 +147,15 @@ class RateLimitBanner extends StatelessWidget {
           children: [
             Icon(
               Icons.warning_amber_rounded,
-              color: Colors.white.withValues(alpha: 0.9),
+              color: AppColors.getTextInverse(context).withValues(alpha: 0.9),
               size: 20,
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Sisa $remaining dari $limit sesi hari ini',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: AppColors.getTextInverse(context),
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
@@ -166,13 +167,13 @@ class RateLimitBanner extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: AppColors.getTextInverse(context).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Upgrade',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.getTextInverse(context),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -185,7 +186,7 @@ class RateLimitBanner extends StatelessWidget {
                 onTap: onDismiss,
                 child: Icon(
                   Icons.close,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: AppColors.getTextInverse(context).withValues(alpha: 0.7),
                   size: 18,
                 ),
               ),
@@ -222,13 +223,13 @@ class RateLimitBadge extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isLow 
-              ? Colors.red.shade100 
-              : Colors.grey.shade200,
+              ? AppColors.getErrorContainer(context)
+              : AppColors.getSurface(context),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isLow 
-                ? Colors.red.shade300 
-                : Colors.grey.shade400,
+                ? AppColors.getError(context)
+                : AppColors.getBorderMedium(context),
             width: 1,
           ),
         ),
@@ -238,7 +239,7 @@ class RateLimitBadge extends StatelessWidget {
             Icon(
               isLow ? Icons.warning_amber_rounded : Icons.layers_outlined,
               size: 14,
-              color: isLow ? Colors.red.shade700 : Colors.grey.shade700,
+              color: isLow ? AppColors.getError(context) : AppColors.getTextSecondary(context),
             ),
             const SizedBox(width: 4),
             Text(
@@ -246,7 +247,7 @@ class RateLimitBadge extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isLow ? Colors.red.shade700 : Colors.grey.shade700,
+                color: isLow ? AppColors.getError(context) : AppColors.getTextSecondary(context),
               ),
             ),
           ],
@@ -276,7 +277,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withValues(alpha: 0.85),
+      color: AppColors.getScrim(context),
       child: SafeArea(
         child: Center(
           child: Padding(
@@ -287,20 +288,20 @@ class RateLimitExceededOverlay extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade700,
+                    color: AppColors.getError(context),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.hourglass_empty_rounded,
-                    color: Colors.white,
+                    color: AppColors.getTextInverse(context),
                     size: 48,
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Batas Harian Tercapai',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.getTextInverse(context),
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -310,7 +311,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
                 Text(
                   'Kamu sudah menggunakan $limit sesi hari ini.\nReset dalam $resetTime.',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: AppColors.getTextInverse(context).withValues(alpha: 0.8),
                     fontSize: 16,
                   ),
                   textAlign: TextAlign.center,
@@ -322,8 +323,8 @@ class RateLimitExceededOverlay extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: onUpgradePressed,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber,
-                        foregroundColor: Colors.black,
+                        backgroundColor: AppColors.getWarning(context),
+                        foregroundColor: AppColors.getTextPrimary(context),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -349,7 +350,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
                   Text(
                     'Sesi unlimited & fitur premium lainnya',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: AppColors.getTextInverse(context).withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
                   ),
@@ -361,7 +362,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
                     child: Text(
                       'Kembali',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: AppColors.getTextInverse(context).withValues(alpha: 0.7),
                         fontSize: 14,
                       ),
                     ),
@@ -407,7 +408,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
 //         ),
 //         boxShadow: [
 //           BoxShadow(
-//             color: Colors.purple.withValues(alpha: 0.3),
+//             color: Colors.purple.withOpacity(0.3),
 //             blurRadius: 8,
 //             offset: const Offset(0, 2),
 //           ),
@@ -420,12 +421,12 @@ class RateLimitExceededOverlay extends StatelessWidget {
 //             Container(
 //               padding: const EdgeInsets.all(8),
 //               decoration: BoxDecoration(
-//                 color: Colors.white.withValues(alpha: 0.2),
+//                 color: Colors.white.withOpacity(0.2),
 //                 borderRadius: BorderRadius.circular(8),
 //               ),
 //               child: const Icon(
 //                 Icons.warning_amber_rounded,
-//                 color: Colors.white,
+//                 color: AppColors.textInverse,
 //                 size: 24,
 //               ),
 //             ),
@@ -438,7 +439,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
 //                   const Text(
 //                     'Surah Tidak Sesuai',
 //                     style: TextStyle(
-//                       color: Colors.white,
+//                       color: AppColors.textInverse,
 //                       fontWeight: FontWeight.bold,
 //                       fontSize: 14,
 //                     ),
@@ -447,7 +448,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
 //                   Text(
 //                     warningMessage,
 //                     style: TextStyle(
-//                       color: Colors.white.withValues(alpha: 0.9),
+//                       color: AppColors.getTextInverse(context).withOpacity(0.9),
 //                       fontSize: 12,
 //                     ),
 //                     maxLines: 2,
@@ -461,7 +462,7 @@ class RateLimitExceededOverlay extends StatelessWidget {
 //                 onTap: onDismiss,
 //                 child: Icon(
 //                   Icons.close,
-//                   color: Colors.white.withValues(alpha: 0.7),
+//                   color: AppColors.getTextInverse(context).withOpacity(0.7),
 //                   size: 20,
 //                 ),
 //               ),
@@ -495,8 +496,8 @@ class DurationWarningBanner extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.orange.shade600,
-            Colors.orange.shade800,
+            AppColors.getWarning(context),
+            AppColors.getWarningDark(context),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -506,17 +507,17 @@ class DurationWarningBanner extends StatelessWidget {
         bottom: false,
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.timer_outlined,
-              color: Colors.white,
+              color: AppColors.getTextInverse(context),
               size: 20,
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 warningMessage,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: AppColors.getTextInverse(context),
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
@@ -527,7 +528,7 @@ class DurationWarningBanner extends StatelessWidget {
                 onTap: onDismiss,
                 child: Icon(
                   Icons.close,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: AppColors.getTextInverse(context).withValues(alpha: 0.7),
                   size: 18,
                 ),
               ),
@@ -554,7 +555,7 @@ class DurationLimitExceededOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withValues(alpha: 0.85),
+      color: AppColors.getScrim(context),
       child: SafeArea(
         child: Center(
           child: Padding(
@@ -565,20 +566,20 @@ class DurationLimitExceededOverlay extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade700,
+                    color: AppColors.getWarning(context),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.timer_off_outlined,
-                    color: Colors.white,
+                    color: AppColors.getTextInverse(context),
                     size: 48,
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Waktu Habis',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.getTextInverse(context),
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -588,7 +589,7 @@ class DurationLimitExceededOverlay extends StatelessWidget {
                 Text(
                   message,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: AppColors.getTextInverse(context).withValues(alpha: 0.8),
                     fontSize: 16,
                   ),
                   textAlign: TextAlign.center,
@@ -597,7 +598,7 @@ class DurationLimitExceededOverlay extends StatelessWidget {
                 Text(
                   'Upgrade ke Premium untuk sesi tanpa batas waktu',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: AppColors.getTextInverse(context).withValues(alpha: 0.6),
                     fontSize: 14,
                   ),
                   textAlign: TextAlign.center,
@@ -609,8 +610,8 @@ class DurationLimitExceededOverlay extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: onUpgradePressed,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber,
-                        foregroundColor: Colors.black,
+                        backgroundColor: AppColors.getWarning(context),
+                        foregroundColor: AppColors.getTextPrimary(context),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -640,7 +641,7 @@ class DurationLimitExceededOverlay extends StatelessWidget {
                     child: Text(
                       'Selesai',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: AppColors.getTextInverse(context).withValues(alpha: 0.7),
                         fontSize: 14,
                       ),
                     ),
@@ -653,6 +654,3 @@ class DurationLimitExceededOverlay extends StatelessWidget {
     );
   }
 }
-
-
-

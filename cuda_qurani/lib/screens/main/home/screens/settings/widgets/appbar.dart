@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
-import 'package:cuda_qurani/core/widgets/app_components.dart';
 
 /// ==================== SETTINGS APP BAR ====================
 /// AppBar untuk halaman settings dan submenunya dengan navigasi yang benar
@@ -25,14 +24,16 @@ class SettingsAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
+    final brightness = Theme.of(context).brightness;
 
     return AppBar(
-      backgroundColor: AppColors.surface,
-      foregroundColor: AppColors.textPrimary,
+      backgroundColor: AppColors.getSurface(context),
+      foregroundColor: AppColors.getTextPrimary(context),
       elevation: 0,
       centerTitle: true,
       automaticallyImplyLeading: false,
-      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      systemOverlayStyle:
+          brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       leading: showBackButton
           ? Material(
               color: Colors.transparent,
@@ -52,7 +53,7 @@ class SettingsAppBar extends StatelessWidget implements PreferredSizeWidget {
                   child: Icon(
                     Icons.arrow_back_ios_rounded,
                     size: AppDesignSystem.iconMedium * s,
-                    color: AppColors.textPrimary,
+                    color: AppColors.getTextPrimary(context),
                   ),
                 ),
               ),
@@ -70,7 +71,7 @@ class SettingsAppBar extends StatelessWidget implements PreferredSizeWidget {
         preferredSize: const Size.fromHeight(1.0),
         child: Container(
           height: AppDesignSystem.borderNormal,
-          color: AppColors.borderLight,
+          color: AppColors.getBorderLight(context),
         ),
       ),
     );

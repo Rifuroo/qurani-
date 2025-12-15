@@ -198,11 +198,11 @@ class _SliderGuidePopupState extends State<SliderGuidePopup>
             child: Container(
               width: cardWidth,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.getSurface(context),
                 borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
+                    color: AppColors.getTextPrimary(context).withOpacity(0.15),
                     blurRadius: 12,
                     offset: const Offset(0, 3),
                   ),
@@ -297,5 +297,3 @@ class _SliderGuidePopupState extends State<SliderGuidePopup>
     );
   }
 }
-
-

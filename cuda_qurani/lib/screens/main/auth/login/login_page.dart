@@ -229,7 +229,7 @@ class _LoginPageState extends State<LoginPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -342,7 +342,7 @@ class _LoginPageState extends State<LoginPage> {
               : 'Login',
           style: AppTypography.displaySmall(
             context,
-            color: AppColors.textPrimary,
+            color: AppColors.getTextPrimary(context),
             weight: AppTypography.bold,
           ),
         ),
@@ -363,7 +363,7 @@ class _LoginPageState extends State<LoginPage> {
             keyboardType: TextInputType.emailAddress,
             style: AppTypography.body(
               context,
-              color: AppColors.textPrimary,
+              color: AppColors.getTextPrimary(context),
               weight: AppTypography.medium,
             ),
             decoration: AppComponentStyles.inputDecoration(
@@ -378,7 +378,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 child: Icon(
                   Icons.email_outlined,
-                  color: AppColors.textTertiary,
+                  color: AppColors.getTextTertiary(context),
                   size: AppDesignSystem.iconLarge * s,
                 ),
               ),
@@ -411,7 +411,7 @@ class _LoginPageState extends State<LoginPage> {
             obscureText: !_isPasswordVisible,
             style: AppTypography.body(
               context,
-              color: AppColors.textPrimary,
+              color: AppColors.getTextPrimary(context),
               weight: AppTypography.medium,
             ),
             decoration: AppComponentStyles.inputDecoration(
@@ -426,7 +426,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 child: Icon(
                   Icons.lock_outline,
-                  color: AppColors.textTertiary,
+                  color: AppColors.getTextTertiary(context),
                   size: AppDesignSystem.iconLarge * s,
                 ),
               ),
@@ -435,7 +435,7 @@ class _LoginPageState extends State<LoginPage> {
                   _isPasswordVisible
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
-                  color: AppColors.textTertiary,
+                  color: AppColors.getTextTertiary(context),
                   size: AppDesignSystem.iconLarge * s,
                 ),
                 onPressed: () {
@@ -497,7 +497,15 @@ class _LoginPageState extends State<LoginPage> {
                     _rememberMe = value ?? false;
                   });
                 },
-                activeColor: AppColors.primary,
+                fillColor: WidgetStateProperty.resolveWith<Color?>(
+                  (Set<WidgetState> states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return AppColors.getPrimary(context);
+                    }
+                    return null;
+                  },
+                ),
+                checkColor: AppColors.getTextInverse(context),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(
                     AppDesignSystem.radiusXSmall * s,
@@ -514,7 +522,7 @@ class _LoginPageState extends State<LoginPage> {
                   : 'Remember me',
               style: AppTypography.body(
                 context,
-                color: AppColors.textSecondary,
+                color: AppColors.getTextSecondary(context),
               ),
             ),
           ],
@@ -562,9 +570,9 @@ class _LoginPageState extends State<LoginPage> {
             ? SizedBox(
                 height: AppDesignSystem.scale(context, 20),
                 width: AppDesignSystem.scale(context, 20),
-                child: const CircularProgressIndicator(
+                child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.getTextInverse(context)),
                 ),
               )
             : Text(
@@ -573,7 +581,7 @@ class _LoginPageState extends State<LoginPage> {
                     : 'Login',
                 style: AppTypography.label(
                   context,
-                  color: Colors.white,
+                  color: AppColors.getTextInverse(context),
                   weight: AppTypography.semiBold,
                 ),
               ),
@@ -586,7 +594,7 @@ class _LoginPageState extends State<LoginPage> {
     return Row(
       children: [
         Expanded(
-          child: AppDivider(color: AppColors.divider, thickness: 1 * s),
+          child: AppDivider(color: AppColors.getDivider(context), thickness: 1 * s),
         ),
         Padding(
           padding: EdgeInsets.symmetric(
@@ -598,12 +606,12 @@ class _LoginPageState extends State<LoginPage> {
                 : 'Or',
             style: AppTypography.caption(
               context,
-              color: AppColors.textTertiary,
+              color: AppColors.getTextTertiary(context),
             ),
           ),
         ),
         Expanded(
-          child: AppDivider(color: AppColors.divider, thickness: 1 * s),
+          child: AppDivider(color: AppColors.getDivider(context), thickness: 1 * s),
         ),
       ],
     );
@@ -633,7 +641,7 @@ class _LoginPageState extends State<LoginPage> {
                 width: AppDesignSystem.scale(context, 20),
                 child: const CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF247C64)),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               )
             : Row(
@@ -647,7 +655,7 @@ class _LoginPageState extends State<LoginPage> {
                       return Icon(
                         Icons.g_mobiledata,
                         size: AppDesignSystem.iconLarge * s,
-                        color: AppColors.textPrimary,
+                        color: AppColors.getTextPrimary(context),
                       );
                     },
                   ),
@@ -661,7 +669,7 @@ class _LoginPageState extends State<LoginPage> {
                         : 'Login with Google',
                     style: AppTypography.label(
                       context,
-                      color: AppColors.textPrimary,
+                      color: AppColors.getTextPrimary(context),
                       weight: AppTypography.semiBold,
                     ),
                   ),
@@ -682,7 +690,7 @@ class _LoginPageState extends State<LoginPage> {
           _translations.isNotEmpty
               ? LanguageHelper.tr(_translations, 'login.null_account_text')
               : 'Don\'t have an account?',
-          style: AppTypography.body(context, color: AppColors.textSecondary),
+          style: AppTypography.body(context, color: AppColors.getTextSecondary(context)),
         ),
         AppTextButton(
           text: _translations.isNotEmpty

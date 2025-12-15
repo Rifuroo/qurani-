@@ -16,6 +16,8 @@ import 'package:cuda_qurani/screens/splash_screen.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/providers/premium_provider.dart';
+import 'package:cuda_qurani/providers/theme_provider.dart';
+import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 
 // Global flag to track DB initialization
 bool _isDatabaseInitialized = false;
@@ -79,6 +81,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider(), lazy: false),
         ChangeNotifierProvider(
           create: (_) => LanguageProvider()..initialize(),
@@ -90,8 +93,8 @@ class MainApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => RecitationProvider(), lazy: true),
       ],
-      child: Consumer<LanguageProvider>(
-        builder: (context, languageProvider, child) {
+      child: Consumer2<LanguageProvider, ThemeProvider>(
+        builder: (context, languageProvider, themeProvider, child) {
           final isRTL = languageProvider.currentLanguageCode == 'ar';
 
           return MaterialApp(
@@ -131,11 +134,9 @@ class MainApp extends StatelessWidget {
               );
             },
 
-            theme: ThemeData(
-              primarySwatch: Colors.green,
-              primaryColor: const Color(0xFF247C64),
-              scaffoldBackgroundColor: const Color(0xFFFFFFFF),
-            ),
+            theme: AppTheme.lightTheme(context),
+            darkTheme: AppTheme.darkTheme(context),
+            themeMode: themeProvider.themeMode,
             home: const InitialSplashScreen(),
           );
         },

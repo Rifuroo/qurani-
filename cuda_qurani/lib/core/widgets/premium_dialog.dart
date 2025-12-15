@@ -23,7 +23,7 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
       child: Container(
         padding: EdgeInsets.all(AppDesignSystem.space24 * s),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.getSurface(context),
           borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge * s),
         ),
         child: Column(
@@ -36,8 +36,8 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xFFF39C12).withValues(alpha: 0.2),
-                    const Color(0xFFF5B041).withValues(alpha: 0.1),
+                    AppColors.getWarning(context).withValues(alpha: 0.2),
+                    AppColors.getWarningLight(context).withValues(alpha: 0.1),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -46,7 +46,7 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
               ),
               child: Icon(
                 Icons.lock_rounded,
-                color: const Color(0xFFF39C12),
+                color: AppColors.getWarning(context),
                 size: 32 * s,
               ),
             ),
@@ -59,7 +59,7 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
               style: TextStyle(
                 fontSize: 20 * s,
                 fontWeight: AppTypography.bold,
-                color: AppColors.textPrimary,
+                color: AppColors.getTextPrimary(context),
               ),
               textAlign: TextAlign.center,
             ),
@@ -73,7 +73,7 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
                 vertical: 6 * s,
               ),
               decoration: BoxDecoration(
-                color: const Color(0xFFF39C12).withValues(alpha: 0.1),
+                color: AppColors.getWarning(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppDesignSystem.radiusRound * s),
               ),
               child: Text(
@@ -81,7 +81,7 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
                 style: TextStyle(
                   fontSize: 14 * s,
                   fontWeight: AppTypography.semiBold,
-                  color: const Color(0xFFF39C12),
+                  color: AppColors.getWarning(context),
                 ),
               ),
             ),
@@ -93,7 +93,7 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
               featureDesc,
               style: TextStyle(
                 fontSize: 14 * s,
-                color: AppColors.textSecondary,
+                color: AppColors.getTextSecondary(context),
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
@@ -106,7 +106,7 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
               'Upgrade to Premium to unlock this feature and many more!',
               style: TextStyle(
                 fontSize: 12 * s,
-                color: AppColors.textTertiary,
+                color: AppColors.getTextTertiary(context),
               ),
               textAlign: TextAlign.center,
             ),
@@ -124,7 +124,7 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
                       padding: EdgeInsets.symmetric(vertical: 12 * s),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
-                        side: BorderSide(color: AppColors.borderLight),
+                        side: BorderSide(color: AppColors.getBorderLight(context)),
                       ),
                     ),
                     child: Text(
@@ -132,7 +132,7 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
                       style: TextStyle(
                         fontSize: 14 * s,
                         fontWeight: AppTypography.medium,
-                        color: AppColors.textSecondary,
+                        color: AppColors.getTextSecondary(context),
                       ),
                     ),
                   ),
@@ -144,15 +144,15 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF3FCCB8), Color(0xFF52E8D4)],
+                      gradient: LinearGradient(
+                        colors: [AppColors.getPrimaryLight(context), AppColors.getPrimaryLight(context)],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF3FCCB8).withValues(alpha: 0.3),
+                          color: AppColors.getPrimaryLight(context).withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -178,7 +178,7 @@ void showPremiumFeatureDialog(BuildContext context, PremiumFeature feature) {
                             style: TextStyle(
                               fontSize: 14 * s,
                               fontWeight: AppTypography.semiBold,
-                              color: Colors.white,
+                              color: AppColors.getTextInverse(context),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -210,7 +210,7 @@ void showPremiumUpgradeDialog(BuildContext context) {
       child: Container(
         padding: EdgeInsets.all(AppDesignSystem.space24 * s),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.getSurface(context),
           borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge * s),
         ),
         child: Column(
@@ -223,8 +223,8 @@ void showPremiumUpgradeDialog(BuildContext context) {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xFFF39C12).withValues(alpha: 0.2),
-                    const Color(0xFFF5B041).withValues(alpha: 0.1),
+                    AppColors.getWarning(context).withValues(alpha: 0.2),
+                    AppColors.getWarningLight(context).withValues(alpha: 0.1),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -233,7 +233,7 @@ void showPremiumUpgradeDialog(BuildContext context) {
               ),
               child: Icon(
                 Icons.star_rounded,
-                color: const Color(0xFFF39C12),
+                color: AppColors.getWarning(context),
                 size: 32 * s,
               ),
             ),
@@ -246,7 +246,7 @@ void showPremiumUpgradeDialog(BuildContext context) {
               style: TextStyle(
                 fontSize: 20 * s,
                 fontWeight: AppTypography.bold,
-                color: AppColors.textPrimary,
+                color: AppColors.getTextPrimary(context),
               ),
               textAlign: TextAlign.center,
             ),
@@ -271,7 +271,7 @@ void showPremiumUpgradeDialog(BuildContext context) {
                       'Not Now',
                       style: TextStyle(
                         fontSize: 14 * s,
-                        color: AppColors.textSecondary,
+                        color: AppColors.getTextSecondary(context),
                       ),
                     ),
                   ),
@@ -310,7 +310,7 @@ Widget _buildBenefitRow(BuildContext context, IconData icon, String text) {
       children: [
         Icon(
           icon,
-          color: const Color(0xFF4CAF50),
+          color: AppColors.getSuccess(context),
           size: 18 * s,
         ),
         SizedBox(width: 8 * s),
@@ -318,7 +318,7 @@ Widget _buildBenefitRow(BuildContext context, IconData icon, String text) {
           text,
           style: TextStyle(
             fontSize: 14 * s,
-            color: AppColors.textPrimary,
+            color: AppColors.getTextPrimary(context),
           ),
         ),
       ],

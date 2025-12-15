@@ -9,7 +9,7 @@ import 'package:cuda_qurani/screens/main/home/screens/surah_list_page.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/playback_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
+import '../controllers/stt_controller.dart';
 import '../utils/constants.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
@@ -146,8 +146,8 @@ class _QuranAppBarState extends State<QuranAppBar> {
       child: IgnorePointer(
         ignoring: !controller.isUIVisible,
         child: AppBar(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          backgroundColor: getPrimaryColor(context),
+          foregroundColor: AppColors.textInverse,
           toolbarHeight: kToolbarHeight * 0.80,
           leading: IconButton(
             icon: Icon(Icons.menu, size: iconSize * 120 / 100),
@@ -177,7 +177,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                       style: TextStyle(
                         fontSize: titleSize,
                         fontWeight: FontWeight.w400,
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: AppColors.textInverse.withOpacity(0.9),
                         height: 1.1,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -189,7 +189,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                   Container(
                     width: 1,
                     height: screenHeight * 0.016,
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: AppColors.textInverse.withOpacity(0.3),
                   ),
                   SizedBox(width: screenWidth * 0.015),
                   // Juz Badge
@@ -198,7 +198,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     style: TextStyle(
                       fontSize: badgeSize,
                       fontWeight: FontWeight.w400,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: AppColors.getTextInverse(context).withOpacity(0.9),
                       height: 1.1,
                     ),
                   ),
@@ -208,7 +208,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                   Container(
                     width: 1,
                     height: screenHeight * 0.016,
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: AppColors.textInverse.withOpacity(0.3),
                   ),
                   SizedBox(width: screenWidth * 0.015),
                   // Page Number
@@ -217,7 +217,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     style: TextStyle(
                       fontSize: subtitleSize,
                       fontWeight: FontWeight.w400,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: AppColors.getTextInverse(context).withOpacity(0.9),
                       height: 1.1,
                     ),
                   ),
@@ -531,11 +531,11 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                     width: trackWidth,
                     height: trackHeight,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.getSurface(context),
                       borderRadius: BorderRadius.circular(trackHeight / 2),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
+                          color: AppColors.getShadowLight(context),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
@@ -556,8 +556,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                   Icons.play_arrow_rounded,
                                   size: iconSize * 0.9,
                                   color: isListeningActive
-                                      ? primaryColor
-                                      : Colors.grey.shade700,
+                                      ? getPrimaryColor(context)
+                                      : AppColors.getTextSecondary(context),
                                 ),
                                 SizedBox(width: 6),
                                 Text(
@@ -571,8 +571,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                     fontSize: labelSize,
                                     fontWeight: FontWeight.w600,
                                     color: isListeningActive
-                                        ? primaryColor
-                                        : Colors.grey.shade700,
+                                        ? getPrimaryColor(context)
+                                        : AppColors.getTextSecondary(context),
                                   ),
                                 ),
                               ],
@@ -599,8 +599,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                     fontSize: labelSize,
                                     fontWeight: FontWeight.w600,
                                     color: isRecordingActive
-                                        ? errorColor
-                                        : Colors.grey.shade700,
+                                        ? getErrorColor(context)
+                                        : AppColors.getTextSecondary(context),
                                   ),
                                 ),
                                 SizedBox(width: 6),
@@ -609,7 +609,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                   size: iconSize * 0.9,
                                   color: isRecordingActive
                                       ? errorColor
-                                      : Colors.grey.shade700,
+                                      : AppColors.getTextSecondary(context),
                                 ),
                               ],
                             ),
@@ -642,7 +642,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                     color: _getThumbColor(
                                       isListeningActive,
                                       isRecordingActive,
-                                    ).withValues(alpha: 0.4),
+                                    ).withOpacity(0.4),
                                     blurRadius: 12,
                                     offset: const Offset(0, 2),
                                   ),
@@ -678,7 +678,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                         key: ValueKey(
                                           'icon_${icon.codePoint}_${isListeningActive}_${isRecordingActive}_${isPaused}_${_dragPosition.toStringAsFixed(1)}',
                                         ), // ✅ Key yang unik termasuk icon codePoint untuk memastikan perubahan terdeteksi
-                                        color: Colors.white,
+                                        color: AppColors.textInverse,
                                         size: iconSize,
                                       );
                                     },
@@ -751,10 +751,10 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                       //     vertical: 6,
                       //   ),
                       //   decoration: BoxDecoration(
-                      //     color: primaryColor.withValues(alpha: 0.1),
+                      //     color: primaryColor.withOpacity(0.1),
                       //     borderRadius: BorderRadius.circular(20),
                       //     border: Border.all(
-                      //       color: primaryColor.withValues(alpha: 0.3),
+                      //       color: primaryColor.withOpacity(0.3),
                       //       width: 1,
                       //     ),
                       //   ),
@@ -789,16 +789,16 @@ class _QuranBottomBarState extends State<QuranBottomBar>
   }
 
   Color _getThumbColor(bool isListening, bool isRecording) {
-    if (isListening) return primaryColor;
-    if (isRecording) return errorColor;
+    if (isListening) return getPrimaryColor(context);
+    if (isRecording) return getErrorColor(context);
 
     // During drag, show preview color
     if (_isDragging) {
-      if (_dragPosition < -0.3) return primaryColor.withValues(alpha: 0.7);
-      if (_dragPosition > 0.3) return errorColor.withValues(alpha: 0.7);
+      if (_dragPosition < -0.3) return getPrimaryColor(context).withOpacity(0.7);
+      if (_dragPosition > 0.3) return getErrorColor(context).withOpacity(0.7);
     }
 
-    return Colors.grey.shade800;
+    return AppColors.getTextTertiary(context);
   }
 
   IconData _getThumbIcon(
@@ -849,13 +849,13 @@ class QuranLoadingWidget extends StatelessWidget {
           Container(
             width: containerSize,
             height: containerSize,
-            decoration: const BoxDecoration(
-              color: primaryColor,
+            decoration: BoxDecoration(
+              color: getPrimaryColor(context),
               shape: BoxShape.circle,
             ),
-            child: const Center(
+            child: Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.textInverse),
                 strokeWidth: 2,
               ),
             ),
@@ -866,7 +866,7 @@ class QuranLoadingWidget extends StatelessWidget {
             style: TextStyle(
               fontSize: titleSize,
               fontWeight: FontWeight.bold,
-              color: primaryColor,
+              color: getPrimaryColor(context),
             ),
           ),
           SizedBox(height: screenHeight * 0.005),
@@ -874,7 +874,7 @@ class QuranLoadingWidget extends StatelessWidget {
             errorMessage.isNotEmpty ? errorMessage : 'Loading Quran data...',
             style: TextStyle(
               fontSize: messageSize,
-              color: Colors.grey.shade600,
+              color: AppColors.getTextSecondary(context),
             ),
             textAlign: TextAlign.center,
           ),
@@ -910,14 +910,14 @@ class QuranErrorWidget extends StatelessWidget {
               width: containerSize,
               height: containerSize,
               decoration: BoxDecoration(
-                color: errorColor.withValues(alpha: 0.1),
+                color: getErrorColor(context).withOpacity(0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: errorColor.withValues(alpha: 0.3)),
+                border: Border.all(color: getErrorColor(context).withOpacity(0.3)),
               ),
               child: Icon(
                 Icons.error_outline,
                 size: iconSize,
-                color: errorColor,
+                color: getErrorColor(context),
               ),
             ),
             SizedBox(height: screenHeight * 0.015),
@@ -926,7 +926,7 @@ class QuranErrorWidget extends StatelessWidget {
               style: TextStyle(
                 fontSize: titleSize,
                 fontWeight: FontWeight.bold,
-                color: primaryColor,
+                color: getPrimaryColor(context),
               ),
               textAlign: TextAlign.center,
             ),
@@ -934,14 +934,17 @@ class QuranErrorWidget extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(screenWidth * 0.02),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: AppColors.getSurfaceContainerLow(context),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: AppColors.getBorderLight(context)),
               ),
               child: Text(
                 controller.errorMessage ?? 'Unknown error occurred',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: messageSize),
+                style: TextStyle(
+                  fontSize: messageSize,
+                  color: AppColors.getTextPrimary(context),
+                ),
               ),
             ),
             SizedBox(height: screenHeight * 0.015),
@@ -956,8 +959,8 @@ class QuranErrorWidget extends StatelessWidget {
                     style: TextStyle(fontSize: buttonTextSize),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
+                    backgroundColor: getPrimaryColor(context),
+                    foregroundColor: AppColors.getTextInverse(context),
                     padding: EdgeInsets.symmetric(
                       horizontal: screenWidth * 0.02,
                       vertical: screenHeight * 0.005,
@@ -967,10 +970,17 @@ class QuranErrorWidget extends StatelessWidget {
                 SizedBox(width: screenWidth * 0.02),
                 TextButton.icon(
                   onPressed: controller.toggleLogs,
-                  icon: Icon(Icons.bug_report, size: iconButtonSize),
+                  icon: Icon(
+                    Icons.bug_report,
+                    size: iconButtonSize,
+                    color: AppColors.getTextPrimary(context),
+                  ),
                   label: Text(
                     'View Logs',
-                    style: TextStyle(fontSize: buttonTextSize),
+                    style: TextStyle(
+                      fontSize: buttonTextSize,
+                      color: AppColors.getTextPrimary(context),
+                    ),
                   ),
                 ),
               ],
@@ -1000,8 +1010,8 @@ class QuranLogsPanel extends StatelessWidget {
 
     return Container(
       height: panelHeight,
-      decoration: const BoxDecoration(
-        color: Colors.black87,
+      decoration: BoxDecoration(
+        color: AppColors.getTextPrimary(context),
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
       child: Column(
@@ -1011,37 +1021,37 @@ class QuranLogsPanel extends StatelessWidget {
               horizontal: paddingH,
               vertical: paddingV,
             ),
-            decoration: const BoxDecoration(
-              color: Colors.black,
+            decoration: BoxDecoration(
+              color: AppColors.getTextPrimary(context),
               borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
-                Icon(Icons.terminal, color: correctColor, size: iconSize),
+                Icon(Icons.terminal, color: getCorrectColor(context), size: iconSize),
                 SizedBox(width: screenWidth * 0.01),
                 Text(
                   'API Debug Console',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textInverse,
                     fontWeight: FontWeight.bold,
                     fontSize: titleSize,
                   ),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: Icon(Icons.clear, color: Colors.white, size: iconSize),
+                  icon: Icon(Icons.clear, color: AppColors.textInverse, size: iconSize),
                   onPressed: controller.clearLogs,
                 ),
                 IconButton(
                   icon: Icon(
                     Icons.save_alt,
-                    color: Colors.white,
+                    color: AppColors.textInverse,
                     size: iconSize,
                   ),
                   onPressed: () => controller.exportSession(context),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, color: Colors.white, size: iconSize),
+                  icon: Icon(Icons.close, color: AppColors.textInverse, size: iconSize),
                   onPressed: controller.toggleLogs,
                 ),
               ],
@@ -1111,9 +1121,15 @@ void showCompletionDialog(BuildContext context, SttController controller) {
       return AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.celebration, color: correctColor, size: iconSize),
+            Icon(Icons.celebration, color: getCorrectColor(context), size: iconSize),
             SizedBox(width: screenWidth * 0.02),
-            Text('Surah Completed!', style: TextStyle(fontSize: titleSize)),
+            Text(
+              'Surah Completed!',
+              style: TextStyle(
+                fontSize: titleSize,
+                color: AppColors.getTextPrimary(context),
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -1122,7 +1138,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
             Container(
               padding: EdgeInsets.all(screenWidth * 0.04),
               decoration: BoxDecoration(
-                color: correctColor.withValues(alpha: 0.1),
+                color: getCorrectColor(context).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -1132,26 +1148,31 @@ void showCompletionDialog(BuildContext context, SttController controller) {
                     style: TextStyle(
                       fontSize: congratsSize,
                       fontWeight: FontWeight.bold,
-                      color: primaryColor,
+                      color: getPrimaryColor(context),
                     ),
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: screenHeight * 0.01),
                   Text(
                     'You have completed reading ${controller.suratNameSimple}',
-                    style: TextStyle(fontSize: messageSize),
+                    style: TextStyle(
+                      fontSize: messageSize,
+                      color: AppColors.getTextPrimary(context),
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: screenHeight * 0.015),
                   Column(
                     children: [
                       _buildStatItem(
+                        context,
                         'Ayat',
                         '${controller.ayatList.length}',
                         statLabelSize,
                         statValueSize,
                       ),
                       _buildStatItem(
+                        context,
                         'Time',
                         '${sessionDuration}min',
                         statLabelSize,
@@ -1170,8 +1191,8 @@ void showCompletionDialog(BuildContext context, SttController controller) {
               Navigator.of(context).pop();
               Navigator.of(context).pop();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-            child: const Text('Finish', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: getPrimaryColor(context)),
+            child: Text('Finish', style: TextStyle(color: AppColors.textInverse)),
           ),
         ],
       );
@@ -1180,6 +1201,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
 }
 
 Widget _buildStatItem(
+  BuildContext context,
   String label,
   String value,
   double labelSize,
@@ -1192,7 +1214,7 @@ Widget _buildStatItem(
       children: [
         Text(
           '$label: ',
-          style: TextStyle(fontSize: labelSize, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: labelSize, color: AppColors.getTextSecondary(context)),
         ),
         Text(
           value,
@@ -1216,8 +1238,14 @@ void showSimpleSnackBar(
 
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(message, style: const TextStyle(fontSize: 12)),
-      backgroundColor: backgroundColor ?? primaryColor,
+      content: Text(
+        message,
+        style: TextStyle(
+          fontSize: 12,
+          color: AppColors.getTextInverse(context),
+        ),
+      ),
+      backgroundColor: backgroundColor ?? getPrimaryColor(context),
       duration: const Duration(seconds: 2),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),

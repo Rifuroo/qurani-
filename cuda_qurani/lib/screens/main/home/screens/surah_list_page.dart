@@ -332,14 +332,14 @@ class _SurahListPageState extends State<SurahListPage> {
     // ✅ Show loading ONLY if cache not ready yet
     if (!_isInitialized) {
       return Scaffold(
-        backgroundColor: AppColors.surfaceVariant,
+        backgroundColor: AppColors.getSurfaceVariant(context),
         appBar: MenuAppBar(selectedIndex: 1),
         body: const AppLoadingIndicator(message: 'Loading metadata...'),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceVariant,
+      backgroundColor: AppColors.getSurfaceVariant(context),
       appBar: MenuAppBar(selectedIndex: 1),
       body: SafeArea(
         child: Column(
@@ -357,7 +357,7 @@ class _SurahListPageState extends State<SurahListPage> {
   Widget _buildSearchBar() {
     final s = AppDesignSystem.getScaleFactor(context);
     return Container(
-      color: AppColors.surface,
+      color: AppColors.getSurface(context),
       padding: EdgeInsets.symmetric(
         horizontal: AppDesignSystem.space20 * s,
         vertical: AppDesignSystem.space20 * s,
@@ -365,11 +365,11 @@ class _SurahListPageState extends State<SurahListPage> {
       child: Container(
         height: 38 * s,
         decoration: BoxDecoration(
-          color: AppColors.surfaceContainerLowest,
+          color: AppColors.getSurfaceContainerLowest(context),
           borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
           border: Border.all(
             color: _searchController.text.isNotEmpty
-                ? AppColors.borderFocus
+                ? AppColors.getBorderFocus(context)
                 : Colors.transparent,
             width: AppDesignSystem.borderThick * s,
           ),
@@ -385,8 +385,8 @@ class _SurahListPageState extends State<SurahListPage> {
               child: Icon(
                 Icons.search_rounded,
                 color: _searchController.text.isNotEmpty
-                    ? AppColors.primary
-                    : AppColors.textTertiary,
+                    ? AppColors.getPrimary(context)
+                    : AppColors.getTextTertiary(context),
                 size: AppDesignSystem.iconMedium * s,
               ),
             ),
@@ -397,7 +397,7 @@ class _SurahListPageState extends State<SurahListPage> {
                 controller: _searchController,
                 style: AppTypography.body(
                   context,
-                  color: AppColors.textPrimary,
+                  color: AppColors.getTextPrimary(context),
                 ),
                 decoration: InputDecoration(
                   border: InputBorder.none,
@@ -425,7 +425,7 @@ class _SurahListPageState extends State<SurahListPage> {
               IconButton(
                 icon: Icon(
                   Icons.close_rounded,
-                  color: AppColors.textTertiary,
+                  color: AppColors.getTextTertiary(context),
                   size: AppDesignSystem.iconMedium * s,
                 ),
                 onPressed: () {
@@ -456,14 +456,14 @@ class _SurahListPageState extends State<SurahListPage> {
     final s = AppDesignSystem.getScaleFactor(context);
 
     return Container(
-      color: AppColors.surface,
+      color: AppColors.getSurface(context),
       padding: EdgeInsets.symmetric(horizontal: AppDesignSystem.space20 * s),
       child: Column(
         children: [
           // Segmented Button
           Container(
             decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLowest,
+              color: AppColors.getSurfaceContainerLowest(context),
               borderRadius: BorderRadius.circular(
                 AppDesignSystem.radiusSmall * s,
               ),
@@ -527,7 +527,7 @@ class _SurahListPageState extends State<SurahListPage> {
 
           // Bottom divider
           SizedBox(height: AppDesignSystem.space12 * s),
-          Container(height: 1 * s, color: AppColors.borderLight),
+          Container(height: 1 * s, color: AppColors.getBorderLight(context)),
         ],
       ),
     );
@@ -548,14 +548,14 @@ class _SurahListPageState extends State<SurahListPage> {
           curve: Curves.easeInOut,
           padding: EdgeInsets.symmetric(vertical: AppDesignSystem.space10 * s),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.surface : Colors.transparent,
+            color: isSelected ? AppColors.getSurface(context) : Colors.transparent,
             borderRadius: BorderRadius.circular(
               AppDesignSystem.radiusSmall * s,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: AppColors.shadowLight,
+                      color: AppColors.getShadowLight(context),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),
@@ -567,7 +567,7 @@ class _SurahListPageState extends State<SurahListPage> {
             textAlign: TextAlign.center,
             style: AppTypography.label(
               context,
-              color: isSelected ? AppColors.primary : AppColors.textTertiary,
+              color: isSelected ? AppColors.getPrimary(context) : AppColors.getTextTertiary(context),
               weight: isSelected
                   ? AppTypography.semiBold
                   : AppTypography.medium,
@@ -850,7 +850,7 @@ class _SurahListPageState extends State<SurahListPage> {
 
       trailing: Icon(
         Icons.chevron_right_rounded,
-        color: AppColors.borderDark,
+        color: AppColors.getBorderMedium(context),
         size: AppDesignSystem.iconMedium,
       ),
     );
@@ -888,7 +888,7 @@ class _SurahListPageState extends State<SurahListPage> {
       subtitle: surahName,
       trailing: Icon(
         Icons.chevron_right_rounded,
-        color: AppColors.borderDark,
+        color: AppColors.getBorderMedium(context),
         size: AppDesignSystem.iconMedium,
       ),
     );
@@ -915,7 +915,7 @@ class _SurahListPageState extends State<SurahListPage> {
           : null,
       trailing: Icon(
         Icons.chevron_right_rounded,
-        color: AppColors.borderDark,
+        color: AppColors.getBorderMedium(context),
         size: AppDesignSystem.iconMedium,
       ),
     );
@@ -948,7 +948,7 @@ class _SurahListPageState extends State<SurahListPage> {
                   const Spacer(),
                   Icon(
                     Icons.chevron_right_rounded,
-                    color: AppColors.borderDark,
+                    color: AppColors.getBorderMedium(context),
                     size: AppDesignSystem.iconMedium * s,
                   ),
                 ],
@@ -1198,7 +1198,7 @@ class _OptimizedPageListState extends State<_OptimizedPageList> {
               subtitle: surahName,
               trailing: Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.borderDark,
+                color: AppColors.getBorderMedium(context),
                 size: AppDesignSystem.iconMedium,
               ),
             );
@@ -1281,7 +1281,7 @@ class _GlobalSliderState extends State<_GlobalSlider> {
                 Container(
                   width: 4 * s,
                   decoration: BoxDecoration(
-                    color: AppColors.borderLight,
+                    color: AppColors.getBorderLight(context),
                     borderRadius: BorderRadius.circular(2 * s),
                   ),
                 ),
@@ -1296,13 +1296,13 @@ class _GlobalSliderState extends State<_GlobalSlider> {
                         vertical: 4 * s,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: AppColors.getPrimary(context),
                         borderRadius: BorderRadius.circular(
                           AppDesignSystem.radiusSmall * s,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.shadowDark,
+                            color: AppColors.getShadowDark(context),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -1312,7 +1312,7 @@ class _GlobalSliderState extends State<_GlobalSlider> {
                         _currentItem.toString(),
                         style: AppTypography.labelSmall(
                           context,
-                          color: Colors.white,
+                          color: AppColors.getTextInverse(context),
                           weight: AppTypography.bold,
                         ),
                       ),
