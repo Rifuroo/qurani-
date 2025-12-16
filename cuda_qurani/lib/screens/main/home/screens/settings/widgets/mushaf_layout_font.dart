@@ -1,13 +1,8 @@
 // lib/screens/main/home/screens/settings/widgets/mushaf_layout_font.dart
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
-import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/preview_service.dart';
-import 'package:cuda_qurani/screens/main/stt/data/models.dart';
 import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
-import 'package:cuda_qurani/services/local_database_service.dart';
-import 'package:cuda_qurani/screens/main/stt/services/quran_service.dart';
-import 'package:cuda_qurani/models/quran_models.dart';
 import 'package:flutter/material.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
@@ -331,7 +326,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
 
             // Mushaf Preview
             Container(
-              height: screenHeight * 0.38,
+              height: screenHeight * 0.38, // ✅ Already optimal
               margin: EdgeInsets.symmetric(
                 horizontal: AppDesignSystem.space16 * s,
               ),
@@ -401,8 +396,8 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
   }
 }
 
-/// ✅ REAL DATABASE PREVIEW: Load actual Surah Yasin first page from database
-class _OptimizedMushafPreview extends StatefulWidget {
+/// ✅ OPTIMIZED: Use pre-rendered AssetImage for instant preview
+class _OptimizedMushafPreview extends StatelessWidget {
   final MushafLayout layout;
   final int previewPage;
 
@@ -411,281 +406,45 @@ class _OptimizedMushafPreview extends StatefulWidget {
     required this.previewPage,
   });
 
-  @override
-  State<_OptimizedMushafPreview> createState() =>
-      _OptimizedMushafPreviewState();
-}
-
-class _OptimizedMushafPreviewState extends State<_OptimizedMushafPreview> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<MushafPageLine>? _pageLines;
-  int? _yasinFirstPage;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPreview();
-  }
-
-  @override
-  void didUpdateWidget(_OptimizedMushafPreview oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.layout != widget.layout) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-        _pageLines = null;
-      });
-      _loadPreview();
-    }
-  }
-
-  Future<void> _loadPreview() async {
-    try {
-      // ✅ Get Yasin page number (Surah 36, Ayah 1)
-      final yasinPage = await LocalDatabaseService.getPageNumber(36, 1);
-
-      // ✅ ULTRA-FAST: Use PreviewService (no controller overhead)
-      final previewService = PreviewService();
-      final lines = await previewService.getPreviewPage(
-        widget.layout,
-        yasinPage,
-      );
-
-      if (mounted) {
-        setState(() {
-          _yasinFirstPage = yasinPage;
-          _pageLines = lines;
-          _isLoading = false;
-        });
-      }
-
-      print('✅ Preview loaded INSTANTLY: ${lines.length} lines');
-    } catch (e) {
-      print('❌ Preview error: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Failed to load preview';
-        });
-      }
+  String get _imagePath {
+    switch (layout) {
+      case MushafLayout.indopak:
+        return 'assets/images/indopak_preview.png';
+      case MushafLayout.qpc:
+        return 'assets/images/qpc_preview.png';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(
-        child: SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      );
-    }
-
-    if (_errorMessage != null || _pageLines == null) {
-      return Center(
-        child: Text(
-          _errorMessage ?? 'No data',
-          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-        ),
-      );
-    }
-
-    return _MushafPreviewRenderer(
-      layout: widget.layout,
-      pageLines: _pageLines!,
-      pageNumber: _yasinFirstPage!,
-    );
-  }
-}
-
-/// ✅ OPTIMIZED: Preview renderer with perfect layout
-class _MushafPreviewRenderer extends StatelessWidget {
-  final MushafLayout layout;
-  final List<MushafPageLine> pageLines;
-  final int pageNumber;
-
-  const _MushafPreviewRenderer({
-    required this.layout,
-    required this.pageLines,
-    required this.pageNumber,
-  });
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    final fontFamily = layout.isGlyphBased
-        ? 'p$pageNumber'
-        : 'IndoPak-Nastaleeq';
-
-    return AbsorbPointer(
-      child: Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: Colors.white,
-        child: ClipRect(
-          // ✅ ADD: Prevent overflow
-          child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: screenWidth * 0.04,
-                vertical: screenHeight * 0.015,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: _buildPreviewLines(
-                  screenWidth,
-                  screenHeight,
-                  fontFamily,
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.white,
+      child: Image.asset(
+        _imagePath,
+        fit: BoxFit.contain, // Maintain aspect ratio
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stackTrace) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.image_not_supported,
+                  size: 48,
+                  color: Colors.grey[400],
                 ),
-              ),
+                SizedBox(height: 8),
+                Text(
+                  'Preview not available',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+              ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildPreviewLines(
-    double screenWidth,
-    double screenHeight,
-    String fontFamily,
-  ) {
-    final widgets = <Widget>[];
-
-    for (final line in pageLines) {
-      switch (line.lineType) {
-        case 'surah_name':
-          widgets.add(_buildSurahHeader(line, screenHeight));
-          break;
-
-        case 'basmallah':
-          widgets.add(_buildBasmallah(screenHeight));
-          break;
-
-        case 'ayah':
-          widgets.add(
-            _buildAyahLine(line, screenWidth, screenHeight, fontFamily),
           );
-          break;
-      }
-    }
-
-    return widgets;
-  }
-
-  Widget _buildSurahHeader(MushafPageLine line, double screenHeight) {
-    final surahId = line.surahNumber ?? 1;
-    final surahGlyphCode = _formatSurahGlyph(surahId);
-
-    return Container(
-      alignment: Alignment.center,
-      margin: EdgeInsets.symmetric(vertical: screenHeight * 0.008),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Text(
-            'header',
-            style: TextStyle(
-              fontSize: screenHeight * 0.028, // ✅ Slightly bigger
-              fontFamily: 'Quran-Common',
-              color: Colors.black87,
-            ),
-          ),
-          Text(
-            surahGlyphCode,
-            style: TextStyle(
-              fontSize: screenHeight * 0.024, // ✅ Proportional
-              fontFamily: 'surah-name-v2',
-              color: Colors.black,
-            ),
-            textDirection: TextDirection.rtl,
-          ),
-        ],
+        },
       ),
     );
-  }
-
-  Widget _buildBasmallah(double screenHeight) {
-    return Container(
-      alignment: Alignment.center,
-      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.006),
-      child: Text(
-        '﷽',
-        style: TextStyle(
-          fontSize: screenHeight * 0.022, // ✅ Balanced size
-          fontFamily: 'Quran-Common',
-          color: Colors.black87,
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-
-  Widget _buildAyahLine(
-    MushafPageLine line,
-    double screenWidth,
-    double screenHeight,
-    String fontFamily,
-  ) {
-    if (line.ayahSegments == null || line.ayahSegments!.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final spans = <InlineSpan>[];
-
-    // ✅ OPTIMIZED: Perfect font size for both layouts
-    final baseFontSize = layout == MushafLayout.indopak
-        ? screenWidth *
-              0.035 // Indopak slightly bigger
-        : screenWidth * 0.030; // QPC standard
-
-    for (final segment in line.ayahSegments!) {
-      for (final word in segment.words) {
-        spans.add(
-          TextSpan(
-            text: word.text,
-            style: TextStyle(
-              fontSize: baseFontSize,
-              fontFamily: fontFamily,
-              color: Colors.black87,
-              fontWeight: FontWeight.w400,
-              height: 2.0, // ✅ FIXED: Consistent line height
-              letterSpacing: layout.isGlyphBased ? -2.0 : 0.5,
-            ),
-          ),
-        );
-
-        // ✅ Consistent word spacing
-        spans.add(
-          TextSpan(
-            text: ' ',
-            style: TextStyle(fontSize: baseFontSize * 0.4),
-          ),
-        );
-      }
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.004),
-      child: Directionality(
-        textDirection: TextDirection.rtl,
-        child: RichText(
-          textAlign: line.isCentered ? TextAlign.center : TextAlign.justify,
-          text: TextSpan(children: spans),
-        ),
-      ),
-    );
-  }
-
-  String _formatSurahGlyph(int surahId) {
-    if (surahId <= 9) return 'surah00$surahId';
-    if (surahId <= 99) return 'surah0$surahId';
-    return 'surah$surahId';
   }
 }

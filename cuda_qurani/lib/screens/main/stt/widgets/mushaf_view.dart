@@ -6,6 +6,8 @@ import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
 
 import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../utils/constants.dart';

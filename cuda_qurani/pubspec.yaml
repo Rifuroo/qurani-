@@ -121,6 +121,8 @@ flutter:
     - assets/images/qurani-icon-green.png
     - assets/images/sliderbutton_guide.jpeg
     - assets/images/google-icon.png
+    - assets/images/indopak_preview.png
+    - assets/images/qpc_preview.png
 
     - assets/data/quran-metadata-surah-name.sqlite
     - assets/data/qpc-v1-15-lines.db
