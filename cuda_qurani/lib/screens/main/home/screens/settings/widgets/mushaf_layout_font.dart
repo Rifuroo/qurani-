@@ -275,7 +275,9 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
           color: AppColors.getSurface(context),
           borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.getBorderLight(context),
+            color: isSelected
+                ? AppColors.primary
+                : AppColors.getBorderLight(context),
             width: isSelected ? 2.5 * s : 1.0 * s,
           ),
         ),
@@ -329,8 +331,8 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
             ),
 
             // Subtitle if exists
-            if (mushaf.containsKey('subtitle') && 
-                mushaf['subtitle'] != null && 
+            if (mushaf.containsKey('subtitle') &&
+                mushaf['subtitle'] != null &&
                 mushaf['subtitle'].toString().isNotEmpty)
               Padding(
                 padding: EdgeInsets.symmetric(
@@ -430,12 +432,18 @@ class _OptimizedMushafPreview extends StatelessWidget {
     required this.previewPage,
   });
 
-  String get _imagePath {
+  String _getImagePath(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     switch (layout) {
       case MushafLayout.indopak:
-        return 'assets/images/indopak_preview.png';
+        return isDark
+            ? 'assets/images/indopak_preview_dark.png'
+            : 'assets/images/indopak_preview.png';
       case MushafLayout.qpc:
-        return 'assets/images/qpc_preview.png';
+        return isDark
+            ? 'assets/images/qpc_preview_dark.png'
+            : 'assets/images/qpc_preview.png';
     }
   }
 
@@ -444,9 +452,11 @@ class _OptimizedMushafPreview extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: Colors.white,
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Color(0xFF1E1E1E)
+          : Colors.white,
       child: Image.asset(
-        _imagePath,
+        _getImagePath(context),
         fit: BoxFit.contain, // Maintain aspect ratio
         filterQuality: FilterQuality.high,
         errorBuilder: (context, error, stackTrace) {
