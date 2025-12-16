@@ -73,83 +73,60 @@ class SttController with ChangeNotifier {
     }
   }
 
-  Future<void> switchMushafLayout(MushafLayout newLayout) async {
-    if (_mushafLayout == newLayout) return;
+Future<void> switchMushafLayout(MushafLayout newLayout) async {
+  if (_mushafLayout == newLayout) return;
 
-    appLogger.log(
-      'LAYOUT_SWITCH',
-      'Switching: ${_mushafLayout.displayName} → ${newLayout.displayName}',
-    );
+  appLogger.log(
+    'LAYOUT_SWITCH',
+    'Switching: ${_mushafLayout.displayName} → ${newLayout.displayName}',
+  );
 
-    // Update service first
-    await _sqliteService.setMushafLayout(newLayout);
+  // ✅ CRITICAL: Stop ALL background tasks FIRST
+  print('[LAYOUT_SWITCH] 🛑 Stopping background tasks...');
+  _isPreloadingPages = false; // Stop preloading immediately
+  await Future.delayed(const Duration(milliseconds: 200)); // Let tasks finish
 
-    // Update local state
-    _mushafLayout = newLayout;
+  // ✅ STEP 1: Close ALL databases
+  print('[LAYOUT_SWITCH] 🔒 Closing all databases...');
+  await DBHelper.closeAllDatabases();
+  await LocalDatabaseService.closePageDatabase();
+  print('[LAYOUT_SWITCH] ✅ All databases closed');
 
-    // ✅ CRITICAL FIX: Clear ALL caches
-    pageCache.clear();
-    _sqliteService.clearPageCache();
+  // ✅ STEP 2: Wait for file system
+  await Future.delayed(const Duration(milliseconds: 200));
 
-    // ✅ NEW: Close ALL databases BEFORE deleting files
-    print('[LAYOUT_SWITCH] Closing all databases...');
-    await DBHelper.closeAllDatabases();
-    print('[LAYOUT_SWITCH] ✅ All databases closed');
-    await LocalDatabaseService.closePageDatabase();
-    // ✅ TAMBAHKAN INI - Force delete old database file
-    print('[LAYOUT_SWITCH] Deleting old database files...');
-    try {
-      final databasesPath = await getDatabasesPath();
+  // ✅ STEP 3: Update service first
+  await _sqliteService.setMushafLayout(newLayout);
 
-      // Delete both databases to force re-copy
-      final qpcPath = join(databasesPath, 'qpc-v1-15-lines.db');
-      final indopakPath = join(
-        databasesPath,
-        'qudratullah-indopak-15-lines.db',
-      );
+  // ✅ STEP 4: Update local state
+  _mushafLayout = newLayout;
 
-      if (await File(qpcPath).exists()) {
-        await File(qpcPath).delete();
-        print('[LAYOUT_SWITCH] Deleted qpc-v1-15-lines.db');
-      }
+  // ✅ STEP 5: Clear ALL caches
+  pageCache.clear();
+  _sqliteService.clearPageCache();
+  _lastLoadedAyatsPage = null;
+  _lastPreloadedPage = null;
 
-      if (await File(indopakPath).exists()) {
-        await File(indopakPath).delete();
-        print('[LAYOUT_SWITCH] Deleted qudratullah-indopak-15-lines.db');
-      }
-    } catch (e) {
-      print('[LAYOUT_SWITCH] Error deleting databases: $e');
-    }
-
-    // ✅ FIX: Rebuild metadata cache SEKALI SAJA dengan layout baru
-    appLogger.log(
-      'LAYOUT_SWITCH',
-      'Rebuilding metadata cache for ${newLayout.displayName}...',
-    );
-    await _metadataCache.rebuildForLayout(newLayout);
-    appLogger.log('LAYOUT_SWITCH', '✅ Metadata cache rebuilt successfully');
-
-    // ✅ CRITICAL: Adjust current page if exceeds new layout's max
-    if (_currentPage > newLayout.totalPages) {
-      _currentPage = newLayout.totalPages;
-    }
-    if (_listViewCurrentPage > newLayout.totalPages) {
-      _listViewCurrentPage = newLayout.totalPages;
-    }
-
-    // Reload current page data
-    _isDataLoaded = false;
-    await _loadSinglePageData(_currentPage);
-
-    // ✅ FIX: Notify listeners to update UI
-    notifyListeners();
-
-    appLogger.log(
-      'LAYOUT_SWITCH',
-      '✅ Layout switched to ${newLayout.displayName} (${newLayout.totalPages} pages)',
-    );
-    notifyListeners();
+  // ✅ STEP 6: Adjust current page if exceeds new layout's max
+  if (_currentPage > newLayout.totalPages) {
+    _currentPage = newLayout.totalPages;
   }
+  if (_listViewCurrentPage > newLayout.totalPages) {
+    _listViewCurrentPage = newLayout.totalPages;
+  }
+
+  // ✅ STEP 7: Reload current page data
+  _isDataLoaded = false;
+  await _loadSinglePageData(_currentPage);
+
+  // ✅ STEP 8: Notify listeners to update UI
+  notifyListeners();
+
+  appLogger.log(
+    'LAYOUT_SWITCH',
+    '✅ Layout switched to ${newLayout.displayName} (${newLayout.totalPages} pages)',
+  );
+}
 
   // ✅ NEW: Apply word status map from Supabase data
   void _applyInitialWordStatusMap(int surahId, Map<String, dynamic> wordMap) {
@@ -321,6 +298,8 @@ class SttController with ChangeNotifier {
   final MetadataCacheService _metadataCache = MetadataCacheService();
 
   bool _isPreloadingPages = false;
+  // Tambahkan property ini setelah deklarasi _isPreloadingPages
+bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
 
   // Getters for UI
   bool get isLoading => _isLoading;
@@ -1253,149 +1232,163 @@ class SttController with ChangeNotifier {
   DateTime? _lastPreloadTime;
 
   Future<void> _preloadAdjacentPagesAggressively() async {
-    // ✅ CRITICAL: Prevent duplicate preload calls for same page
-    if (_isPreloadingPages) {
-      return; // Already preloading
+  // ✅ CRITICAL: Check disposal state AND stop flag BEFORE any async operation
+  if (_isDisposed || _stopPreloading) {
+    print('[PRELOAD] Controller disposed or stopped, skipping preload');
+    return;
+  }
+
+  // ✅ CRITICAL: Prevent duplicate preload calls for same page
+  if (_isPreloadingPages) {
+    return; // Already preloading
+  }
+
+  // ✅ Debounce: Don't preload if same page was preloaded recently (< 500ms)
+  if (_lastPreloadedPage == _currentPage &&
+      _lastPreloadTime != null &&
+      DateTime.now().difference(_lastPreloadTime!).inMilliseconds < 500) {
+    return; // Too soon, skip
+  }
+
+  _isPreloadingPages = true;
+  _lastPreloadedPage = _currentPage;
+  _lastPreloadTime = DateTime.now();
+
+  try {
+    final pagesToPreload = <int>[];
+
+    // ✅ Check stop flag before building list
+    if (_stopPreloading) {
+      _isPreloadingPages = false;
+      return;
     }
 
-    // ✅ Debounce: Don't preload if same page was preloaded recently (< 500ms)
-    if (_lastPreloadedPage == _currentPage &&
-        _lastPreloadTime != null &&
-        DateTime.now().difference(_lastPreloadTime!).inMilliseconds < 500) {
-      return; // Too soon, skip
+    // ✅ OPTIMIZED: Prioritize immediate adjacent pages first
+    if (_currentPage > 1) pagesToPreload.add(_currentPage - 1);
+    if (_currentPage < totalPages) pagesToPreload.add(_currentPage + 1);
+
+    // Then load expanding radius pages
+    for (int i = 2; i <= cacheRadius; i++) {
+      if (_stopPreloading) break; // ✅ Check on each iteration
+      if (_currentPage - i >= 1) pagesToPreload.add(_currentPage - i);
+      if (_currentPage + i <= totalPages) pagesToPreload.add(_currentPage + i);
     }
 
-    _isPreloadingPages = true;
-    _lastPreloadedPage = _currentPage;
-    _lastPreloadTime = DateTime.now();
+    // Rest of the method remains the same...
+    // (keep existing code for loading pages)
+    
+    final immediatePages = <int>[];
+    final backgroundPages = <int>[];
 
-    try {
-      final pagesToPreload = <int>[];
-
-      // ✅ OPTIMIZED: Prioritize immediate adjacent pages first
-      // Load ±1, ±2 pages first for instant swipe
-      if (_currentPage > 1) pagesToPreload.add(_currentPage - 1);
-      if (_currentPage < 604) pagesToPreload.add(_currentPage + 1);
-
-      // Then load expanding radius pages
-      for (int i = 2; i <= cacheRadius; i++) {
-        if (_currentPage - i >= 1) pagesToPreload.add(_currentPage - i);
-        if (_currentPage + i <= 604) pagesToPreload.add(_currentPage + i);
+    for (final page in pagesToPreload) {
+      if (_isDisposed || _stopPreloading) {
+        print('[PRELOAD] Stopped during page filtering, aborting');
+        return;
       }
 
-      // ✅ OPTIMIZED: Load immediate pages first, then others in background
-      final immediatePages = <int>[];
-      final backgroundPages = <int>[];
+      if (pageCache.containsKey(page)) continue;
 
-      for (final page in pagesToPreload) {
-        // ✅ CRITICAL: Check both caches before adding to preload list
-        if (pageCache.containsKey(page)) continue;
-
-        // ✅ Check QuranService cache (shared singleton)
-        final serviceCache = _sqliteService.getCachedPage(page);
-        if (serviceCache != null) {
-          // ✅ Sync immediately if found in QuranService cache
-          pageCache[page] = serviceCache;
-          continue; // Already cached, skip
-        }
-
-        final distance = (page - _currentPage).abs();
-        // ✅ OPTIMIZED: Increased from 15 to 20 for ultra-fast swipe support (Tarteel-style)
-        if (distance <= 20) {
-          immediatePages.add(page);
-        } else {
-          backgroundPages.add(page);
-        }
+      final serviceCache = _sqliteService.getCachedPage(page);
+      if (serviceCache != null) {
+        pageCache[page] = serviceCache;
+        continue;
       }
 
-      // Load immediate pages first (high priority)
-      if (immediatePages.isNotEmpty) {
-        await Future.wait(
-          immediatePages.map((page) async {
-            // ✅ CRITICAL: Check QuranService cache first (shared singleton)
-            final serviceCache = _sqliteService.getCachedPage(page);
-            if (serviceCache != null) {
-              pageCache[page] = serviceCache;
-              return; // Already cached, skip loading
-            }
-
-            try {
-              final lines = await _sqliteService.getMushafPageLines(page);
-              pageCache[page] = lines;
-              appLogger.log(
-                'CACHE',
-                '⚡ Immediate preloaded page $page (${lines.length} lines)',
-              );
-            } catch (e) {
-              appLogger.log('CACHE_ERROR', 'Failed to preload page $page: $e');
-            }
-          }),
-          eagerError: false,
-        );
+      final distance = (page - _currentPage).abs();
+      if (distance <= 20) {
+        immediatePages.add(page);
+      } else {
+        backgroundPages.add(page);
       }
+    }
 
-      // ✅ OPTIMIZED: Load background pages in larger batches for faster preloading
-      if (backgroundPages.isNotEmpty) {
-        // ✅ CRITICAL: Don't await - run in background without blocking
-        Future.microtask(() async {
-          // ✅ Load in batches of 100 for maximum performance (increased from 50)
-          const batchSize = 100;
-          int loadedCount = 0;
+    // Load immediate pages first (high priority)
+    if (immediatePages.isNotEmpty && !_stopPreloading) {
+      await Future.wait(
+        immediatePages.map((page) async {
+          if (_isDisposed || _stopPreloading) return;
 
-          for (int i = 0; i < backgroundPages.length; i += batchSize) {
-            final batch = backgroundPages.skip(i).take(batchSize).toList();
-            await Future.wait(
-              batch.map((page) async {
-                // ✅ CRITICAL: Check both caches before loading
-                if (pageCache.containsKey(page)) return;
-
-                // ✅ Check QuranService cache (shared singleton)
-                final serviceCache = _sqliteService.getCachedPage(page);
-                if (serviceCache != null) {
-                  pageCache[page] = serviceCache;
-                  loadedCount++;
-                  return; // Already cached, skip loading
-                }
-
-                try {
-                  final lines = await _sqliteService.getMushafPageLines(page);
-                  pageCache[page] = lines;
-                  loadedCount++;
-                  // ✅ Reduce log spam - only log summary every 30 pages
-                  if (loadedCount % 30 == 0) {
-                    appLogger.log(
-                      'CACHE',
-                      'Background preloaded $loadedCount/${backgroundPages.length} pages...',
-                    );
-                  }
-                } catch (e) {
-                  appLogger.log(
-                    'CACHE_ERROR',
-                    'Failed to preload page $page: $e',
-                  );
-                }
-              }),
-              eagerError: false,
-            );
-
-            // ✅ NO DELAY: Remove delay completely for maximum speed (was 1ms)
-            // Background preload runs asynchronously, no need to throttle
+          final serviceCache = _sqliteService.getCachedPage(page);
+          if (serviceCache != null) {
+            pageCache[page] = serviceCache;
+            return;
           }
 
-          appLogger.log(
-            'CACHE',
-            '✅ Background preload complete: $loadedCount pages cached',
-          );
-          _cleanupDistantCache();
-        });
-      } else {
-        // If no background pages, cleanup immediately
-        _cleanupDistantCache();
-      }
-    } finally {
-      _isPreloadingPages = false;
+          try {
+            final lines = await _sqliteService.getMushafPageLines(page);
+
+            if (_isDisposed || _stopPreloading) return;
+
+            pageCache[page] = lines;
+            if (!_isDisposed && !_stopPreloading) {
+              print('[CACHE] ⚡ Immediate preloaded page $page (${lines.length} lines)');
+            }
+          } catch (e) {
+            if (!_isDisposed && !_stopPreloading) {
+              print('[CACHE_ERROR] Failed to preload page $page: $e');
+            }
+          }
+        }),
+        eagerError: false,
+      );
     }
+
+    // ✅ Background loading with stop checks
+    if (backgroundPages.isNotEmpty && !_isDisposed && !_stopPreloading) {
+      Future.microtask(() async {
+        const batchSize = 100;
+        int loadedCount = 0;
+
+        for (int i = 0; i < backgroundPages.length; i += batchSize) {
+          if (_isDisposed || _stopPreloading) {
+            print('[PRELOAD] Stopped during background load, stopping');
+            break;
+          }
+
+          final batch = backgroundPages.skip(i).take(batchSize).toList();
+          await Future.wait(
+            batch.map((page) async {
+              if (_isDisposed || _stopPreloading || pageCache.containsKey(page)) return;
+
+              final serviceCache = _sqliteService.getCachedPage(page);
+              if (serviceCache != null) {
+                pageCache[page] = serviceCache;
+                loadedCount++;
+                return;
+              }
+
+              try {
+                final lines = await _sqliteService.getMushafPageLines(page);
+                if (_isDisposed || _stopPreloading) return;
+
+                pageCache[page] = lines;
+                loadedCount++;
+
+                if (!_isDisposed && !_stopPreloading && loadedCount % 30 == 0) {
+                  print('[CACHE] Background preloaded $loadedCount/${backgroundPages.length} pages...');
+                }
+              } catch (e) {
+                if (!_isDisposed && !_stopPreloading) {
+                  print('[CACHE_ERROR] Failed to preload page $page: $e');
+                }
+              }
+            }),
+            eagerError: false,
+          );
+        }
+
+        if (!_isDisposed && !_stopPreloading) {
+          print('[CACHE] ✅ Background preload complete: $loadedCount pages cached');
+          _cleanupDistantCache();
+        }
+      });
+    } else if (!_isDisposed && !_stopPreloading) {
+      _cleanupDistantCache();
+    }
+  } finally {
+    _isPreloadingPages = false;
   }
+}
 
   void _cleanupDistantCache() {
     // ✅ OPTIMIZED: Only evict when cache is VERY large and pages are VERY far
@@ -3105,23 +3098,26 @@ class SttController with ChangeNotifier {
     print('💀 SttController: DISPOSE CALLED for surah $suratId');
     appLogger.log('DISPOSAL', 'Starting cleanup process');
 
+    // ✅ CRITICAL: Set disposal flag FIRST to stop all background tasks
+    _isDisposed = true;
+
+    // ✅ Wait a bit for background tasks to check the flag
+    Future.delayed(const Duration(milliseconds: 100));
+
     _verseChangeSubscription?.cancel();
     _wordHighlightSubscription?.cancel();
     _listeningAudioService?.dispose();
     ReciterDatabaseService.dispose();
 
-    // ✅ Cancel subscriptions
     _wsSubscription?.cancel();
     _connectionSubscription?.cancel();
 
-    // ✅ Dispose audio service
     _audioService.dispose();
-
-    // ✅ DON'T dispose singleton WebSocketService!
-    // _webSocketService.dispose();  // ← REMOVED: Singleton should not be disposed
-    // ✅ QuranService singleton - jangan dispose, database tetap hidup
     _scrollController.dispose();
+
+    // ✅ Dispose logger LAST (after background tasks stopped)
     appLogger.dispose();
+
     super.dispose();
   }
 }

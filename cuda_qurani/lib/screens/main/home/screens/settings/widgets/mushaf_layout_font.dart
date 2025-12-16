@@ -1,11 +1,18 @@
 // lib/screens/main/home/screens/settings/widgets/mushaf_layout_font.dart
+import 'dart:io';
+
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
+import 'package:cuda_qurani/screens/main/stt/database/db_helper.dart';
+import 'package:cuda_qurani/services/local_database_service.dart';
 import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
+import 'package:path/path.dart' as path_helper;
+import 'package:sqflite/sqflite.dart';
+import 'package:cuda_qurani/core/services/language_service.dart';
 
 class MushafLayoutFontPage extends StatefulWidget {
   const MushafLayoutFontPage({Key? key}) : super(key: key);
@@ -58,11 +65,20 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
   }
 
   Future<void> _loadTranslations() async {
-    final trans = await context.loadTranslations('settings/mushaf_layout_font');
-    if (mounted) {
-      setState(() {
-        _translations = trans;
-      });
+    try {
+      // ✅ FIX: Use LanguageService directly (no context needed in initState)
+      final languageService = LanguageService();
+      final trans = await languageService.loadTranslation(
+        'settings/mushaf_layout_font',
+      );
+      if (mounted) {
+        setState(() {
+          _translations = trans;
+        });
+      }
+    } catch (e) {
+      print('⚠️ Failed to load translations: $e');
+      // Continue with empty translations
     }
   }
 
@@ -94,37 +110,101 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
     });
 
     try {
-      // 1. Save to SharedPreferences
+      // ✅ STEP 1: Show loading dialog FIRST (user feedback)
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AbsorbPointer(
+            absorbing: true,
+            child: Center(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Switching layout...'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      // ✅ STEP 2: Wait for UI to render loading dialog
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // ✅ STEP 3: Close ALL databases FIRST (prevent lock)
+      print('🔒 Closing all databases before layout switch...');
+      await DBHelper.closeAllDatabases();
+      await LocalDatabaseService.closePageDatabase();
+      print('✅ All databases closed');
+
+      // ✅ STEP 4: Wait for file system to release locks
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // ✅ STEP 5: Delete old database files
+      print('🗑️ Deleting old layout database files...');
+      try {
+        final databasesPath = await getDatabasesPath();
+        final qpcPath = path_helper.join(databasesPath, 'qpc-v1-15-lines.db');
+        final indopakPath = path_helper.join(
+          databasesPath,
+          'qudratullah-indopak-15-lines.db',
+        );
+
+        if (await File(qpcPath).exists()) {
+          await File(qpcPath).delete();
+          print('   Deleted: qpc-v1-15-lines.db');
+        }
+
+        if (await File(indopakPath).exists()) {
+          await File(indopakPath).delete();
+          print('   Deleted: qudratullah-indopak-15-lines.db');
+        }
+      } catch (e) {
+        print('⚠️ Error deleting databases: $e');
+        // Continue anyway
+      }
+
+      // ✅ STEP 6: Save to SharedPreferences
       await _settingsService.setMushafLayout(newLayout);
 
-      // 2. Rebuild metadata cache for new layout
+      // ✅ STEP 7: Rebuild metadata cache for new layout (ONLY ONCE HERE)
       print('🔄 Rebuilding metadata cache for ${newLayout.displayName}...');
       await _metadataCache.rebuildForLayout(newLayout);
 
-      // 3. Update UI state
+      // ✅ STEP 8: Update UI state
       if (mounted) {
         setState(() {
           _selectedLayout = newLayout;
           _isSaving = false;
         });
+      }
 
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Layout changed to ${newLayout.displayName}',
-              style: const TextStyle(fontSize: 14),
-            ),
-            backgroundColor: AppColors.primary,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      // ✅ STEP 9: Close loading dialog
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
       }
 
       print('✅ Layout saved: ${newLayout.displayName}');
     } catch (e) {
       print('❌ Failed to save layout: $e');
+
+      // Close loading dialog if open
+      if (mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {
+          // Dialog might not be open
+        }
+      }
+
       if (mounted) {
         setState(() {
           _isSaving = false;

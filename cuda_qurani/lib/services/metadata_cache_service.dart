@@ -190,7 +190,7 @@ class MetadataCacheService {
       print('[MetadataCache] Error building page mapping: $e');
       // ✅ SIMPLIFIED FALLBACK: Just create empty mapping to prevent crashes
       _pageSurahMap = {};
-      
+
       // Don't do the slow fallback loop - it's better to have empty cache
       // than to block the UI for minutes
       print('[MetadataCache] Using empty page mapping as fallback');
@@ -204,18 +204,72 @@ class MetadataCacheService {
   Future<void> rebuildForLayout(MushafLayout layout) async {
     print('[MetadataCache] 🔄 Rebuilding cache for ${layout.displayName}...');
 
-    _allSurahs = [];
-    _allJuz = [];
-    _surahMap.clear();
-    _juzMap.clear();
-    _pageSurahMap.clear();
-    _isInitialized = false;
-    _isInitializing = false;
+    // ✅ CRITICAL FIX: Force stop any ongoing initialization
+    if (_isInitializing) {
+      print('[MetadataCache] ⚠️ Stopping ongoing initialization...');
+      _isInitializing = false;
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
 
-    // Rebuild with new layout
-    await initialize(); // ← This will use the new layout
+    // ✅ Set flag to prevent concurrent rebuilds
+    _isInitializing = true;
 
-    print('[MetadataCache] ✅ Cache rebuilt for ${layout.displayName}');
+    try {
+      // ✅ STEP 1: Clear ALL caches
+      _allSurahs = [];
+      _allJuz = [];
+      _surahMap.clear();
+      _juzMap.clear();
+      _pageSurahMap.clear();
+      _isInitialized = false;
+
+      print('[MetadataCache] ✅ All caches cleared');
+
+      // ✅ STEP 2: Wait for cleanup
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // ✅ STEP 3: Rebuild WITHOUT calling initialize() (avoid recursion)
+      print('[MetadataCache] 📦 Loading surahs and juz...');
+      final results = await Future.wait([
+        LocalDatabaseService.getSurahs(),
+        JuzService.getAllJuz(),
+      ]);
+
+      _allSurahs = List<Map<String, dynamic>>.from(results[0] as List);
+      _allJuz = List<Map<String, dynamic>>.from(results[1] as List);
+
+      // Build fast lookup maps
+      for (final surah in _allSurahs) {
+        _surahMap[surah['id'] as int] = surah;
+      }
+
+      for (final juz in _allJuz) {
+        _juzMap[juz['juz_number'] as int] = juz;
+      }
+
+      print(
+        '[MetadataCache] ✅ Loaded ${_allSurahs.length} surahs, ${_allJuz.length} juz',
+      );
+
+      // ✅ STEP 4: Build page mapping for new layout
+      print('[MetadataCache] 🗺️ Building page-surah mapping...');
+      await _buildPageSurahMapping();
+
+      _isInitialized = true;
+      print('[MetadataCache] ✅ Cache rebuilt for ${layout.displayName}');
+
+      // Debug: Print sample to verify
+      if (_pageSurahMap.isNotEmpty) {
+        print('[MetadataCache] Sample mapping:');
+        print('  Page 1: ${_pageSurahMap[1]}');
+        print('  Page 2: ${_pageSurahMap[2]}');
+      }
+    } catch (e) {
+      print('[MetadataCache] ❌ Rebuild failed: $e');
+      _isInitialized = true; // Set to true to prevent infinite retry
+    } finally {
+      _isInitializing = false;
+    }
   }
 
   /// Clear cache (for testing/debugging)

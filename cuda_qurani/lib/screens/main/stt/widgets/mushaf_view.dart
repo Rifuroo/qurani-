@@ -84,7 +84,9 @@ class MushafRenderer {
         child: RichText(
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.justify,
-          text: wordSpans.first as TextSpan,
+          text: TextSpan(
+            children: [wordSpans.first],
+          ), // ✅ UBAH: wrap dalam children
         ),
       );
     }
@@ -95,7 +97,9 @@ class MushafRenderer {
 
     for (final span in wordSpans) {
       final textPainter = TextPainter(
-        text: span as TextSpan,
+        text: span is TextSpan
+            ? span
+            : TextSpan(children: [span]), // ✅ UBAH: handle InlineSpan
         textDirection: TextDirection.rtl,
       );
       textPainter.layout();
@@ -104,18 +108,13 @@ class MushafRenderer {
       totalTextWidth += width;
     }
 
-    // Calculate spacing needed to fill the line (for future use if needed)
-    // final remainingSpace = maxWidth - totalTextWidth;
-    // final numberOfGaps = wordSpans.length - 1;
-
     // Build justified row with proper centering and tight spacing
     return SizedBox(
-      width: maxWidth, // Use full width for proper positioning
+      width: maxWidth,
       height: lineH,
       child: Row(
         textDirection: TextDirection.rtl,
-        mainAxisAlignment: MainAxisAlignment
-            .spaceBetween, // ✅ UBAH: dari center jadi spaceBetween
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           for (int i = 0; i < wordSpans.length; i++) ...[
@@ -123,12 +122,11 @@ class MushafRenderer {
               textDirection: TextDirection.rtl,
               overflow: TextOverflow.visible,
               maxLines: 1,
-              text: wordSpans[i] as TextSpan,
+              text: TextSpan(
+                children: [wordSpans[i]],
+              ), // ✅ UBAH: wrap dalam children, hapus casting
             ),
-            if (i < wordSpans.length - 1)
-              const SizedBox(
-                width: 0.0, // No spacing for any words to prevent overflow
-              ),
+            if (i < wordSpans.length - 1) const SizedBox(width: 0.0),
           ],
         ],
       ),
@@ -424,7 +422,7 @@ class _JustifiedAyahLine extends StatelessWidget {
 
     // Font size berbeda untuk QPC vs IndoPak
     final fontSizeMultiplier = isIndopak
-        ? 0.0690 // IndoPak: ukuran konsisten
+        ? 0.0610 // IndoPak: ukuran konsisten
         : ((pageNumber == 1 || pageNumber == 2)
               ? 0.080
               : 0.0690); // QPC: page 1-2 lebih besar
@@ -518,48 +516,61 @@ class _JustifiedAyahLine extends StatelessWidget {
             : baseFontSize;
 
         for (final textSegment in segments) {
-          for (final textSegment in segments) {
-            spans.add(
-              TextSpan(
-                text: textSegment.text,
-                style: TextStyle(
-                  fontSize: effectiveFontSize,
-                  fontFamily: fontFamily,
-                  color: _getWordColor(
-                    isCurrentAyat,
-                    context,
-                  ).withValues(alpha: wordOpacity),
-                  backgroundColor: wordBg,
-                  fontWeight: FontWeight.w400,
-                  height: isIndopak
-                      ? 1.9
-                      : 1.8, // ✅ TAMBAH: Line height berbeda
-                  letterSpacing: isIndopak
-                      ? -1.2
-                      : -5, // ✅ TAMBAH: Letter spacing berbeda
-                  decoration: (controller.hideUnreadAyat && !isLastWord)
-                      ? TextDecoration.underline
-                      : null,
-                  decorationColor: AppColors.getTextPrimary(
-                    context,
-                  ).withValues(alpha: 0.15),
-                  decorationThickness: 0.3,
-                ),
+          spans.add(
+            TextSpan(
+              text: textSegment.text,
+              style: TextStyle(
+                fontSize: effectiveFontSize,
+                fontFamily: fontFamily,
+                color: _getWordColor(
+                  isCurrentAyat,
+                  context,
+                ).withValues(alpha: wordOpacity),
+                backgroundColor: wordBg,
+                fontWeight: FontWeight.w400,
+                height: isIndopak ? 1.9 : 1.8,
+                // ✅ SOLUSI: Letterspace yang lebih negatif untuk "gepengin" text
+                letterSpacing: isIndopak
+                    ? -0.3 // ✅ Lebih negatif = lebih gepeng (coba -1.5 sampai -3.0)
+                    : -5,
+                decoration: (controller.hideUnreadAyat && !isLastWord)
+                    ? TextDecoration.underline
+                    : null,
+                decorationColor: AppColors.getTextPrimary(
+                  context,
+                ).withValues(alpha: 0.15),
+                decorationThickness: 0.3,
               ),
-            );
-          }
+            ),
+          );
         }
       }
     }
 
-    return MushafRenderer.renderJustifiedLine(
+// ✅ Build line widget
+    final lineWidget = MushafRenderer.renderJustifiedLine(
       wordSpans: spans,
       isCentered: line.isCentered,
       availableWidth: MediaQuery.of(context).size.width,
       context: context,
       allowOverflow: false,
     );
+
+    // ✅ Wrap dengan Transform untuk IndoPak
+    if (isIndopak) {
+      return Transform.scale(
+        scaleX: 0.93, // Gepengin 10%
+        alignment: Alignment.center,
+        child: lineWidget,
+      );
+    }
+    
+    return lineWidget;
   }
+    
+  }
+
+  
 
   // Methods tetap sama
   Color _getWordColor(bool isCurrentWord, BuildContext context) {
@@ -567,7 +578,6 @@ class _JustifiedAyahLine extends StatelessWidget {
         ? getListeningColor(context)
         : AppColors.getTextPrimary(context);
   }
-}
 
 class MushafPageHeader extends StatefulWidget {
   const MushafPageHeader({super.key});
