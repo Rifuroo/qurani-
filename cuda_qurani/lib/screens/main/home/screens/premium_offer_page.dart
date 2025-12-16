@@ -47,7 +47,7 @@ class _PremiumOfferPageState extends State<PremiumOfferPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.getBackground(context),
+      backgroundColor: AppColors.getSurfaceVariant(context),
       appBar: ProfileAppBar(
         title: _t('premium_offer.title'),
         showBackButton: true,

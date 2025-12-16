@@ -26,8 +26,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         print('   - isAuthenticated: ${auth.isAuthenticated}');
         print('   - currentUser: ${auth.currentUser?.email ?? "null"}');
         
-        // ✅ FIXED: Show loading indicator instead of SplashScreen
-        // SplashScreen should only show once on app start (handled by InitialSplashScreen)
+        // ✅ Show loading screen while AuthProvider is initializing
         if (auth.isLoading) {
           print('   → Showing LOADING screen');
           return Scaffold(
@@ -37,7 +36,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.getPrimary(context)),
                   ),
                   const SizedBox(height: 20),
                   Text(

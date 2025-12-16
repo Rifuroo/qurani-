@@ -440,7 +440,7 @@ class _ActivityPageState extends State<ActivityPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.getBackground(context),
+      backgroundColor: AppColors.getSurfaceVariant(context),
       appBar: const MenuAppBar(selectedIndex: 4),
       body: SafeArea(
         child: RefreshIndicator(

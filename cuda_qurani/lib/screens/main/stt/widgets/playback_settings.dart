@@ -7,7 +7,7 @@ import 'package:cuda_qurani/screens/main/home/screens/settings/submenu/reciters_
 import 'package:cuda_qurani/services/reciter_manager_services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import '../../../../services/local_database_service.dart';
 import 'package:cuda_qurani/services/global_ayat_services.dart';
 import 'package:provider/provider.dart';
@@ -259,7 +259,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.getSurface(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppDesignSystem.radiusXLarge),
@@ -293,7 +293,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                                 : 'Cancel',
                             style: AppTypography.label(
                               context,
-                              color: AppColors.textSecondary,
+                              color: AppColors.getTextSecondary(context),
                             ),
                           ),
                         ),
@@ -341,7 +341,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                                 : 'Done',
                             style: AppTypography.label(
                               context,
-                              color: AppColors.textPrimary,
+                              color: AppColors.getTextPrimary(context),
                               weight: AppTypography.semiBold,
                             ),
                           ),
@@ -445,11 +445,11 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
               vertical: AppDesignSystem.space12 * s,
             ),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: AppColors.getSurface(context),
               borderRadius: BorderRadius.circular(
                 AppDesignSystem.radiusMedium * s,
               ),
-              border: Border.all(color: AppColors.borderMedium),
+              border: Border.all(color: AppColors.getBorderMedium(context)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -467,7 +467,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                     SizedBox(width: AppDesignSystem.space8 * s),
                     Icon(
                       Icons.keyboard_arrow_down,
-                      color: AppColors.textSecondary,
+                      color: AppColors.getTextSecondary(context),
                       size: AppDesignSystem.iconMedium * s,
                     ),
                   ],
@@ -497,11 +497,11 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
         SizedBox(height: AppDesignSystem.space10 * s),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.getSurface(context),
             borderRadius: BorderRadius.circular(
               AppDesignSystem.radiusMedium * s,
             ),
-            border: Border.all(color: AppColors.borderMedium),
+            border: Border.all(color: AppColors.getBorderMedium(context)),
           ),
           child: Column(
             children: [
@@ -535,7 +535,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                         _isReciterExpanded
                             ? Icons.keyboard_arrow_up
                             : Icons.keyboard_arrow_down,
-                        color: AppColors.textPrimary,
+                        color: AppColors.getTextPrimary(context),
                         size: AppDesignSystem.iconLarge * s,
                       ),
                     ],
@@ -543,7 +543,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                 ),
               ),
               if (_isReciterExpanded) ...[
-                const Divider(height: 1, color: AppColors.borderMedium),
+                Divider(height: 1, color: AppColors.getBorderMedium(context)),
                 SizedBox(
                   height: 200 * s,
                   child: ListView.builder(
@@ -563,7 +563,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                         },
                         child: Container(
                           color: isSelected
-                              ? AppColors.primaryWithOpacity(0.1)
+                              ? AppColors.getSurface(context)
                               : null,
                           padding: EdgeInsets.symmetric(
                             horizontal: AppDesignSystem.space16 * s,
@@ -585,7 +585,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                 ),
               ],
               if (!_isReciterExpanded) ...[
-                const Divider(height: 1, color: AppColors.borderMedium),
+                Divider(height: 1, color: AppColors.getBorderMedium(context)),
                 InkWell(
                   onTap: () {
                     AppHaptics.light();
@@ -646,12 +646,12 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                         Container(
                           padding: EdgeInsets.all(AppDesignSystem.space4 * s),
                           decoration: BoxDecoration(
-                            color: AppColors.getTextPrimary(context),
+                            color: AppColors.getBorderMedium(context),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.arrow_downward,
-                            color: AppColors.textInverse,
+                            color: AppColors.getTextPrimary(context),
                             size: AppDesignSystem.iconSmall * s,
                           ),
                         ),
@@ -713,12 +713,12 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? AppColors.textPrimary
-                          : AppColors.surface,
+                          ? AppColors.getBorderMedium(context)
+                          : AppColors.getSurface(context),
                       border: Border.all(
                         color: isSelected
-                            ? AppColors.textPrimary
-                            : AppColors.borderMedium,
+                            ? AppColors.getTextPrimary(context)
+                            : AppColors.getBorderMedium(context),
                       ),
                       borderRadius: BorderRadius.circular(
                         AppDesignSystem.radiusSmall * s,
@@ -728,9 +728,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                       displayText, // ✅ Tampilkan yang sudah di-format
                       style: AppTypography.labelSmall(
                         context,
-                        color: isSelected
-                            ? AppColors.textInverse
-                            : AppColors.textPrimary,
+                        color: AppColors.getTextPrimary(context),
                         weight: isSelected
                             ? AppTypography.semiBold
                             : AppTypography.regular,
@@ -751,15 +749,15 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
     final s = AppDesignSystem.getScaleFactor(context);
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: AppColors.background,
-        body: const Center(
-          child: CircularProgressIndicator(color: AppColors.textPrimary),
+        backgroundColor: AppColors.getBackground(context),
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.getTextPrimary(context)),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -781,6 +779,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                     style: AppTypography.h2(
                       context,
                       weight: AppTypography.bold,
+                      color: AppColors.getTextTertiary(context),
                     ),
                   ),
                   IconButton(
@@ -788,7 +787,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                       AppHaptics.light();
                       Navigator.pop(context);
                     },
-                    icon: Icon(Icons.close, color: AppColors.textSecondary),
+                    icon: Icon(Icons.close, color: AppColors.getTextSecondary(context)),
                     splashRadius: 20 * s,
                   ),
                 ],
@@ -885,7 +884,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
         ),
       ),
       bottomNavigationBar: Container(
-        color: AppColors.background,
+        color: AppColors.getBackground(context),
         padding: EdgeInsets.fromLTRB(
           AppDesignSystem.space20 * s,
           0,
@@ -916,7 +915,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                 Navigator.pop(context, settings);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.textPrimary,
+                backgroundColor: AppColors.getTextPrimary(context),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30 * s),
                 ),
@@ -924,7 +923,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
               ),
               icon: Icon(
                 Icons.play_arrow,
-                color: AppColors.textInverse,
+                color: AppColors.getBackground(context),
                 size: AppDesignSystem.iconMedium * s,
               ),
               label: Text(
@@ -936,7 +935,7 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                     : 'Play Audio',
                 style: AppTypography.label(
                   context,
-                  color: AppColors.textInverse,
+                  color: AppColors.getBackground(context),
                   weight: AppTypography.semiBold,
                 ),
               ),

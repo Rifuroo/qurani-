@@ -90,7 +90,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.getBackgroundLight(context),
       appBar: ProfileAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'home.session.session_text')

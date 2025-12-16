@@ -149,7 +149,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
 
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.getBackground(context),
         appBar: SettingsAppBar(
           title: _translations.isNotEmpty
               ? LanguageHelper.tr(_translations, 'mushaf_type.title')
@@ -160,7 +160,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'mushaf_type.title')
@@ -176,20 +176,24 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Book Settings Header
-                Text(
-                  _translations.isNotEmpty
-                      ? LanguageHelper.tr(
-                          _translations,
-                          'mushaf_type.book_settings',
-                        ).toUpperCase()
-                      : 'BOOK SETTINGS',
-                  style: TextStyle(
-                    fontSize: 13 * s,
-                    fontWeight: AppTypography.bold,
-                    color: AppColors.textPrimary,
-                    letterSpacing: 0.5,
-                  ),
+                // Book Settings Header with Info Icon
+                Row(
+                  children: [
+                    Text(
+                      _translations.isNotEmpty
+                          ? LanguageHelper.tr(
+                              _translations,
+                              'mushaf_type.book_settings',
+                            ).toUpperCase()
+                          : 'BOOK SETTINGS',
+                      style: TextStyle(
+                        fontSize: 13 * s,
+                        fontWeight: AppTypography.bold,
+                        color: AppColors.getTextPrimary(context),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
 
                 SizedBox(height: AppDesignSystem.space12 * s),
@@ -205,7 +209,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                   style: TextStyle(
                     fontSize: 14 * s,
                     fontWeight: AppTypography.regular,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                     height: 1.4,
                   ),
                 ),
@@ -268,10 +272,10 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
         duration: const Duration(milliseconds: 200),
         width: cardWidth,
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.getSurface(context),
           borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.borderLight,
+            color: isSelected ? AppColors.primary : AppColors.getBorderLight(context),
             width: isSelected ? 2.5 * s : 1.0 * s,
           ),
         ),
@@ -291,7 +295,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                       style: TextStyle(
                         fontSize: 18 * s,
                         fontWeight: AppTypography.semiBold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.getTextPrimary(context),
                       ),
                     ),
                   ),
@@ -324,6 +328,26 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
               ),
             ),
 
+            // Subtitle if exists
+            if (mushaf.containsKey('subtitle') && 
+                mushaf['subtitle'] != null && 
+                mushaf['subtitle'].toString().isNotEmpty)
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppDesignSystem.space16 * s,
+                ),
+                child: Text(
+                  mushaf['subtitle'],
+                  style: TextStyle(
+                    fontSize: 16 * s,
+                    fontWeight: AppTypography.semiBold,
+                    color: AppColors.getTextPrimary(context),
+                  ),
+                ),
+              ),
+
+            SizedBox(height: AppDesignSystem.space12 * s),
+
             // Mushaf Preview
             Container(
               height: screenHeight * 0.38, // ✅ Already optimal
@@ -331,12 +355,12 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                 horizontal: AppDesignSystem.space16 * s,
               ),
               decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLowest,
+                color: AppColors.getSurfaceContainerLowest(context),
                 borderRadius: BorderRadius.circular(
                   AppDesignSystem.radiusSmall * s,
                 ),
                 border: Border.all(
-                  color: AppColors.borderLight,
+                  color: AppColors.getBorderLight(context),
                   width: 1.0 * s,
                 ),
               ),
@@ -363,7 +387,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                 style: TextStyle(
                   fontSize: 13 * s,
                   fontWeight: AppTypography.regular,
-                  color: AppColors.textSecondary,
+                  color: AppColors.getTextSecondary(context),
                   height: 1.4,
                 ),
                 maxLines: 3,
@@ -383,7 +407,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                 style: TextStyle(
                   fontSize: 14 * s,
                   fontWeight: AppTypography.semiBold,
-                  color: AppColors.textPrimary,
+                  color: AppColors.getTextPrimary(context),
                 ),
               ),
             ),

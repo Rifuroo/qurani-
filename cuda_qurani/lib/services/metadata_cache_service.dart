@@ -20,6 +20,7 @@ class MetadataCacheService {
   Map<int, List<int>> _pageSurahMap = {}; // page → [surahIds on that page]
 
   bool _isInitialized = false;
+  bool _isInitializing = false; // ✅ NEW: Prevent concurrent initialization
 
   // ==================== GETTERS ====================
   bool get isInitialized => _isInitialized;
@@ -89,20 +90,30 @@ class MetadataCacheService {
   // ==================== INITIALIZATION ====================
 
   Future<void> initialize() async {
+    // ✅ Prevent concurrent initialization
     if (_isInitialized) {
-      print('[MetadataCache] Already initialized');
+      print('[MetadataCache] Already initialized, skipping...');
       return;
     }
 
+    if (_isInitializing) {
+      print('[MetadataCache] Already initializing, waiting...');
+      // Wait for current initialization to complete
+      while (_isInitializing && !_isInitialized) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      return;
+    }
+
+    _isInitializing = true;
     print('[MetadataCache] 🔄 Starting pre-cache...');
     final startTime = DateTime.now();
 
     try {
-      // ✅ Load ALL metadata in parallel
+      // ✅ Load surahs and juz first (fast operations)
       final results = await Future.wait([
         LocalDatabaseService.getSurahs(),
         JuzService.getAllJuz(),
-        _buildPageSurahMapping(),
       ]);
 
       _allSurahs = List<Map<String, dynamic>>.from(results[0] as List);
@@ -116,6 +127,9 @@ class MetadataCacheService {
       for (final juz in _allJuz) {
         _juzMap[juz['juz_number'] as int] = juz;
       }
+
+      // ✅ Build page mapping separately (can be slow)
+      await _buildPageSurahMapping();
 
       // Debug: Check if mapping is populated
       if (_pageSurahMap.isEmpty) {
@@ -138,7 +152,10 @@ class MetadataCacheService {
       print('   - ${_pageSurahMap.length} page mappings');
     } catch (e) {
       print('[MetadataCache] ❌ Pre-cache failed: $e');
-      rethrow;
+      // Don't rethrow - allow app to continue with empty cache
+      _isInitialized = true; // Mark as initialized to prevent retry loops
+    } finally {
+      _isInitializing = false;
     }
   }
 
@@ -146,7 +163,7 @@ class MetadataCacheService {
     print('[MetadataCache] Building page-surah mapping...');
 
     try {
-      // ✅ FIX: Get current layout from service (sudah di-update di switchMushafLayout)
+      // ✅ FIX: Get current layout from service
       final currentLayout = await MushafSettingsService().getMushafLayout();
 
       _pageSurahMap = await LocalDatabaseService.buildPageSurahMapping(
@@ -157,7 +174,7 @@ class MetadataCacheService {
         '[MetadataCache] Page-surah mapping complete: ${_pageSurahMap.length} pages for ${currentLayout.displayName}',
       );
 
-      // ✅ TAMBAHKAN: Debug log untuk verifikasi
+      // ✅ Debug log untuk verifikasi
       if (_pageSurahMap.isNotEmpty) {
         print('[MetadataCache] Sample mapping:');
         print('  Page 1: ${_pageSurahMap[1]}');
@@ -170,37 +187,13 @@ class MetadataCacheService {
         }
       }
     } catch (e) {
-      print('[MetadataCache] Error: $e, using fallback...');
-
-      // Fallback tetap sama...
-      final MushafSettingsService settingsService = MushafSettingsService();
-      final currentLayout = await settingsService.getMushafLayout();
-      final totalPages = currentLayout.totalPages;
-
-      print(
-        '[MetadataCache] Fallback using layout: ${currentLayout.displayName} ($totalPages pages)',
-      );
-
-      for (int page = 1; page <= totalPages; page++) {
-        try {
-          final ayahInfo = await LocalDatabaseService.getFirstAyahInPage(page);
-          final surahId = ayahInfo['surah'] as int;
-
-          if (!_pageSurahMap.containsKey(page)) {
-            _pageSurahMap[page] = [];
-          }
-
-          if (!_pageSurahMap[page]!.contains(surahId)) {
-            _pageSurahMap[page]!.add(surahId);
-          }
-        } catch (e) {
-          print('[MetadataCache] Error mapping page $page: $e');
-        }
-
-        if (page % 100 == 0) {
-          print('[MetadataCache] Progress: $page/$totalPages pages mapped');
-        }
-      }
+      print('[MetadataCache] Error building page mapping: $e');
+      // ✅ SIMPLIFIED FALLBACK: Just create empty mapping to prevent crashes
+      _pageSurahMap = {};
+      
+      // Don't do the slow fallback loop - it's better to have empty cache
+      // than to block the UI for minutes
+      print('[MetadataCache] Using empty page mapping as fallback');
     }
   }
 
@@ -217,9 +210,10 @@ class MetadataCacheService {
     _juzMap.clear();
     _pageSurahMap.clear();
     _isInitialized = false;
+    _isInitializing = false;
 
     // Rebuild with new layout
-    await initialize(); // ← Ini akan pakai layout yang baru
+    await initialize(); // ← This will use the new layout
 
     print('[MetadataCache] ✅ Cache rebuilt for ${layout.displayName}');
   }
@@ -232,5 +226,6 @@ class MetadataCacheService {
     _juzMap.clear();
     _pageSurahMap.clear();
     _isInitialized = false;
+    _isInitializing = false;
   }
 }

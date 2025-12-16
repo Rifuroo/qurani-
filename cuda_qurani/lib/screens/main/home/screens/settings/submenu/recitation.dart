@@ -109,7 +109,7 @@ class _RecitationPageState extends State<RecitationPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.medium,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
 
@@ -123,7 +123,7 @@ class _RecitationPageState extends State<RecitationPage> {
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
                     border: Border.all(
-                      color: AppColors.borderLight,
+                      color: AppColors.getBorderLight(context),
                       width: 1.0 * s * 0.9,
                     ),
                   ),
@@ -235,7 +235,8 @@ class _RecitationPageState extends State<RecitationPage> {
                                 style: TextStyle(
                                   fontSize: 13 * s * 0.9,
                                   fontWeight: AppTypography.regular,
-                                  color: AppColors.textSecondary,
+
+                    color: AppColors.getTextSecondary(context),
                                   height: 1.4,
                                 ),
                               ),
@@ -474,8 +475,8 @@ class _RecitationPageState extends State<RecitationPage> {
               : (_) => showPremiumFeatureDialog(context, feature),
           activeTrackColor: AppColors.getSuccess(context),
           activeThumbColor: AppColors.getSuccess(context),
-          inactiveThumbColor: AppColors.borderMedium,
-          inactiveTrackColor: AppColors.borderLight,
+          inactiveThumbColor: AppColors.getBorderMedium(context),
+          inactiveTrackColor: AppColors.getBorderLight(context),
         ),
       ],
     );

@@ -99,7 +99,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
                     border: Border.all(
-                      color: AppColors.borderLight,
+                      color: AppColors.getBorderLight(context),
                       width: 1.0 * s * 0.9,
                     ),
                   ),
@@ -116,7 +116,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                             Icon(
                               Icons.visibility_off_outlined,
                               size: 20 * s * 0.9,
-                              color: AppColors.textPrimary,
+                              color: AppColors.getTextPrimary(context),
                             ),
                             SizedBox(width: AppDesignSystem.space12 * s * 0.9),
                             Expanded(
@@ -130,7 +130,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                                 style: TextStyle(
                                   fontSize: 16 * s * 0.9,
                                   fontWeight: AppTypography.regular,
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.getTextPrimary(context),
                                 ),
                               ),
                             ),
@@ -139,8 +139,8 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                               onChanged: _toggleHideVerses,
                               activeTrackColor: AppColors.getSuccess(context),
                               activeThumbColor: AppColors.getSuccess(context),
-                              inactiveThumbColor: AppColors.borderMedium,
-                              inactiveTrackColor: AppColors.borderLight,
+                              inactiveThumbColor: AppColors.getBorderMedium(context),
+                              inactiveTrackColor: AppColors.getBorderLight(context),
                             ),
                           ],
                         ),
@@ -150,7 +150,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                       Divider(
                         height: 1,
                         thickness: 1 * s * 0.9,
-                        color: AppColors.borderLight,
+                        color: AppColors.getBorderLight(context),
                       ),
 
                       // Hide verse markers
@@ -164,7 +164,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                             Icon(
                               Icons.hide_source,
                               size: 20 * s * 0.9,
-                              color: AppColors.textPrimary,
+                              color: AppColors.getTextPrimary(context),
                             ),
                             SizedBox(width: AppDesignSystem.space12 * s * 0.9),
                             Expanded(
@@ -178,7 +178,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                                 style: TextStyle(
                                   fontSize: 16 * s * 0.9,
                                   fontWeight: AppTypography.regular,
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.getTextPrimary(context),
                                 ),
                               ),
                             ),
@@ -187,8 +187,8 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                               onChanged: _toggleHideVerseMarkers,
                               activeTrackColor: AppColors.getSuccess(context),
                               activeThumbColor: AppColors.getSuccess(context),
-                              inactiveThumbColor: AppColors.borderMedium,
-                              inactiveTrackColor: AppColors.borderLight,
+                              inactiveThumbColor: AppColors.getBorderMedium(context),
+                              inactiveTrackColor: AppColors.getBorderLight(context),
                             ),
                           ],
                         ),
@@ -214,7 +214,7 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                     style: TextStyle(
                       fontSize: 14 * s * 0.9,
                       fontWeight: AppTypography.regular,
-                      color: AppColors.textSecondary,
+                      color: AppColors.getTextSecondary(context),
                       height: 1.4,
                     ),
                   ),

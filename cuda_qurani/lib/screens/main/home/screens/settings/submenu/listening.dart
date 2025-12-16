@@ -191,7 +191,7 @@ class _ListeningPageState extends State<ListeningPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.medium,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
 
@@ -205,7 +205,7 @@ class _ListeningPageState extends State<ListeningPage> {
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
                     border: Border.all(
-                      color: AppColors.borderLight,
+                      color: AppColors.getBorderLight(context),
                       width: 1.0 * s * 0.9,
                     ),
                   ),
@@ -245,7 +245,7 @@ class _ListeningPageState extends State<ListeningPage> {
                                   style: TextStyle(
                                     fontSize: 16 * s * 0.9,
                                     fontWeight: AppTypography.regular,
-                                    color: AppColors.textPrimary,
+                                    color: AppColors.getTextPrimary(context),
                                   ),
                                 ),
                               ),
@@ -254,7 +254,7 @@ class _ListeningPageState extends State<ListeningPage> {
                                     ? Icons.keyboard_arrow_up
                                     : Icons.keyboard_arrow_down,
                                 size: 24 * s * 0.9,
-                                color: AppColors.textPrimary,
+                                color: AppColors.getTextPrimary(context),
                               ),
                             ],
                           ),
@@ -266,7 +266,7 @@ class _ListeningPageState extends State<ListeningPage> {
                         Divider(
                           height: 1,
                           thickness: 1 * s * 0.9,
-                          color: AppColors.borderLight,
+                          color: AppColors.getBorderLight(context),
                         ),
                         Container(
                           constraints: BoxConstraints(maxHeight: 250 * s * 0.9),
@@ -277,7 +277,7 @@ class _ListeningPageState extends State<ListeningPage> {
                             separatorBuilder: (context, index) => Divider(
                               height: 1,
                               thickness: 1 * s * 0.9,
-                              color: AppColors.borderLight,
+                              color: AppColors.getBorderLight(context),
                             ),
                             itemBuilder: (context, index) {
                               final reciter = _reciters[index];
@@ -318,7 +318,7 @@ class _ListeningPageState extends State<ListeningPage> {
                         Divider(
                           height: 1,
                           thickness: 1 * s * 0.9,
-                          color: AppColors.borderLight,
+                          color: AppColors.getBorderLight(context),
                         ),
 
                       // Manage Downloads Button
@@ -351,7 +351,7 @@ class _ListeningPageState extends State<ListeningPage> {
                                     style: TextStyle(
                                       fontSize: 16 * s * 0.9,
                                       fontWeight: AppTypography.regular,
-                                      color: AppColors.textPrimary,
+                                      color: AppColors.getTextPrimary(context),
                                     ),
                                   ),
                                 ),

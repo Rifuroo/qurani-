@@ -757,6 +757,50 @@ class AppColors {
         ? const Color(0xFF4A4A4A) // Lighter border for dark theme
         : const Color(0xFFBDBDBD); // Darker border for light theme
   }
+
+  // ==================== MISSING CONTEXT-AWARE GETTERS ====================
+  
+  /// Get primary color (context-aware) - this is the main brand color
+  static Color getPrimaryColor(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? primaryDarkTheme : primary;
+  }
+  
+  /// Get accent color (context-aware)
+  static Color getAccent(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? accentLight : accent;
+  }
+  
+  /// Get listening state color (context-aware)
+  static Color getListening(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? infoLight : listening;
+  }
+  
+  /// Get correct state color (context-aware)
+  static Color getCorrect(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? successLight : correct;
+  }
+  
+  /// Get incorrect state color (context-aware)
+  static Color getIncorrect(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? errorLight : incorrect;
+  }
+  
+  /// Get skipped state color (context-aware)
+  static Color getSkipped(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? textTertiaryDark : skipped;
+  }
+  
+  /// Get unread state color (context-aware)
+  static Color getUnread(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? textDisabledDark : unread;
+  }
 }
 
 /// ==================== TYPOGRAPHY SYSTEM ====================
@@ -839,7 +883,7 @@ class AppTypography {
       fontWeight: weight ?? semiBold,
       height: lineHeightNormal,
       letterSpacing: letterSpacingTight,
-      color: color ?? AppColors.textPrimary,
+      color: color ?? AppColors.getTextPrimary(context),
     );
   }
   
@@ -875,7 +919,7 @@ class AppTypography {
       fontWeight: weight ?? semiBold,
       height: lineHeightNormal,
       letterSpacing: letterSpacingNormal,
-      color: color ?? AppColors.textPrimary,
+      color: color ?? AppColors.getTextPrimary(context),
     );
   }
 
@@ -911,7 +955,7 @@ class AppTypography {
       fontWeight: weight ?? regular,
       height: lineHeightRelaxed,
       letterSpacing: letterSpacingWide,
-      color: color ?? AppColors.textSecondary,
+      color: color ?? AppColors.getTextSecondary(context),
     );
   }
   
@@ -923,7 +967,7 @@ class AppTypography {
       fontWeight: weight ?? regular,
       height: lineHeightRelaxed,
       letterSpacing: letterSpacingWide,
-      color: color ?? AppColors.textSecondary,
+      color: color ?? AppColors.getTextSecondary(context),
     );
   }
 
@@ -935,7 +979,7 @@ class AppTypography {
       fontWeight: weight ?? regular,
       height: lineHeightRelaxed,
       letterSpacing: letterSpacingWide,
-      color: color ?? AppColors.textSecondary,
+      color: color ?? AppColors.getTextSecondary(context),
     );
   }
   
@@ -1501,17 +1545,20 @@ class AppComponentStyles {
   // ==================== APP BAR THEME ====================
   
   static AppBarTheme appBarTheme(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
     return AppBarTheme(
-      backgroundColor: AppColors.surface,
-      foregroundColor: AppColors.textPrimary,
+      backgroundColor: AppColors.getSurface(context),
+      foregroundColor: AppColors.getTextPrimary(context),
       elevation: 0,
       centerTitle: true,
-      titleTextStyle: AppTypography.titleLarge(context),
-      iconTheme: const IconThemeData(
-        color: AppColors.textPrimary,
+      titleTextStyle: AppTypography.titleLarge(context, color: AppColors.getTextPrimary(context)),
+      iconTheme: IconThemeData(
+        color: AppColors.getTextPrimary(context),
         size: AppDesignSystem.iconLarge,
       ),
-      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      systemOverlayStyle: brightness == Brightness.dark 
+          ? SystemUiOverlayStyle.light 
+          : SystemUiOverlayStyle.dark,
     );
   }
 
@@ -1519,13 +1566,13 @@ class AppComponentStyles {
   
   static TabBarThemeData tabBarTheme(BuildContext context) {
     return TabBarThemeData(
-      labelColor: AppColors.primary,
-      unselectedLabelColor: AppColors.textDisabled,
-      labelStyle: AppTypography.label(context, weight: AppTypography.semiBold),
-      unselectedLabelStyle: AppTypography.label(context),
-      indicator: const UnderlineTabIndicator(
+      labelColor: AppColors.getPrimary(context),
+      unselectedLabelColor: AppColors.getTextDisabled(context),
+      labelStyle: AppTypography.label(context, color: AppColors.getPrimary(context), weight: AppTypography.semiBold),
+      unselectedLabelStyle: AppTypography.label(context, color: AppColors.getTextDisabled(context)),
+      indicator: UnderlineTabIndicator(
         borderSide: BorderSide(
-          color: AppColors.primary,
+          color: AppColors.getPrimary(context),
           width: 2.5,
         ),
       ),

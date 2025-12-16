@@ -413,7 +413,7 @@ class _SurahListPageState extends State<SurahListPage> {
                       : 'Search surah, juz, or page...',
                   hintStyle: AppTypography.body(
                     context,
-                    color: AppColors.textHint,
+                    color: AppColors.getTextSecondary(context),
                     weight: AppTypography.regular,
                   ),
                 ),
@@ -850,7 +850,7 @@ class _SurahListPageState extends State<SurahListPage> {
 
       trailing: Icon(
         Icons.chevron_right_rounded,
-        color: AppColors.getBorderMedium(context),
+        color: AppColors.getTextSecondary(context),
         size: AppDesignSystem.iconMedium,
       ),
     );
