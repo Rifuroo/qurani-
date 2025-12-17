@@ -33,6 +33,21 @@ class _QuranAppBarState extends State<QuranAppBar> {
     _loadTranslations();
   }
 
+  // Helper function untuk AppBar colors
+  Color _getAppBarBackgroundColor(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark 
+        ? AppColors.getSurfaceVariant(context)
+        : AppColors.getPrimary(context);
+  }
+
+  Color _getAppBarTextColor(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark 
+        ? AppColors.getTextPrimary(context)
+        : AppColors.getTextInverse(context);
+  }
+
   Future<void> _loadTranslations() async {
     // Ganti path sesuai file JSON yang dibutuhkan
     final trans = await context.loadTranslations('stt');
@@ -156,14 +171,14 @@ class _QuranAppBarState extends State<QuranAppBar> {
       child: IgnorePointer(
         ignoring: !controller.isUIVisible,
         child: AppBar(
-          backgroundColor: AppColors.getSurfaceContainerHigh(context),
-          foregroundColor: AppColors.getTextPrimary(context),
+          backgroundColor: _getAppBarBackgroundColor(context),
+          foregroundColor: _getAppBarTextColor(context),
           toolbarHeight: kToolbarHeight * 0.80,
           leading: IconButton(
             icon: Icon(
               Icons.menu, 
               size: iconSize * 120 / 100,
-              color: AppColors.getTextPrimary(context),
+              color: _getAppBarTextColor(context),
             ),
             onPressed: () {
               Navigator.pop(context);
@@ -191,7 +206,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                       style: TextStyle(
                         fontSize: titleSize,
                         fontWeight: FontWeight.w400,
-                        color: AppColors.getTextPrimary(context).withOpacity(0.9),
+                        color: _getAppBarTextColor(context).withOpacity(0.9),
                         height: 1.1,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -203,7 +218,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                   Container(
                     width: 1,
                     height: screenHeight * 0.016,
-                    color: AppColors.getTextSecondary(context).withOpacity(0.3),
+                    color: _getAppBarTextColor(context).withOpacity(0.3),
                   ),
                   SizedBox(width: screenWidth * 0.015),
                   // Juz Badge
@@ -212,7 +227,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     style: TextStyle(
                       fontSize: badgeSize,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.getTextPrimary(context).withOpacity(0.9),
+                      color: _getAppBarTextColor(context).withOpacity(0.9),
                       height: 1.1,
                     ),
                   ),
@@ -222,7 +237,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                   Container(
                     width: 1,
                     height: screenHeight * 0.016,
-                    color: AppColors.getTextSecondary(context).withOpacity(0.3),
+                    color: _getAppBarTextColor(context).withOpacity(0.3),
                   ),
                   SizedBox(width: screenWidth * 0.015),
                   // Page Number
@@ -231,7 +246,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     style: TextStyle(
                       fontSize: subtitleSize,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.getTextPrimary(context).withOpacity(0.9),
+                      color: _getAppBarTextColor(context).withOpacity(0.9),
                       height: 1.1,
                     ),
                   ),
@@ -249,7 +264,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     ? Icons.vertical_split
                     : Icons.auto_stories,
                 size: iconSize * 0.9,
-                color: AppColors.getTextPrimary(context),
+                color: _getAppBarTextColor(context),
               ),
               onPressed: () async {
                 // ✅ FIX: Await toggle completion
@@ -273,7 +288,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     ? Icons.visibility
                     : Icons.visibility_off,
                 size: iconSize * 0.9,
-                color: AppColors.getTextPrimary(context),
+                color: _getAppBarTextColor(context),
               ),
               onPressed: controller.toggleHideUnread,
               splashRadius: iconSize * 1.1,
@@ -316,7 +331,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
               icon: Icon(
                 Icons.settings, 
                 size: iconSize * 0.9,
-                color: AppColors.getTextPrimary(context),
+                color: _getAppBarTextColor(context),
               ),
               splashRadius: iconSize * 1.1,
             ),
@@ -325,7 +340,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
               icon: Icon(
                 Icons.book_outlined, 
                 size: 20,
-                color: AppColors.getTextPrimary(context),
+                color: _getAppBarTextColor(context),
               ),
               onPressed: () => _showLayoutPicker(context),
               tooltip: 'Mushaf Layout',
@@ -555,13 +570,13 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                     width: trackWidth,
                     height: trackHeight,
                     decoration: BoxDecoration(
-                      color: AppColors.getSurface(context),
+                      color: AppColors.getSurfaceContainerMedium(context),
                       borderRadius: BorderRadius.circular(trackHeight / 2),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.getShadowLight(context),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
+                          color: AppColors.getShadowMedium(context),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
@@ -580,8 +595,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                   Icons.play_arrow_rounded,
                                   size: iconSize * 0.9,
                                   color: isListeningActive
-                                      ? getPrimaryColor(context)
-                                      : Colors.white.withOpacity(0.9),
+                                      ? AppColors.getPrimary(context)
+                                      : AppColors.getTextPrimary(context),
                                 ),
                                 SizedBox(width: 6),
                                 Text(
@@ -595,8 +610,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                     fontSize: labelSize,
                                     fontWeight: FontWeight.w600,
                                     color: isListeningActive
-                                        ? getPrimaryColor(context)
-                                        : Colors.white.withOpacity(0.9),
+                                        ? AppColors.getPrimary(context)
+                                        : AppColors.getTextPrimary(context),
                                   ),
                                 ),
                               ],
@@ -623,8 +638,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                     fontSize: labelSize,
                                     fontWeight: FontWeight.w600,
                                     color: isRecordingActive
-                                        ? getErrorColor(context)
-                                        : Colors.white.withOpacity(0.9),
+                                        ? AppColors.getError(context)
+                                        : AppColors.getTextPrimary(context),
                                   ),
                                 ),
                                 SizedBox(width: 6),
@@ -632,8 +647,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                   Icons.mic_rounded,
                                   size: iconSize * 0.9,
                                   color: isRecordingActive
-                                      ? getErrorColor(context)
-                                      : Colors.white.withOpacity(0.9),
+                                      ? AppColors.getError(context)
+                                      : AppColors.getTextPrimary(context),
                                 ),
                               ],
                             ),
@@ -813,13 +828,13 @@ class _QuranBottomBarState extends State<QuranBottomBar>
   }
 
   Color _getThumbColor(bool isListening, bool isRecording) {
-    if (isListening) return getPrimaryColor(context);
-    if (isRecording) return getErrorColor(context);
+    if (isListening) return AppColors.getPrimary(context);
+    if (isRecording) return AppColors.getError(context);
 
     // During drag, show preview color
     if (_isDragging) {
-      if (_dragPosition < -0.3) return getPrimaryColor(context).withOpacity(0.7);
-      if (_dragPosition > 0.3) return getErrorColor(context).withOpacity(0.7);
+      if (_dragPosition < -0.3) return AppColors.getPrimary(context).withOpacity(0.7);
+      if (_dragPosition > 0.3) return AppColors.getError(context).withOpacity(0.7);
     }
 
     return AppColors.getTextTertiary(context);
@@ -876,7 +891,7 @@ class QuranLoadingWidget extends StatelessWidget {
             width: containerSize,
             height: containerSize,
             decoration: BoxDecoration(
-              color: getPrimaryColor(context),
+              color: AppColors.getPrimary(context),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -892,7 +907,7 @@ class QuranLoadingWidget extends StatelessWidget {
             style: TextStyle(
               fontSize: titleSize,
               fontWeight: FontWeight.bold,
-              color: getPrimaryColor(context),
+              color: AppColors.getPrimary(context),
             ),
           ),
           SizedBox(height: screenHeight * 0.005),
@@ -936,14 +951,14 @@ class QuranErrorWidget extends StatelessWidget {
               width: containerSize,
               height: containerSize,
               decoration: BoxDecoration(
-                color: getErrorColor(context).withOpacity(0.1),
+                color: AppColors.getError(context).withOpacity(0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: getErrorColor(context).withOpacity(0.3)),
+                border: Border.all(color: AppColors.getError(context).withOpacity(0.3)),
               ),
               child: Icon(
                 Icons.error_outline,
                 size: iconSize,
-                color: getErrorColor(context),
+                color: AppColors.getError(context),
               ),
             ),
             SizedBox(height: screenHeight * 0.015),
@@ -952,7 +967,7 @@ class QuranErrorWidget extends StatelessWidget {
               style: TextStyle(
                 fontSize: titleSize,
                 fontWeight: FontWeight.bold,
-                color: getPrimaryColor(context),
+                color: AppColors.getPrimary(context),
               ),
               textAlign: TextAlign.center,
             ),
@@ -985,7 +1000,7 @@ class QuranErrorWidget extends StatelessWidget {
                     style: TextStyle(fontSize: buttonTextSize),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: getPrimaryColor(context),
+                    backgroundColor: AppColors.getPrimary(context),
                     foregroundColor: AppColors.getTextInverse(context),
                     padding: EdgeInsets.symmetric(
                       horizontal: screenWidth * 0.02,
@@ -1053,7 +1068,7 @@ class QuranLogsPanel extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.terminal, color: getCorrectColor(context), size: iconSize),
+                Icon(Icons.terminal, color: AppColors.getSuccess(context), size: iconSize),
                 SizedBox(width: screenWidth * 0.01),
                 Text(
                   'API Debug Console',
@@ -1148,7 +1163,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
         backgroundColor: AppColors.getSurface(context),
         title: Row(
           children: [
-            Icon(Icons.celebration, color: getCorrectColor(context), size: iconSize),
+            Icon(Icons.celebration, color: AppColors.getSuccess(context), size: iconSize),
             SizedBox(width: screenWidth * 0.02),
             Text(
               'Surah Completed!',
@@ -1165,7 +1180,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
             Container(
               padding: EdgeInsets.all(screenWidth * 0.04),
               decoration: BoxDecoration(
-                color: getCorrectColor(context).withOpacity(0.1),
+                color: AppColors.getSuccess(context).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -1175,7 +1190,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
                     style: TextStyle(
                       fontSize: congratsSize,
                       fontWeight: FontWeight.bold,
-                      color: getPrimaryColor(context),
+                      color: AppColors.getPrimary(context),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -1218,7 +1233,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
               Navigator.of(context).pop();
               Navigator.of(context).pop();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: getPrimaryColor(context)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.getPrimary(context)),
             child: Text('Finish', style: TextStyle(color: AppColors.getTextInverse(context))),
           ),
         ],
@@ -1248,7 +1263,7 @@ Widget _buildStatItem(
           style: TextStyle(
             fontSize: valueSize,
             fontWeight: FontWeight.bold,
-            color: getPrimaryColor(context),
+            color: AppColors.getPrimary(context),
           ),
         ),
       ],
@@ -1272,7 +1287,7 @@ void showSimpleSnackBar(
           color: AppColors.getTextInverse(context),
         ),
       ),
-      backgroundColor: backgroundColor ?? getPrimaryColor(context),
+      backgroundColor: backgroundColor ?? AppColors.getPrimary(context),
       duration: const Duration(seconds: 2),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
