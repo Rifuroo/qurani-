@@ -589,7 +589,7 @@ class AppColors {
   
   static Color getSurfaceContainerMedium(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    return brightness == Brightness.dark ? surfaceContainerMediumDark : surfaceContainerMedium;
+    return brightness == Brightness.dark ? surfaceContainerMediumDark : const Color.fromARGB(255, 255, 255, 255);
   }
   
   static Color getSurfaceContainerHigh(BuildContext context) {
