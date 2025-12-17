@@ -48,14 +48,6 @@ class _QuranAppBarState extends State<QuranAppBar> {
         : AppColors.getTextInverse(context);
   }
 
-  Future<void> _loadTranslations() async {
-    // Ganti path sesuai file JSON yang dibutuhkan
-    final trans = await context.loadTranslations('stt');
-    setState(() {
-      _translations = trans;
-    });
-  }
-
   void _showLayoutPicker(BuildContext context) {
     final controller = context.read<SttController>();
 
@@ -109,6 +101,14 @@ class _QuranAppBarState extends State<QuranAppBar> {
         ],
       ),
     );
+  }
+
+  Future<void> _loadTranslations() async {
+    // Ganti path sesuai file JSON yang dibutuhkan
+    final trans = await context.loadTranslations('stt');
+    setState(() {
+      _translations = trans;
+    });
   }
 
   @override
