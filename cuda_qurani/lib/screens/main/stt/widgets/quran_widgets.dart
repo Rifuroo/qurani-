@@ -41,61 +41,6 @@ class _QuranAppBarState extends State<QuranAppBar> {
     });
   }
 
-  void _showLayoutPicker(BuildContext context) {
-    final controller = context.read<SttController>();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.getSurface(context),
-        title: Text(
-          'Select Mushaf Layout',
-          style: TextStyle(
-            fontSize: 16,
-            color: AppColors.getTextPrimary(context),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: MushafLayout.values.map((layout) {
-            final isSelected = controller.mushafLayout == layout;
-            return RadioListTile<MushafLayout>(
-              title: Text(
-                '${layout.displayName} (${layout.totalPages} pages)',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.getTextPrimary(context),
-                ),
-              ),
-              subtitle: Text(
-                layout.isGlyphBased ? 'Glyph-based fonts' : 'Single font',
-                style: TextStyle(fontSize: 12, color: AppColors.getTextSecondary(context)),
-              ),
-              value: layout,
-              groupValue: controller.mushafLayout,
-              onChanged: (value) {
-                if (value != null) {
-                  Navigator.of(ctx).pop();
-                  controller.switchMushafLayout(value);
-                }
-              },
-              selected: isSelected,
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.getTextPrimary(context)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<SttController>();
@@ -319,16 +264,6 @@ class _QuranAppBarState extends State<QuranAppBar> {
                 color: AppColors.getTextPrimary(context),
               ),
               splashRadius: iconSize * 1.1,
-            ),
-            SizedBox(width: screenWidth * 0.01),
-            IconButton(
-              icon: Icon(
-                Icons.book_outlined, 
-                size: 20,
-                color: AppColors.getTextPrimary(context),
-              ),
-              onPressed: () => _showLayoutPicker(context),
-              tooltip: 'Mushaf Layout',
             ),
           ],
         ),

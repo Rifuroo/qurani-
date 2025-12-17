@@ -379,7 +379,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                       height: 24 * s,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.primary,
+                        color: const Color.fromARGB(255, 0, 0, 0),
                       ),
                     )
                   else if (isSelected)
