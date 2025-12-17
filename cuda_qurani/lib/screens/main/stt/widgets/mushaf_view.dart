@@ -649,9 +649,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             '$juzText ${context.formatNumber(juzNumber)}',
             style: TextStyle(
               fontSize: headerFontSize,
-              color: Colors.black.withOpacity(
-                0.8,
-              ), // ✅ FIX: Putih terang untuk kontras maksimal
+              color: AppColors.getTextPrimary(context).withOpacity(0.8),
               fontWeight: FontWeight.w500,
             ),
             textDirection: TextDirection.rtl,
@@ -709,9 +707,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             '${context.formatNumber(controller.currentPage)}',
             style: TextStyle(
               fontSize: headerFontSize,
-              color: Colors.black.withOpacity(
-                0.8,
-              ), // ✅ FIX: Putih terang untuk kontras maksimal
+              color: AppColors.getTextPrimary(context).withOpacity(0.8),
               fontWeight: FontWeight.w500,
             ),
           ),
