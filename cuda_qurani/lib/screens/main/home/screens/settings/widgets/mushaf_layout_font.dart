@@ -213,7 +213,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to change layout: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
             duration: const Duration(seconds: 3),
           ),
         );
@@ -403,7 +403,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                       child: Icon(
                         Icons.check,
                         size: 18 * s,
-                        color: Colors.white,
+                        color: AppColors.textInverse,
                       ),
                     ),
                 ],
@@ -547,12 +547,15 @@ class _OptimizedMushafPreview extends StatelessWidget {
                 Icon(
                   Icons.image_not_supported,
                   size: 48,
-                  color: Colors.grey[400],
+                  color: AppColors.getTextTertiary(context),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   'Preview not available',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  style: TextStyle(
+                    color: AppColors.getTextSecondary(context), 
+                    fontSize: 12
+                  ),
                 ),
               ],
             ),

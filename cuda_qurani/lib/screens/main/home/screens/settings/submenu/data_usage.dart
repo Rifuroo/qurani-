@@ -95,8 +95,8 @@ class _DataUsagePageState extends State<DataUsagePage> {
           Switch(
             value: isEnabled,
             onChanged: onChanged,
-            activeTrackColor: AppColors.getSuccess(context),
-            activeThumbColor: AppColors.getSuccess(context),
+            activeTrackColor: AppColors.getPrimary(context).withValues(alpha: 0.5),
+            activeThumbColor: Colors.white,
             inactiveThumbColor: AppColors.getBorderMedium(context),
             inactiveTrackColor: AppColors.getBorderLight(context),
           ),

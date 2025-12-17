@@ -295,7 +295,7 @@ class _LoginPageState extends State<LoginPage> {
                 style: TextStyle(
                   fontFamily: 'surah_names',
                   fontSize: 90 * s,
-                  color: AppColors.primary,
+                  color: AppColors.getPrimary(context),
                   height: 1.0,
                 ),
               ),
@@ -305,13 +305,13 @@ class _LoginPageState extends State<LoginPage> {
           Image.asset(
             'assets/images/qurani-white-text.png',
             height: 28 * s,
-            color: AppColors.primary,
+            color: AppColors.getPrimary(context),
             errorBuilder: (context, error, stackTrace) {
               return Text(
                 'Qurani',
                 style: AppTypography.h2(
                   context,
-                  color: AppColors.primary,
+                  color: AppColors.getPrimary(context),
                   weight: AppTypography.bold,
                 ),
               );
@@ -322,7 +322,7 @@ class _LoginPageState extends State<LoginPage> {
             'Hafidz',
             style: AppTypography.label(
               context,
-              color: AppColors.primary,
+              color: AppColors.getPrimary(context),
               weight: AppTypography.semiBold,
             ).copyWith(letterSpacing: 2 * s),
           ),
@@ -534,7 +534,7 @@ class _LoginPageState extends State<LoginPage> {
           onPressed: () {
             // Handle forgot password
           },
-          color: AppColors.primary,
+          color: AppColors.getPrimary(context),
         ),
       ],
     );
@@ -542,50 +542,13 @@ class _LoginPageState extends State<LoginPage> {
 
   // ==================== LOGIN BUTTON ====================
   Widget _buildLoginButton(BuildContext context) {
-    // ✅ Disable only when email login is loading
-    final isDisabled = _isEmailLoginLoading;
-
-    return Container(
-      height: AppDesignSystem.scale(context, AppDesignSystem.buttonHeightLarge),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(
-          AppDesignSystem.radiusMedium *
-              AppDesignSystem.getScaleFactor(context),
-        ),
-        boxShadow: isDisabled
-            ? []
-            : [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.25),
-                  blurRadius: AppDesignSystem.scale(context, 12),
-                  offset: Offset(0, AppDesignSystem.scale(context, 4)),
-                ),
-              ],
-      ),
-      child: ElevatedButton(
-        onPressed: isDisabled ? null : _handleLogin,
-        style: AppComponentStyles.primaryButton(context),
-        child:
-            _isEmailLoginLoading // ✅ Only show loading for email login
-            ? SizedBox(
-                height: AppDesignSystem.scale(context, 20),
-                width: AppDesignSystem.scale(context, 20),
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.getTextInverse(context)),
-                ),
-              )
-            : Text(
-                _translations.isNotEmpty
-                    ? LanguageHelper.tr(_translations, 'login.login_text')
-                    : 'Login',
-                style: AppTypography.label(
-                  context,
-                  color: AppColors.getTextInverse(context),
-                  weight: AppTypography.semiBold,
-                ),
-              ),
-      ),
+    return AppButton(
+      text: _translations.isNotEmpty
+          ? LanguageHelper.tr(_translations, 'login.login_text')
+          : 'Login',
+      onPressed: _isEmailLoginLoading ? null : _handleLogin,
+      loading: _isEmailLoginLoading,
+      fullWidth: true,
     );
   }
 
@@ -639,9 +602,9 @@ class _LoginPageState extends State<LoginPage> {
             ? SizedBox(
                 height: AppDesignSystem.scale(context, 20),
                 width: AppDesignSystem.scale(context, 20),
-                child: const CircularProgressIndicator(
+                child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.getPrimary(context)),
                 ),
               )
             : Row(
@@ -701,7 +664,7 @@ class _LoginPageState extends State<LoginPage> {
               MaterialPageRoute(builder: (context) => const RegisterPage()),
             );
           },
-          color: AppColors.primary,
+          color: AppColors.getPrimary(context),
         ),
       ],
     );

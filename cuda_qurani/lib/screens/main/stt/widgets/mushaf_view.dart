@@ -144,18 +144,21 @@ class MushafDisplay extends StatefulWidget {
 class _MushafDisplayState extends State<MushafDisplay> {
   bool _isSwipeInProgress = false;
   double _dragStartPosition = 0;
+  bool _isUpdating = false; // ✅ FIX: Prevent concurrent updates
 
   @override
   Widget build(BuildContext context) {
     final controller = context.read<SttController>();
 
     return GestureDetector(
-      behavior: HitTestBehavior.opaque, // ✅ Detect gestures on empty space
+      behavior: HitTestBehavior.translucent, // ✅ FIX: Ganti dari opaque ke translucent
       onHorizontalDragStart: (details) {
+        if (!mounted) return; // ✅ FIX: Check mounted state
         _dragStartPosition = details.globalPosition.dx;
         _isSwipeInProgress = false;
       },
       onHorizontalDragUpdate: (details) {
+        if (!mounted) return; // ✅ FIX: Check mounted state
         // Detect significant horizontal movement
         final dragDistance = (details.globalPosition.dx - _dragStartPosition)
             .abs();
@@ -164,7 +167,7 @@ class _MushafDisplayState extends State<MushafDisplay> {
         }
       },
       onHorizontalDragEnd: (details) {
-        if (!_isSwipeInProgress) return;
+        if (!mounted || !_isSwipeInProgress) return; // ✅ FIX: Check mounted state
 
         final velocity = details.primaryVelocity ?? 0;
 
@@ -177,14 +180,18 @@ class _MushafDisplayState extends State<MushafDisplay> {
           controller.navigateToPage(controller.currentPage - 1);
         }
 
-        // Reset swipe state
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) {
-            setState(() {
-              _isSwipeInProgress = false;
-            });
-          }
-        });
+        // Reset swipe state dengan safety check dan debouncing
+        if (!_isUpdating) {
+          _isUpdating = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _isSwipeInProgress = false;
+                _isUpdating = false;
+              });
+            }
+          });
+        }
       },
       child: SizedBox.expand(
         // ✅ Fill entire screen for gesture detection
@@ -192,7 +199,10 @@ class _MushafDisplayState extends State<MushafDisplay> {
           // ✅ Allow scrolling if content exceeds screen
           physics:
               const NeverScrollableScrollPhysics(), // ✅ Disable scroll (only swipe)
-          child: _buildMushafPageOptimized(context),
+          child: RepaintBoundary(
+            // ✅ FIX: Isolate repaints to prevent MouseTracker conflicts
+            child: _buildMushafPageOptimized(context),
+          ),
         ),
       ),
     );
@@ -623,9 +633,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
 
     return Container(
       height: headerHeight,
-      color: AppColors.getBackground(
-        context,
-      ), // ✅ ADD: Background to blend when hidden
+      // ✅ FIX: Hapus background color sama sekali
       padding: EdgeInsets
           .zero, // ✅ CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
       alignment: Alignment.center,
@@ -636,7 +644,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             '$juzText ${context.formatNumber(juzNumber)}',
             style: TextStyle(
               fontSize: headerFontSize,
-              color: AppColors.getTextSecondary(context),
+              color: Colors.white.withOpacity(0.8), // ✅ FIX: Putih terang untuk kontras maksimal
               fontWeight: FontWeight.w500,
             ),
             textDirection: TextDirection.rtl,
@@ -694,7 +702,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             '${context.formatNumber(controller.currentPage)}',
             style: TextStyle(
               fontSize: headerFontSize,
-              color: AppColors.getTextSecondary(context),
+              color: Colors.white.withOpacity(0.8), // ✅ FIX: Putih terang untuk kontras maksimal
               fontWeight: FontWeight.w500,
             ),
           ),

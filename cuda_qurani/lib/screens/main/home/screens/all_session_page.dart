@@ -90,7 +90,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.getBackgroundLight(context),
+      backgroundColor: AppColors.getBackground(context),
       appBar: ProfileAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'home.session.session_text')
@@ -98,7 +98,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(child: CircularProgressIndicator(color: AppColors.getPrimary(context)))
             : _buildBody(context),
       ),
     );
@@ -155,7 +155,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
         : 'SESSIONS';
     return Text(
       '${context.formatNumber(_sessions.length)} $headerText',
-      style: AppTypography.overline(context, color: AppColors.textTertiary),
+      style: AppTypography.overline(context, color: AppColors.getTextTertiary(context)),
     );
   }
 
@@ -176,7 +176,8 @@ class _AllSessionPageState extends State<AllSessionPage> {
             AppDesignSystem.space12 * AppDesignSystem.getScaleFactor(context),
           ),
           decoration: AppComponentStyles.card(
-            borderColor: AppColors.borderLight,
+            color: AppColors.getSurface(context),
+            borderColor: AppColors.getBorderLight(context),
             shadow: false,
           ),
           child: Column(
@@ -187,7 +188,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
                 _getSessionTypeLabel(session.type).toUpperCase(),
                 style: AppTypography.captionSmall(
                   context,
-                  color: AppColors.textDisabled,
+                  color: AppColors.getTextDisabled(context),
                   weight: AppTypography.semiBold,
                 ),
               ),
@@ -206,7 +207,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
                     width: 36 * AppDesignSystem.getScaleFactor(context),
                     height: 36 * AppDesignSystem.getScaleFactor(context),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLowest,
+                      color: AppColors.getSurfaceContainerLowest(context),
                       borderRadius: BorderRadius.circular(
                         AppDesignSystem.radiusSmall,
                       ),
@@ -214,7 +215,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
                     child: Icon(
                       _getSessionIcon(session.type),
                       size: AppDesignSystem.iconMedium,
-                      color: AppColors.primary,
+                      color: AppColors.getPrimary(context),
                     ),
                   ),
 
@@ -258,7 +259,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
         // Surah Name (smaller)
         Text(
           session.surah,
-          style: AppTypography.title(context, weight: AppTypography.semiBold),
+          style: AppTypography.title(context, weight: AppTypography.semiBold, color: AppColors.getTextPrimary(context)),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -273,7 +274,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
           children: [
             Text(
               _formatDurationWithContext(context, session.duration),
-              style: AppTypography.captionSmall(context),
+              style: AppTypography.captionSmall(context, color: AppColors.getTextSecondary(context)),
             ),
 
             // Separator Dot
@@ -285,15 +286,15 @@ class _AllSessionPageState extends State<AllSessionPage> {
               ),
               width: AppDesignSystem.space2,
               height: AppDesignSystem.space2,
-              decoration: const BoxDecoration(
-                color: AppColors.borderDark,
+              decoration: BoxDecoration(
+                color: AppColors.getBorderDark(context),
                 shape: BoxShape.circle,
               ),
             ),
 
             Text(
               '${context.formatNumber(session.verses)} $versesText',
-              style: AppTypography.captionSmall(context),
+              style: AppTypography.captionSmall(context, color: AppColors.getTextSecondary(context)),
             ),
           ],
         ),
@@ -311,7 +312,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
             '${_formatDisplayDate(context, session.displayDate)} ${_formatDisplayTime(context, session.displayTime)}',
             style: AppTypography.captionSmall(
               context,
-              color: AppColors.textDisabled,
+              color: AppColors.getTextDisabled(context),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -359,7 +360,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
                 continueText,
                 style: AppTypography.captionSmall(
                   context,
-                  color: AppColors.primary,
+                  color: AppColors.getPrimary(context),
                   weight: AppTypography.semiBold,
                 ),
               ),
@@ -371,7 +372,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
               Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: AppDesignSystem.iconXSmall,
-                color: AppColors.primary,
+                color: AppColors.getPrimary(context),
               ),
             ],
           ),
@@ -435,14 +436,14 @@ class _AllSessionPageState extends State<AllSessionPage> {
     }
   }
 
-  Color _getTypeColor(SessionType type) {
+  Color _getTypeColor(BuildContext context, SessionType type) {
     switch (type) {
       case SessionType.reading:
-        return AppColors.primary;
+        return AppColors.getPrimary(context);
       case SessionType.memorization:
-        return AppColors.secondary;
+        return AppColors.getSecondary(context);
       case SessionType.revision:
-        return AppColors.accent;
+        return AppColors.getPrimary(context); // Using primary since accent getter might not exist
     }
   }
 

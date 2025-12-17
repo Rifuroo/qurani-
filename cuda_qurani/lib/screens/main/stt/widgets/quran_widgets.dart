@@ -47,9 +47,13 @@ class _QuranAppBarState extends State<QuranAppBar> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(
+        backgroundColor: AppColors.getSurface(context),
+        title: Text(
           'Select Mushaf Layout',
-          style: TextStyle(fontSize: 16),
+          style: TextStyle(
+            fontSize: 16,
+            color: AppColors.getTextPrimary(context),
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -58,11 +62,14 @@ class _QuranAppBarState extends State<QuranAppBar> {
             return RadioListTile<MushafLayout>(
               title: Text(
                 '${layout.displayName} (${layout.totalPages} pages)',
-                style: const TextStyle(fontSize: 14),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.getTextPrimary(context),
+                ),
               ),
               subtitle: Text(
                 layout.isGlyphBased ? 'Glyph-based fonts' : 'Single font',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 12, color: AppColors.getTextSecondary(context)),
               ),
               value: layout,
               groupValue: controller.mushafLayout,
@@ -79,7 +86,10 @@ class _QuranAppBarState extends State<QuranAppBar> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.getTextPrimary(context)),
+            ),
           ),
         ],
       ),
@@ -146,11 +156,15 @@ class _QuranAppBarState extends State<QuranAppBar> {
       child: IgnorePointer(
         ignoring: !controller.isUIVisible,
         child: AppBar(
-          backgroundColor: getPrimaryColor(context),
-          foregroundColor: AppColors.textInverse,
+          backgroundColor: AppColors.getSurfaceContainerHigh(context),
+          foregroundColor: AppColors.getTextPrimary(context),
           toolbarHeight: kToolbarHeight * 0.80,
           leading: IconButton(
-            icon: Icon(Icons.menu, size: iconSize * 120 / 100),
+            icon: Icon(
+              Icons.menu, 
+              size: iconSize * 120 / 100,
+              color: AppColors.getTextPrimary(context),
+            ),
             onPressed: () {
               Navigator.pop(context);
             },
@@ -177,7 +191,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                       style: TextStyle(
                         fontSize: titleSize,
                         fontWeight: FontWeight.w400,
-                        color: AppColors.textInverse.withOpacity(0.9),
+                        color: AppColors.getTextPrimary(context).withOpacity(0.9),
                         height: 1.1,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -189,7 +203,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                   Container(
                     width: 1,
                     height: screenHeight * 0.016,
-                    color: AppColors.textInverse.withOpacity(0.3),
+                    color: AppColors.getTextSecondary(context).withOpacity(0.3),
                   ),
                   SizedBox(width: screenWidth * 0.015),
                   // Juz Badge
@@ -198,7 +212,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     style: TextStyle(
                       fontSize: badgeSize,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.getTextInverse(context).withOpacity(0.9),
+                      color: AppColors.getTextPrimary(context).withOpacity(0.9),
                       height: 1.1,
                     ),
                   ),
@@ -208,7 +222,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                   Container(
                     width: 1,
                     height: screenHeight * 0.016,
-                    color: AppColors.textInverse.withOpacity(0.3),
+                    color: AppColors.getTextSecondary(context).withOpacity(0.3),
                   ),
                   SizedBox(width: screenWidth * 0.015),
                   // Page Number
@@ -217,7 +231,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     style: TextStyle(
                       fontSize: subtitleSize,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.getTextInverse(context).withOpacity(0.9),
+                      color: AppColors.getTextPrimary(context).withOpacity(0.9),
                       height: 1.1,
                     ),
                   ),
@@ -235,6 +249,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     ? Icons.vertical_split
                     : Icons.auto_stories,
                 size: iconSize * 0.9,
+                color: AppColors.getTextPrimary(context),
               ),
               onPressed: () async {
                 // ✅ FIX: Await toggle completion
@@ -258,6 +273,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
                     ? Icons.visibility
                     : Icons.visibility_off,
                 size: iconSize * 0.9,
+                color: AppColors.getTextPrimary(context),
               ),
               onPressed: controller.toggleHideUnread,
               splashRadius: iconSize * 1.1,
@@ -297,12 +313,20 @@ class _QuranAppBarState extends State<QuranAppBar> {
                   transitionDuration: AppDesignSystem.durationNormal,
                 ),
               ), // dikosongin
-              icon: Icon(Icons.settings, size: iconSize * 0.9),
+              icon: Icon(
+                Icons.settings, 
+                size: iconSize * 0.9,
+                color: AppColors.getTextPrimary(context),
+              ),
               splashRadius: iconSize * 1.1,
             ),
             SizedBox(width: screenWidth * 0.01),
             IconButton(
-              icon: const Icon(Icons.book_outlined, size: 20),
+              icon: Icon(
+                Icons.book_outlined, 
+                size: 20,
+                color: AppColors.getTextPrimary(context),
+              ),
               onPressed: () => _showLayoutPicker(context),
               tooltip: 'Mushaf Layout',
             ),
@@ -435,7 +459,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('$e'),
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.getError(context),
                 duration: const Duration(seconds: 5),
               ),
             );
@@ -557,7 +581,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                   size: iconSize * 0.9,
                                   color: isListeningActive
                                       ? getPrimaryColor(context)
-                                      : AppColors.getTextSecondary(context),
+                                      : Colors.white.withOpacity(0.9),
                                 ),
                                 SizedBox(width: 6),
                                 Text(
@@ -572,7 +596,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                     fontWeight: FontWeight.w600,
                                     color: isListeningActive
                                         ? getPrimaryColor(context)
-                                        : AppColors.getTextSecondary(context),
+                                        : Colors.white.withOpacity(0.9),
                                   ),
                                 ),
                               ],
@@ -600,7 +624,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                     fontWeight: FontWeight.w600,
                                     color: isRecordingActive
                                         ? getErrorColor(context)
-                                        : AppColors.getTextSecondary(context),
+                                        : Colors.white.withOpacity(0.9),
                                   ),
                                 ),
                                 SizedBox(width: 6),
@@ -608,8 +632,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                   Icons.mic_rounded,
                                   size: iconSize * 0.9,
                                   color: isRecordingActive
-                                      ? errorColor
-                                      : AppColors.getTextSecondary(context),
+                                      ? getErrorColor(context)
+                                      : Colors.white.withOpacity(0.9),
                                 ),
                               ],
                             ),
@@ -678,7 +702,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                         key: ValueKey(
                                           'icon_${icon.codePoint}_${isListeningActive}_${isRecordingActive}_${isPaused}_${_dragPosition.toStringAsFixed(1)}',
                                         ), // ✅ Key yang unik termasuk icon codePoint untuk memastikan perubahan terdeteksi
-                                        color: AppColors.textInverse,
+                                        color: AppColors.getTextInverse(context),
                                         size: iconSize,
                                       );
                                     },
@@ -826,6 +850,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
 
     return Icons.code;
   }
+
+
 }
 
 class QuranLoadingWidget extends StatelessWidget {
@@ -855,7 +881,7 @@ class QuranLoadingWidget extends StatelessWidget {
             ),
             child: Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.textInverse),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.getTextInverse(context)),
                 strokeWidth: 2,
               ),
             ),
@@ -1032,26 +1058,26 @@ class QuranLogsPanel extends StatelessWidget {
                 Text(
                   'API Debug Console',
                   style: TextStyle(
-                    color: AppColors.textInverse,
+                    color: AppColors.getTextInverse(context),
                     fontWeight: FontWeight.bold,
                     fontSize: titleSize,
                   ),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: Icon(Icons.clear, color: AppColors.textInverse, size: iconSize),
+                  icon: Icon(Icons.clear, color: AppColors.getTextInverse(context), size: iconSize),
                   onPressed: controller.clearLogs,
                 ),
                 IconButton(
                   icon: Icon(
                     Icons.save_alt,
-                    color: AppColors.textInverse,
+                    color: AppColors.getTextInverse(context),
                     size: iconSize,
                   ),
                   onPressed: () => controller.exportSession(context),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, color: AppColors.textInverse, size: iconSize),
+                  icon: Icon(Icons.close, color: AppColors.getTextInverse(context), size: iconSize),
                   onPressed: controller.toggleLogs,
                 ),
               ],
@@ -1068,13 +1094,13 @@ class QuranLogsPanel extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final logIndex = logs.length - 1 - index;
                     final log = logs[logIndex];
-                    Color logColor = Colors.greenAccent;
+                    Color logColor = AppColors.getSuccess(context);
                     if (log.contains('ERROR') || log.contains('Failed'))
-                      logColor = Colors.redAccent;
+                      logColor = AppColors.getError(context);
                     else if (log.contains('WARNING') || log.contains('Warning'))
-                      logColor = Colors.orangeAccent;
+                      logColor = AppColors.getWarning(context);
                     else if (log.contains('API_') || log.contains('WEBSOCKET'))
-                      logColor = Colors.cyanAccent;
+                      logColor = AppColors.getInfo(context);
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 1),
                       child: Text(
@@ -1119,6 +1145,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
     barrierDismissible: false,
     builder: (BuildContext context) {
       return AlertDialog(
+        backgroundColor: AppColors.getSurface(context),
         title: Row(
           children: [
             Icon(Icons.celebration, color: getCorrectColor(context), size: iconSize),
@@ -1192,7 +1219,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
               Navigator.of(context).pop();
             },
             style: ElevatedButton.styleFrom(backgroundColor: getPrimaryColor(context)),
-            child: Text('Finish', style: TextStyle(color: AppColors.textInverse)),
+            child: Text('Finish', style: TextStyle(color: AppColors.getTextInverse(context))),
           ),
         ],
       );
@@ -1221,7 +1248,7 @@ Widget _buildStatItem(
           style: TextStyle(
             fontSize: valueSize,
             fontWeight: FontWeight.bold,
-            color: primaryColor,
+            color: getPrimaryColor(context),
           ),
         ),
       ],

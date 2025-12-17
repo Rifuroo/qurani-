@@ -1314,8 +1314,8 @@ class AppComponentStyles {
   static ButtonStyle primaryButton(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
     return ElevatedButton.styleFrom(
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.getPrimary(context),
+      foregroundColor: AppColors.getTextInverse(context),
       elevation: 0,
       shadowColor: Colors.transparent,
       padding: EdgeInsets.symmetric(
@@ -1325,7 +1325,7 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
       ),
-      textStyle: AppTypography.label(context, color: Colors.white, weight: AppTypography.semiBold),
+      textStyle: AppTypography.label(context, color: AppColors.getTextInverse(context), weight: AppTypography.semiBold),
     );
   }
 
@@ -1333,10 +1333,10 @@ class AppComponentStyles {
   static ButtonStyle secondaryButton(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
     return OutlinedButton.styleFrom(
-      foregroundColor: AppColors.primary,
+      foregroundColor: AppColors.getPrimary(context),
       backgroundColor: Colors.transparent,
       elevation: 0,
-      side: BorderSide(color: AppColors.primary, width: 1.5 * s),
+      side: BorderSide(color: AppColors.getPrimary(context), width: 1.5 * s),
       padding: EdgeInsets.symmetric(
         horizontal: AppDesignSystem.space24 * s,
         vertical: AppDesignSystem.space16 * s,
@@ -1344,7 +1344,7 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
       ),
-      textStyle: AppTypography.label(context, color: AppColors.primary, weight: AppTypography.semiBold),
+      textStyle: AppTypography.label(context, color: AppColors.getPrimary(context), weight: AppTypography.semiBold),
     );
   }
 
@@ -1352,7 +1352,7 @@ class AppComponentStyles {
   static ButtonStyle textButton(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextButton.styleFrom(
-      foregroundColor: AppColors.primary,
+      foregroundColor: AppColors.getPrimary(context),
       backgroundColor: Colors.transparent,
       elevation: 0,
       padding: EdgeInsets.symmetric(
@@ -1362,7 +1362,7 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
       ),
-      textStyle: AppTypography.label(context, color: AppColors.primary, weight: AppTypography.semiBold),
+      textStyle: AppTypography.label(context, color: AppColors.getPrimary(context), weight: AppTypography.semiBold),
     );
   }
 
@@ -1370,8 +1370,8 @@ class AppComponentStyles {
   static ButtonStyle smallButton(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
     return ElevatedButton.styleFrom(
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.getPrimary(context),
+      foregroundColor: AppColors.getTextInverse(context),
       elevation: 0,
       padding: EdgeInsets.symmetric(
         horizontal: AppDesignSystem.space16 * s,
@@ -1381,7 +1381,7 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
       ),
-      textStyle: AppTypography.labelSmall(context, color: Colors.white, weight: AppTypography.semiBold),
+      textStyle: AppTypography.labelSmall(context, color: AppColors.getTextInverse(context), weight: AppTypography.semiBold),
     );
   }
 
@@ -1416,12 +1416,12 @@ class AppComponentStyles {
     return InputDecoration(
       hintText: hintText,
       labelText: labelText,
-      hintStyle: AppTypography.body(context, color: AppColors.textHint),
-      labelStyle: AppTypography.body(context, color: AppColors.textTertiary),
+      hintStyle: AppTypography.body(context, color: AppColors.getTextHint(context)),
+      labelStyle: AppTypography.body(context, color: AppColors.getTextTertiary(context)),
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       filled: filled,
-      fillColor: fillColor ?? AppColors.surfaceContainerLowest,
+      fillColor: fillColor ?? AppColors.getSurfaceContainerLowest(context),
       contentPadding: EdgeInsets.symmetric(
         horizontal: AppDesignSystem.space16 * s,
         vertical: AppDesignSystem.space12 * s,
@@ -1429,35 +1429,35 @@ class AppComponentStyles {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
         borderSide: BorderSide(
-          color: borderColor ?? AppColors.borderMedium,
+          color: borderColor ?? AppColors.getBorderLight(context),
           width: 1.0 * s,
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
         borderSide: BorderSide(
-          color: borderColor ?? Colors.transparent,
+          color: borderColor ?? AppColors.getBorderLight(context),
           width: 1.0 * s,
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
         borderSide: BorderSide(
-          color: error ? AppColors.error : AppColors.borderFocus,
+          color: error ? AppColors.getError(context) : AppColors.getBorderFocus(context),
           width: 1.5 * s,
         ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
         borderSide: BorderSide(
-          color: AppColors.borderError,
+          color: AppColors.getBorderError(context),
           width: 1.5 * s,
         ),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
         borderSide: BorderSide(
-          color: AppColors.error,
+          color: AppColors.getError(context),
           width: 2.0 * s,
         ),
       ),
@@ -1470,10 +1470,11 @@ class AppComponentStyles {
   static SnackBar successSnackBar({
     required String message,
     Duration? duration,
+    BuildContext? context,
   }) {
     return SnackBar(
       content: Text(message),
-      backgroundColor: AppColors.success,
+      backgroundColor: context != null ? AppColors.getSuccess(context) : AppColors.success,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall),
@@ -1486,10 +1487,11 @@ class AppComponentStyles {
   static SnackBar errorSnackBar({
     required String message,
     Duration? duration,
+    BuildContext? context,
   }) {
     return SnackBar(
       content: Text(message),
-      backgroundColor: AppColors.error,
+      backgroundColor: context != null ? AppColors.getError(context) : AppColors.error,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall),
@@ -1502,10 +1504,11 @@ class AppComponentStyles {
   static SnackBar infoSnackBar({
     required String message,
     Duration? duration,
+    BuildContext? context,
   }) {
     return SnackBar(
       content: Text(message),
-      backgroundColor: AppColors.info,
+      backgroundColor: context != null ? AppColors.getInfo(context) : AppColors.info,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall),

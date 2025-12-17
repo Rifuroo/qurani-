@@ -152,7 +152,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 style: TextStyle(
                   fontFamily: 'surah_names',
                   fontSize: 90 * s,
-                  color: AppColors.primary,
+                  color: AppColors.getPrimary(context),
                   height: 1.0,
                 ),
               ),
@@ -162,13 +162,13 @@ class _RegisterPageState extends State<RegisterPage> {
           Image.asset(
             'assets/images/qurani-white-text.png',
             height: 28 * s,
-            color: AppColors.primary,
+            color: AppColors.getPrimary(context),
             errorBuilder: (context, error, stackTrace) {
               return Text(
                 'Qurani',
                 style: AppTypography.h2(
                   context,
-                  color: AppColors.primary,
+                  color: AppColors.getPrimary(context),
                   weight: AppTypography.bold,
                 ),
               );
@@ -179,7 +179,7 @@ class _RegisterPageState extends State<RegisterPage> {
             'Hafidz',
             style: AppTypography.label(
               context,
-              color: AppColors.primary,
+              color: AppColors.getPrimary(context),
               weight: AppTypography.semiBold,
             ).copyWith(letterSpacing: 2 * s),
           ),
@@ -399,16 +399,17 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _buildTermsCheckbox(double s) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(
-          height: 20 * s,
-          width: 20 * s,
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        margin: EdgeInsets.only(top: 2 * s),
+        child: SizedBox(
+          height: 18 * s,
+          width: 18 * s,
           child: Checkbox(
             value: _agreeToTerms,
-            onChanged: (value) =>
-                setState(() => _agreeToTerms = value ?? false),
+            onChanged: (value) => setState(() => _agreeToTerms = value ?? false),
             fillColor: WidgetStateProperty.resolveWith<Color?>(
               (Set<WidgetState> states) {
                 if (states.contains(WidgetState.selected)) {
@@ -418,90 +419,82 @@ class _RegisterPageState extends State<RegisterPage> {
               },
             ),
             checkColor: AppColors.getTextInverse(context),
+            side: WidgetStateBorderSide.resolveWith(
+              (Set<WidgetState> states) {
+                if (states.contains(WidgetState.selected)) {
+                  return BorderSide(
+                    color: AppColors.getPrimary(context),
+                    width: 2.0,
+                  );
+                }
+                return BorderSide(
+                  color: AppColors.getBorderMedium(context),
+                  width: 1.5,
+                );
+              },
+            ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4 * s),
+              borderRadius: BorderRadius.circular(3 * s),
             ),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             visualDensity: VisualDensity.compact,
           ),
         ),
-        SizedBox(width: AppDesignSystem.space12 * s),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: AppTypography.bodySmall(
-                context,
-                color: AppColors.getTextSecondary(context),
-              ),
-              children: [
-                TextSpan(
-                  text: _translations.isNotEmpty
-                      ? LanguageHelper.tr(
-                          _translations,
-                          'register.agreement_text',
-                        )
-                      : 'I Agree to the',
-                ),
-                WidgetSpan(
-                  alignment: PlaceholderAlignment.baseline,
-                  baseline: TextBaseline.alphabetic,
-                  child: GestureDetector(
-                    onTap: () {},
-                    child: Text(
-                      _translations.isNotEmpty
-                          ? LanguageHelper.tr(
-                              _translations,
-                              'register.terms_and_conditions_text',
-                            )
-                          : 'Terms and Conditions',
-                      style:
-                          AppTypography.bodySmall(
-                            context,
-                            color: AppColors.primary,
-                            weight: AppTypography.semiBold,
-                          ).copyWith(
-                            decoration: TextDecoration.underline,
-                            decorationColor: AppColors.primary,
-                          ),
-                    ),
-                  ),
-                ),
-                TextSpan(
-                  text: _translations.isNotEmpty
-                      ? LanguageHelper.tr(_translations, 'register.and_text')
-                      : 'and',
-                ),
-                WidgetSpan(
-                  alignment: PlaceholderAlignment.baseline,
-                  baseline: TextBaseline.alphabetic,
-                  child: GestureDetector(
-                    onTap: () {},
-                    child: Text(
-                      _translations.isNotEmpty
-                          ? LanguageHelper.tr(
-                              _translations,
-                              'register.privacy_policy_text',
-                            )
-                          : 'Privacy Policy',
-                      style:
-                          AppTypography.bodySmall(
-                            context,
-                            color: AppColors.primary,
-                            weight: AppTypography.semiBold,
-                          ).copyWith(
-                            decoration: TextDecoration.underline,
-                            decorationColor: AppColors.primary,
-                          ),
-                    ),
-                  ),
-                ),
-              ],
+      ),
+      SizedBox(width: AppDesignSystem.space10 * s),
+      Expanded(
+        child: Text.rich(
+          TextSpan(
+            style: AppTypography.body(
+              context,
+              color: AppColors.getTextSecondary(context),
             ),
+            children: [
+              TextSpan(
+                text: (_translations.isNotEmpty
+                        ? LanguageHelper.tr(_translations, 'register.agreement_text')
+                        : 'I agree to the ')
+                    .trimRight(),
+              ),
+              const TextSpan(text: ' '),
+              TextSpan(
+                text: (_translations.isNotEmpty
+                        ? LanguageHelper.tr(_translations, 'register.terms_and_conditions_text')
+                        : 'Terms and Conditions')
+                    .trimRight(),
+                style: TextStyle(
+                  color: AppColors.getPrimary(context),
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                  decorationColor: AppColors.getPrimary(context),
+                ),
+              ),
+              const TextSpan(text: ' '),
+              TextSpan(
+                text: (_translations.isNotEmpty
+                        ? LanguageHelper.tr(_translations, 'register.and_text')
+                        : 'and')
+                    .trim(),
+              ),
+              const TextSpan(text: ' '),
+              TextSpan(
+                text: _translations.isNotEmpty
+                    ? LanguageHelper.tr(_translations, 'register.privacy_policy_text')
+                    : 'Privacy Policy',
+                style: TextStyle(
+                  color: AppColors.getPrimary(context),
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                  decorationColor: AppColors.getPrimary(context),
+                ),
+              ),
+            ],
           ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   Widget _buildRegisterButton() {
     return Consumer<AuthProvider>(
@@ -538,7 +531,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ? LanguageHelper.tr(_translations, 'login.login_text')
               : 'Login',
           onPressed: () => Navigator.of(context).pop(),
-          color: AppColors.primary,
+          color: AppColors.getPrimary(context),
         ),
       ],
     );
