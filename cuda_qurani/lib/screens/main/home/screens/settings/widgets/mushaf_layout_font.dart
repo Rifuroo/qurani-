@@ -13,6 +13,7 @@ import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.da
 import 'package:path/path.dart' as path_helper;
 import 'package:sqflite/sqflite.dart';
 import 'package:cuda_qurani/core/services/language_service.dart';
+import 'package:restart_app/restart_app.dart';
 
 class MushafLayoutFontPage extends StatefulWidget {
   const MushafLayoutFontPage({Key? key}) : super(key: key);
@@ -115,8 +116,8 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (_) => AbsorbPointer(
-            absorbing: true,
+          builder: (_) => WillPopScope(
+            onWillPop: () async => false, // Prevent back button
             child: Center(
               child: Card(
                 child: Padding(
@@ -127,6 +128,11 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                       CircularProgressIndicator(),
                       SizedBox(height: 16),
                       Text('Switching layout...'),
+                      SizedBox(height: 8),
+                      Text(
+                        'App will restart',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                     ],
                   ),
                 ),
@@ -168,33 +174,24 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
           print('   Deleted: qudratullah-indopak-15-lines.db');
         }
       } catch (e) {
-        print('⚠️ Error deleting databases: $e');
+        print('⚠️ Error deleting databases: <span class="hljs-subst">$e');
         // Continue anyway
       }
 
-      // ✅ STEP 6: Save to SharedPreferences
+      // ✅ STEP 6: Save to SharedPreferences (HARUS sebelum restart)
       await _settingsService.setMushafLayout(newLayout);
+      print(
+        '✅ Layout preference saved: <span class="hljs-subst">${newLayout.displayName}',
+      );
 
-      // ✅ STEP 7: Rebuild metadata cache for new layout (ONLY ONCE HERE)
-      print('🔄 Rebuilding metadata cache for ${newLayout.displayName}...');
-      await _metadataCache.rebuildForLayout(newLayout);
+      // ✅ STEP 7: Wait a bit to ensure SharedPreferences is written to disk
+      await Future.delayed(const Duration(milliseconds: 500));
 
-      // ✅ STEP 8: Update UI state
-      if (mounted) {
-        setState(() {
-          _selectedLayout = newLayout;
-          _isSaving = false;
-        });
-      }
-
-      // ✅ STEP 9: Close loading dialog
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
-
-      print('✅ Layout saved: ${newLayout.displayName}');
+      // ✅ STEP 8: Restart aplikasi (ini akan clear SEMUA cache termasuk font)
+      print('🔄 Restarting app to clear all caches...');
+      Restart.restartApp();
     } catch (e) {
-      print('❌ Failed to save layout: $e');
+      print('❌ Failed to save layout: <span class="hljs-subst">$e');
 
       // Close loading dialog if open
       if (mounted) {
@@ -212,7 +209,9 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to change layout: $e'),
+            content: Text(
+              'Failed to change layout: <span class="hljs-subst">$e',
+            ),
             backgroundColor: AppColors.error,
             duration: const Duration(seconds: 3),
           ),
@@ -553,8 +552,8 @@ class _OptimizedMushafPreview extends StatelessWidget {
                 Text(
                   'Preview not available',
                   style: TextStyle(
-                    color: AppColors.getTextSecondary(context), 
-                    fontSize: 12
+                    color: AppColors.getTextSecondary(context),
+                    fontSize: 12,
                   ),
                 ),
               ],
