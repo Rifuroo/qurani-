@@ -151,7 +151,8 @@ class _MushafDisplayState extends State<MushafDisplay> {
     final controller = context.read<SttController>();
 
     return GestureDetector(
-      behavior: HitTestBehavior.translucent, // ✅ FIX: Ganti dari opaque ke translucent
+      behavior: HitTestBehavior
+          .translucent, // ✅ FIX: Ganti dari opaque ke translucent
       onHorizontalDragStart: (details) {
         if (!mounted) return; // ✅ FIX: Check mounted state
         _dragStartPosition = details.globalPosition.dx;
@@ -167,7 +168,8 @@ class _MushafDisplayState extends State<MushafDisplay> {
         }
       },
       onHorizontalDragEnd: (details) {
-        if (!mounted || !_isSwipeInProgress) return; // ✅ FIX: Check mounted state
+        if (!mounted || !_isSwipeInProgress)
+          return; // ✅ FIX: Check mounted state
 
         final velocity = details.primaryVelocity ?? 0;
 
@@ -396,6 +398,9 @@ class _BasmallahLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final basmallahSize = screenHeight * 0.040;
+    final controller = context.watch<SttController>();
+    final isIndopakFontFamily = controller.mushafLayout == MushafLayout.indopak;
+    final isIndopakFontSize = controller.mushafLayout == MushafLayout.indopak;
 
     return Container(
       height: MushafRenderer.lineHeight(context),
@@ -403,8 +408,8 @@ class _BasmallahLine extends StatelessWidget {
       child: Text(
         '﷽',
         style: TextStyle(
-          fontSize: basmallahSize,
-          fontFamily: 'Quran-Common',
+          fontSize: isIndopakFontSize ? basmallahSize * 0.85 : basmallahSize,
+          fontFamily: isIndopakFontFamily ? 'IndoPak-Nastaleeq' : 'Quran-Common',
           color: AppColors.getTextPrimary(context),
           fontWeight: FontWeight.normal,
         ),
@@ -557,7 +562,7 @@ class _JustifiedAyahLine extends StatelessWidget {
       }
     }
 
-// ✅ Build line widget
+    // ✅ Build line widget
     final lineWidget = MushafRenderer.renderJustifiedLine(
       wordSpans: spans,
       isCentered: line.isCentered,
@@ -574,20 +579,17 @@ class _JustifiedAyahLine extends StatelessWidget {
         child: lineWidget,
       );
     }
-    
+
     return lineWidget;
   }
-    
-  }
+}
 
-  
-
-  // Methods tetap sama
-  Color _getWordColor(bool isCurrentWord, BuildContext context) {
-    return isCurrentWord
-        ? getListeningColor(context)
-        : AppColors.getTextPrimary(context);
-  }
+// Methods tetap sama
+Color _getWordColor(bool isCurrentWord, BuildContext context) {
+  return isCurrentWord
+      ? getListeningColor(context)
+      : AppColors.getTextPrimary(context);
+}
 
 class MushafPageHeader extends StatefulWidget {
   const MushafPageHeader({super.key});
@@ -634,8 +636,9 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
     return Container(
       height: headerHeight,
       // ✅ FIX: Hapus background color sama sekali
-      padding: EdgeInsets
-          .zero, // ✅ CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * 0.030,
+      ), // ✅ CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
       alignment: Alignment.center,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -644,7 +647,9 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             '$juzText ${context.formatNumber(juzNumber)}',
             style: TextStyle(
               fontSize: headerFontSize,
-              color: Colors.white.withOpacity(0.8), // ✅ FIX: Putih terang untuk kontras maksimal
+              color: Colors.black.withOpacity(
+                0.8,
+              ), // ✅ FIX: Putih terang untuk kontras maksimal
               fontWeight: FontWeight.w500,
             ),
             textDirection: TextDirection.rtl,
@@ -702,7 +707,9 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             '${context.formatNumber(controller.currentPage)}',
             style: TextStyle(
               fontSize: headerFontSize,
-              color: Colors.white.withOpacity(0.8), // ✅ FIX: Putih terang untuk kontras maksimal
+              color: Colors.black.withOpacity(
+                0.8,
+              ), // ✅ FIX: Putih terang untuk kontras maksimal
               fontWeight: FontWeight.w500,
             ),
           ),
