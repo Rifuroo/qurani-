@@ -409,7 +409,9 @@ class _BasmallahLine extends StatelessWidget {
         '﷽',
         style: TextStyle(
           fontSize: isIndopakFontSize ? basmallahSize * 0.85 : basmallahSize,
-          fontFamily: isIndopakFontFamily ? 'IndoPak-Nastaleeq' : 'Quran-Common',
+          fontFamily: isIndopakFontFamily
+              ? 'IndoPak-Nastaleeq'
+              : 'Quran-Common',
           color: AppColors.getTextPrimary(context),
           fontWeight: FontWeight.normal,
         ),

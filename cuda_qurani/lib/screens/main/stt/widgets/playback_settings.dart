@@ -4,6 +4,7 @@ import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/models/playback_settings_model.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/submenu/reciters_download.dart';
+import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:cuda_qurani/services/reciter_manager_services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -139,9 +140,13 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
     try {
       print('🎯 Auto-filling range from page $pageNumber...');
 
-      // Get ayah range using new word_id mapping method
+      // ✅ FIX: Get current layout first
+      final currentLayout = await MushafSettingsService().getMushafLayout();
+
+      // ✅ FIX: Pass layout as second parameter
       final ayahRange = await LocalDatabaseService.getAyahRangeInPage(
         pageNumber,
+        currentLayout, // ✅ ADD: Pass layout parameter
       );
 
       final firstSurah = ayahRange['firstSurah'] as int;
@@ -751,7 +756,9 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
       return Scaffold(
         backgroundColor: AppColors.getBackground(context),
         body: Center(
-          child: CircularProgressIndicator(color: AppColors.getTextPrimary(context)),
+          child: CircularProgressIndicator(
+            color: AppColors.getTextPrimary(context),
+          ),
         ),
       );
     }
@@ -787,7 +794,10 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
                       AppHaptics.light();
                       Navigator.pop(context);
                     },
-                    icon: Icon(Icons.close, color: AppColors.getTextSecondary(context)),
+                    icon: Icon(
+                      Icons.close,
+                      color: AppColors.getTextSecondary(context),
+                    ),
                     splashRadius: 20 * s,
                   ),
                 ],
@@ -946,6 +956,3 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
     );
   }
 }
-
-
-

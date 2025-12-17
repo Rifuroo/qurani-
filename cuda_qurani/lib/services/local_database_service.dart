@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
+import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
@@ -31,12 +32,27 @@ class LocalDatabaseService {
   }
 
   /// ✅ NEW: Get first and last ayah in a page using word_id mapping
-  static Future<Map<String, dynamic>> getAyahRangeInPage(int pageNumber) async {
+  static Future<Map<String, dynamic>> getAyahRangeInPage(
+    int pageNumber,
+    MushafLayout layout, // ✅ ADD: Pass layout as parameter
+  ) async {
     await _ensureInitialized();
 
     try {
       final databasesPath = await getDatabasesPath();
-      final pagesPath = join(databasesPath, 'qpc-v1-15-lines.db');
+
+      // ✅ Use passed layout parameter instead of controller
+      final String dbFileName;
+      switch (layout) {
+        case MushafLayout.qpc:
+          dbFileName = 'qpc-v1-15-lines.db';
+          break;
+        case MushafLayout.indopak:
+          dbFileName = 'qudratullah-indopak-15-lines.db';
+          break;
+      }
+
+      final pagesPath = join(databasesPath, dbFileName);
 
       // 1. Open pages database
       final pagesDb = await openDatabase(pagesPath, readOnly: true);
@@ -410,11 +426,11 @@ class LocalDatabaseService {
 
       // Query pages database to find page containing this word
       final databasesPath = await getDatabasesPath();
-      
+
       // ✅ FIX: Get current layout to determine which DB to use
       final currentLayout = await MushafSettingsService().getMushafLayout();
       final String dbFileName;
-      
+
       switch (currentLayout) {
         case MushafLayout.qpc:
           dbFileName = 'qpc-v1-15-lines.db';
@@ -423,7 +439,7 @@ class LocalDatabaseService {
           dbFileName = 'qudratullah-indopak-15-lines.db';
           break;
       }
-      
+
       final pagesPath = join(databasesPath, dbFileName);
 
       if (!await File(pagesPath).exists()) {
@@ -605,7 +621,8 @@ class LocalDatabaseService {
       final pageLines = await pagesDb.query(
         'pages',
         columns: ['page_number', 'first_word_id'],
-        where: 'line_type = ? AND first_word_id IS NOT NULL AND first_word_id != ?',
+        where:
+            'line_type = ? AND first_word_id IS NOT NULL AND first_word_id != ?',
         whereArgs: ['ayah', ''],
         orderBy: 'page_number ASC, line_number ASC',
       );

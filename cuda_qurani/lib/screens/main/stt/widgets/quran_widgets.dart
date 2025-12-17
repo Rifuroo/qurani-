@@ -516,7 +516,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                   size: iconSize * 0.9,
                                   color: isListeningActive
                                       ? getPrimaryColor(context)
-                                      : Colors.white.withOpacity(0.9),
+                                      : Colors.black.withOpacity(0.9),
                                 ),
                                 SizedBox(width: 6),
                                 Text(
@@ -531,7 +531,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                     fontWeight: FontWeight.w600,
                                     color: isListeningActive
                                         ? getPrimaryColor(context)
-                                        : Colors.white.withOpacity(0.9),
+                                        : Colors.black.withOpacity(0.9),
                                   ),
                                 ),
                               ],
@@ -559,7 +559,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                     fontWeight: FontWeight.w600,
                                     color: isRecordingActive
                                         ? getErrorColor(context)
-                                        : Colors.white.withOpacity(0.9),
+                                        : Colors.black.withOpacity(0.9),
                                   ),
                                 ),
                                 SizedBox(width: 6),
@@ -568,7 +568,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                   size: iconSize * 0.9,
                                   color: isRecordingActive
                                       ? getErrorColor(context)
-                                      : Colors.white.withOpacity(0.9),
+                                      : Colors.black.withOpacity(0.9),
                                 ),
                               ],
                             ),
