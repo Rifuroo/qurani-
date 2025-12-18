@@ -25,6 +25,8 @@ import 'package:cuda_qurani/services/auth_service.dart'; // ? NEW: For user UUID
 import 'package:cuda_qurani/config/app_config.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
 import 'package:cuda_qurani/core/widgets/achievement_popup.dart'; // ? NEW: Achievement popup
+import 'package:cuda_qurani/providers/premium_provider.dart'; // ✅ NEW: Premium gating
+import 'package:cuda_qurani/models/premium_features.dart'; // ✅ NEW: Premium features
 
 class SttController with ChangeNotifier {
   final int? suratId;
@@ -73,60 +75,60 @@ class SttController with ChangeNotifier {
     }
   }
 
-Future<void> switchMushafLayout(MushafLayout newLayout) async {
-  if (_mushafLayout == newLayout) return;
+  Future<void> switchMushafLayout(MushafLayout newLayout) async {
+    if (_mushafLayout == newLayout) return;
 
-  appLogger.log(
-    'LAYOUT_SWITCH',
-    'Switching: ${_mushafLayout.displayName} → ${newLayout.displayName}',
-  );
+    appLogger.log(
+      'LAYOUT_SWITCH',
+      'Switching: ${_mushafLayout.displayName} → ${newLayout.displayName}',
+    );
 
-  // ✅ CRITICAL: Stop ALL background tasks FIRST
-  print('[LAYOUT_SWITCH] 🛑 Stopping background tasks...');
-  _isPreloadingPages = false; // Stop preloading immediately
-  await Future.delayed(const Duration(milliseconds: 200)); // Let tasks finish
+    // ✅ CRITICAL: Stop ALL background tasks FIRST
+    print('[LAYOUT_SWITCH] 🛑 Stopping background tasks...');
+    _isPreloadingPages = false; // Stop preloading immediately
+    await Future.delayed(const Duration(milliseconds: 200)); // Let tasks finish
 
-  // ✅ STEP 1: Close ALL databases
-  print('[LAYOUT_SWITCH] 🔒 Closing all databases...');
-  await DBHelper.closeAllDatabases();
-  await LocalDatabaseService.closePageDatabase();
-  print('[LAYOUT_SWITCH] ✅ All databases closed');
+    // ✅ STEP 1: Close ALL databases
+    print('[LAYOUT_SWITCH] 🔒 Closing all databases...');
+    await DBHelper.closeAllDatabases();
+    await LocalDatabaseService.closePageDatabase();
+    print('[LAYOUT_SWITCH] ✅ All databases closed');
 
-  // ✅ STEP 2: Wait for file system
-  await Future.delayed(const Duration(milliseconds: 200));
+    // ✅ STEP 2: Wait for file system
+    await Future.delayed(const Duration(milliseconds: 200));
 
-  // ✅ STEP 3: Update service first
-  await _sqliteService.setMushafLayout(newLayout);
+    // ✅ STEP 3: Update service first
+    await _sqliteService.setMushafLayout(newLayout);
 
-  // ✅ STEP 4: Update local state
-  _mushafLayout = newLayout;
+    // ✅ STEP 4: Update local state
+    _mushafLayout = newLayout;
 
-  // ✅ STEP 5: Clear ALL caches
-  pageCache.clear();
-  _sqliteService.clearPageCache();
-  _lastLoadedAyatsPage = null;
-  _lastPreloadedPage = null;
+    // ✅ STEP 5: Clear ALL caches
+    pageCache.clear();
+    _sqliteService.clearPageCache();
+    _lastLoadedAyatsPage = null;
+    _lastPreloadedPage = null;
 
-  // ✅ STEP 6: Adjust current page if exceeds new layout's max
-  if (_currentPage > newLayout.totalPages) {
-    _currentPage = newLayout.totalPages;
+    // ✅ STEP 6: Adjust current page if exceeds new layout's max
+    if (_currentPage > newLayout.totalPages) {
+      _currentPage = newLayout.totalPages;
+    }
+    if (_listViewCurrentPage > newLayout.totalPages) {
+      _listViewCurrentPage = newLayout.totalPages;
+    }
+
+    // ✅ STEP 7: Reload current page data
+    _isDataLoaded = false;
+    await _loadSinglePageData(_currentPage);
+
+    // ✅ STEP 8: Notify listeners to update UI
+    notifyListeners();
+
+    appLogger.log(
+      'LAYOUT_SWITCH',
+      '✅ Layout switched to ${newLayout.displayName} (${newLayout.totalPages} pages)',
+    );
   }
-  if (_listViewCurrentPage > newLayout.totalPages) {
-    _listViewCurrentPage = newLayout.totalPages;
-  }
-
-  // ✅ STEP 7: Reload current page data
-  _isDataLoaded = false;
-  await _loadSinglePageData(_currentPage);
-
-  // ✅ STEP 8: Notify listeners to update UI
-  notifyListeners();
-
-  appLogger.log(
-    'LAYOUT_SWITCH',
-    '✅ Layout switched to ${newLayout.displayName} (${newLayout.totalPages} pages)',
-  );
-}
 
   // ✅ NEW: Apply word status map from Supabase data
   void _applyInitialWordStatusMap(int surahId, Map<String, dynamic> wordMap) {
@@ -299,7 +301,7 @@ Future<void> switchMushafLayout(MushafLayout newLayout) async {
 
   bool _isPreloadingPages = false;
   // Tambahkan property ini setelah deklarasi _isPreloadingPages
-bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
+  bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
 
   // Getters for UI
   bool get isLoading => _isLoading;
@@ -1232,163 +1234,175 @@ bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
   DateTime? _lastPreloadTime;
 
   Future<void> _preloadAdjacentPagesAggressively() async {
-  // ✅ CRITICAL: Check disposal state AND stop flag BEFORE any async operation
-  if (_isDisposed || _stopPreloading) {
-    print('[PRELOAD] Controller disposed or stopped, skipping preload');
-    return;
-  }
-
-  // ✅ CRITICAL: Prevent duplicate preload calls for same page
-  if (_isPreloadingPages) {
-    return; // Already preloading
-  }
-
-  // ✅ Debounce: Don't preload if same page was preloaded recently (< 500ms)
-  if (_lastPreloadedPage == _currentPage &&
-      _lastPreloadTime != null &&
-      DateTime.now().difference(_lastPreloadTime!).inMilliseconds < 500) {
-    return; // Too soon, skip
-  }
-
-  _isPreloadingPages = true;
-  _lastPreloadedPage = _currentPage;
-  _lastPreloadTime = DateTime.now();
-
-  try {
-    final pagesToPreload = <int>[];
-
-    // ✅ Check stop flag before building list
-    if (_stopPreloading) {
-      _isPreloadingPages = false;
+    // ✅ CRITICAL: Check disposal state AND stop flag BEFORE any async operation
+    if (_isDisposed || _stopPreloading) {
+      print('[PRELOAD] Controller disposed or stopped, skipping preload');
       return;
     }
 
-    // ✅ OPTIMIZED: Prioritize immediate adjacent pages first
-    if (_currentPage > 1) pagesToPreload.add(_currentPage - 1);
-    if (_currentPage < totalPages) pagesToPreload.add(_currentPage + 1);
-
-    // Then load expanding radius pages
-    for (int i = 2; i <= cacheRadius; i++) {
-      if (_stopPreloading) break; // ✅ Check on each iteration
-      if (_currentPage - i >= 1) pagesToPreload.add(_currentPage - i);
-      if (_currentPage + i <= totalPages) pagesToPreload.add(_currentPage + i);
+    // ✅ CRITICAL: Prevent duplicate preload calls for same page
+    if (_isPreloadingPages) {
+      return; // Already preloading
     }
 
-    // Rest of the method remains the same...
-    // (keep existing code for loading pages)
-    
-    final immediatePages = <int>[];
-    final backgroundPages = <int>[];
+    // ✅ Debounce: Don't preload if same page was preloaded recently (< 500ms)
+    if (_lastPreloadedPage == _currentPage &&
+        _lastPreloadTime != null &&
+        DateTime.now().difference(_lastPreloadTime!).inMilliseconds < 500) {
+      return; // Too soon, skip
+    }
 
-    for (final page in pagesToPreload) {
-      if (_isDisposed || _stopPreloading) {
-        print('[PRELOAD] Stopped during page filtering, aborting');
+    _isPreloadingPages = true;
+    _lastPreloadedPage = _currentPage;
+    _lastPreloadTime = DateTime.now();
+
+    try {
+      final pagesToPreload = <int>[];
+
+      // ✅ Check stop flag before building list
+      if (_stopPreloading) {
+        _isPreloadingPages = false;
         return;
       }
 
-      if (pageCache.containsKey(page)) continue;
+      // ✅ OPTIMIZED: Prioritize immediate adjacent pages first
+      if (_currentPage > 1) pagesToPreload.add(_currentPage - 1);
+      if (_currentPage < totalPages) pagesToPreload.add(_currentPage + 1);
 
-      final serviceCache = _sqliteService.getCachedPage(page);
-      if (serviceCache != null) {
-        pageCache[page] = serviceCache;
-        continue;
+      // Then load expanding radius pages
+      for (int i = 2; i <= cacheRadius; i++) {
+        if (_stopPreloading) break; // ✅ Check on each iteration
+        if (_currentPage - i >= 1) pagesToPreload.add(_currentPage - i);
+        if (_currentPage + i <= totalPages)
+          pagesToPreload.add(_currentPage + i);
       }
 
-      final distance = (page - _currentPage).abs();
-      if (distance <= 20) {
-        immediatePages.add(page);
-      } else {
-        backgroundPages.add(page);
+      // Rest of the method remains the same...
+      // (keep existing code for loading pages)
+
+      final immediatePages = <int>[];
+      final backgroundPages = <int>[];
+
+      for (final page in pagesToPreload) {
+        if (_isDisposed || _stopPreloading) {
+          print('[PRELOAD] Stopped during page filtering, aborting');
+          return;
+        }
+
+        if (pageCache.containsKey(page)) continue;
+
+        final serviceCache = _sqliteService.getCachedPage(page);
+        if (serviceCache != null) {
+          pageCache[page] = serviceCache;
+          continue;
+        }
+
+        final distance = (page - _currentPage).abs();
+        if (distance <= 20) {
+          immediatePages.add(page);
+        } else {
+          backgroundPages.add(page);
+        }
       }
-    }
 
-    // Load immediate pages first (high priority)
-    if (immediatePages.isNotEmpty && !_stopPreloading) {
-      await Future.wait(
-        immediatePages.map((page) async {
-          if (_isDisposed || _stopPreloading) return;
-
-          final serviceCache = _sqliteService.getCachedPage(page);
-          if (serviceCache != null) {
-            pageCache[page] = serviceCache;
-            return;
-          }
-
-          try {
-            final lines = await _sqliteService.getMushafPageLines(page);
-
+      // Load immediate pages first (high priority)
+      if (immediatePages.isNotEmpty && !_stopPreloading) {
+        await Future.wait(
+          immediatePages.map((page) async {
             if (_isDisposed || _stopPreloading) return;
 
-            pageCache[page] = lines;
-            if (!_isDisposed && !_stopPreloading) {
-              print('[CACHE] ⚡ Immediate preloaded page $page (${lines.length} lines)');
+            final serviceCache = _sqliteService.getCachedPage(page);
+            if (serviceCache != null) {
+              pageCache[page] = serviceCache;
+              return;
             }
-          } catch (e) {
-            if (!_isDisposed && !_stopPreloading) {
-              print('[CACHE_ERROR] Failed to preload page $page: $e');
+
+            try {
+              final lines = await _sqliteService.getMushafPageLines(page);
+
+              if (_isDisposed || _stopPreloading) return;
+
+              pageCache[page] = lines;
+              if (!_isDisposed && !_stopPreloading) {
+                print(
+                  '[CACHE] ⚡ Immediate preloaded page $page (${lines.length} lines)',
+                );
+              }
+            } catch (e) {
+              if (!_isDisposed && !_stopPreloading) {
+                print('[CACHE_ERROR] Failed to preload page $page: $e');
+              }
             }
-          }
-        }),
-        eagerError: false,
-      );
-    }
+          }),
+          eagerError: false,
+        );
+      }
 
-    // ✅ Background loading with stop checks
-    if (backgroundPages.isNotEmpty && !_isDisposed && !_stopPreloading) {
-      Future.microtask(() async {
-        const batchSize = 100;
-        int loadedCount = 0;
+      // ✅ Background loading with stop checks
+      if (backgroundPages.isNotEmpty && !_isDisposed && !_stopPreloading) {
+        Future.microtask(() async {
+          const batchSize = 100;
+          int loadedCount = 0;
 
-        for (int i = 0; i < backgroundPages.length; i += batchSize) {
-          if (_isDisposed || _stopPreloading) {
-            print('[PRELOAD] Stopped during background load, stopping');
-            break;
-          }
+          for (int i = 0; i < backgroundPages.length; i += batchSize) {
+            if (_isDisposed || _stopPreloading) {
+              print('[PRELOAD] Stopped during background load, stopping');
+              break;
+            }
 
-          final batch = backgroundPages.skip(i).take(batchSize).toList();
-          await Future.wait(
-            batch.map((page) async {
-              if (_isDisposed || _stopPreloading || pageCache.containsKey(page)) return;
+            final batch = backgroundPages.skip(i).take(batchSize).toList();
+            await Future.wait(
+              batch.map((page) async {
+                if (_isDisposed ||
+                    _stopPreloading ||
+                    pageCache.containsKey(page))
+                  return;
 
-              final serviceCache = _sqliteService.getCachedPage(page);
-              if (serviceCache != null) {
-                pageCache[page] = serviceCache;
-                loadedCount++;
-                return;
-              }
-
-              try {
-                final lines = await _sqliteService.getMushafPageLines(page);
-                if (_isDisposed || _stopPreloading) return;
-
-                pageCache[page] = lines;
-                loadedCount++;
-
-                if (!_isDisposed && !_stopPreloading && loadedCount % 30 == 0) {
-                  print('[CACHE] Background preloaded $loadedCount/${backgroundPages.length} pages...');
+                final serviceCache = _sqliteService.getCachedPage(page);
+                if (serviceCache != null) {
+                  pageCache[page] = serviceCache;
+                  loadedCount++;
+                  return;
                 }
-              } catch (e) {
-                if (!_isDisposed && !_stopPreloading) {
-                  print('[CACHE_ERROR] Failed to preload page $page: $e');
-                }
-              }
-            }),
-            eagerError: false,
-          );
-        }
 
-        if (!_isDisposed && !_stopPreloading) {
-          print('[CACHE] ✅ Background preload complete: $loadedCount pages cached');
-          _cleanupDistantCache();
-        }
-      });
-    } else if (!_isDisposed && !_stopPreloading) {
-      _cleanupDistantCache();
+                try {
+                  final lines = await _sqliteService.getMushafPageLines(page);
+                  if (_isDisposed || _stopPreloading) return;
+
+                  pageCache[page] = lines;
+                  loadedCount++;
+
+                  if (!_isDisposed &&
+                      !_stopPreloading &&
+                      loadedCount % 30 == 0) {
+                    print(
+                      '[CACHE] Background preloaded $loadedCount/${backgroundPages.length} pages...',
+                    );
+                  }
+                } catch (e) {
+                  if (!_isDisposed && !_stopPreloading) {
+                    print('[CACHE_ERROR] Failed to preload page $page: $e');
+                  }
+                }
+              }),
+              eagerError: false,
+            );
+          }
+
+          if (!_isDisposed && !_stopPreloading) {
+            print(
+              '[CACHE] ✅ Background preload complete: $loadedCount pages cached',
+            );
+            _cleanupDistantCache();
+          }
+        });
+      } else if (!_isDisposed && !_stopPreloading) {
+        _cleanupDistantCache();
+      }
+    } finally {
+      _isPreloadingPages = false;
     }
-  } finally {
-    _isPreloadingPages = false;
   }
-}
 
   void _cleanupDistantCache() {
     // ✅ OPTIMIZED: Only evict when cache is VERY large and pages are VERY far
@@ -2762,29 +2776,56 @@ bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
     notifyListeners();
   }
 
+  // ✅ NEW: Premium provider reference for feature gating
+  PremiumProvider? _premiumProvider;
+
+  /// ✅ NEW: Set premium provider from context (call from widget)
+  void setPremiumProvider(PremiumProvider provider) {
+    _premiumProvider = provider;
+  }
+
   WordStatus _mapWordStatus(String status) {
+    // ✅ FREE USER: Only current word shows processing (blue)
+    // Previous words reset to pending (white) - NO permanent colors
+    final isPremium =
+        _premiumProvider?.canAccess(PremiumFeature.permanentWordColors) ?? true;
+
     switch (status.toLowerCase()) {
       case 'matched':
       case 'correct':
       case 'close': // ✅ Close = hampir benar = HIJAU
       case 'benar': // ? Backend sends "benar" for correct words
-        return WordStatus.matched;
+        // ✅ FREE: Return pending (white) so color disappears after processing
+        return isPremium ? WordStatus.matched : WordStatus.pending;
       case 'processing':
-        return WordStatus.processing;
+        return WordStatus.processing; // Always show current word as blue
       case 'mismatched':
       case 'incorrect':
       case 'salah': // ? Backend sends "salah" for incorrect words
-        return WordStatus.mismatched;
+        // ✅ FREE: Return pending (white) so color disappears after processing
+        return isPremium ? WordStatus.mismatched : WordStatus.pending;
       case 'skipped':
-        return WordStatus.skipped;
+        // ✅ FREE: Return pending (white) so color disappears after processing
+        return isPremium ? WordStatus.skipped : WordStatus.pending;
       default:
         return WordStatus.pending;
     }
   }
 
   /// ? NEW: Resume from existing session
+  /// ✅ PREMIUM ONLY: FREE users cannot resume session
   Future<void> resumeFromSession(Map<String, dynamic> session) async {
-    print('?? Resuming session: ${session['session_id']}');
+    // ✅ PREMIUM GATE: Check if user can resume session
+    final canResume =
+        _premiumProvider?.canAccess(PremiumFeature.sessionResume) ?? false;
+    if (!canResume) {
+      print('❌ Resume Session: Feature not available for FREE users');
+      _errorMessage = 'Resume session is a premium feature';
+      notifyListeners();
+      return;
+    }
+
+    print('🔄 Resuming session: ${session['session_id']}');
     print(
       '   Location: Surah ${session['surah_id']}, Ayah ${session['ayah']}, Word ${(session['position'] ?? 0) + 1}',
     );

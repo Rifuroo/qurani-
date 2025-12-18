@@ -6,6 +6,7 @@ import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/screens/main/home/widgets/navigation_bar.dart';
 import 'package:cuda_qurani/screens/main/auth/login/login_page.dart';
 import 'package:cuda_qurani/providers/auth_provider.dart';
+import 'package:cuda_qurani/providers/premium_provider.dart'; // ✅ NEW: Show real plan
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -23,6 +24,10 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _loadTranslations();
+    // ✅ NEW: Refresh subscription status from database when page opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PremiumProvider>().refresh();
+    });
   }
 
   Future<void> _loadTranslations() async {
@@ -226,6 +231,9 @@ class _ProfilePageState extends State<ProfilePage> {
     String joinedDate =
         '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 
+    // ✅ FIX: Get real subscription status from PremiumProvider
+    final premium = context.watch<PremiumProvider>();
+
     return AppCard(
       padding: EdgeInsets.zero,
       child: Column(
@@ -244,9 +252,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     'profile.subscription_status_text',
                   )
                 : 'Subscription Status',
-            _translations.isNotEmpty
-                ? LanguageHelper.tr(_translations, 'profile.premium_text')
-                : 'Premium',
+            premium
+                .planDisplayName, // ✅ FIX: Use actual plan from PremiumProvider
             showDivider: false,
           ),
         ],
@@ -270,7 +277,10 @@ class _ProfilePageState extends State<ProfilePage> {
           Text(label, style: AppTypography.body(context)),
           Text(
             value,
-            style: AppTypography.body(context, color: AppColors.getTextTertiary(context)),
+            style: AppTypography.body(
+              context,
+              color: AppColors.getTextTertiary(context),
+            ),
           ),
         ],
       ),
@@ -487,7 +497,9 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Container(
         padding: AppPadding.all(context, AppDesignSystem.space16),
         decoration: showDivider
-            ? AppComponentStyles.divider(color: AppColors.getBorderLight(context))
+            ? AppComponentStyles.divider(
+                color: AppColors.getBorderLight(context),
+              )
             : null,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -537,7 +549,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 : 'Delete Account',
             style: AppTypography.body(
               context,
-              color: _isLoggingOut ? AppColors.getTextDisabled(context) : AppColors.error,
+              color: _isLoggingOut
+                  ? AppColors.getTextDisabled(context)
+                  : AppColors.error,
               weight: AppTypography.medium,
             ),
           ),
@@ -861,7 +875,9 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                             context,
                             AppDesignSystem.iconMedium,
                           ),
-                          color: AppColors.getTextPrimary(context).withValues(alpha: 0.85),
+                          color: AppColors.getTextPrimary(
+                            context,
+                          ).withValues(alpha: 0.85),
                         ),
                         AppMargin.gapHSmall(context),
                         Text(
@@ -873,7 +889,9 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                               : 'ADD ACCOUNT',
                           style: AppTypography.label(
                             context,
-                            color: AppColors.getTextPrimary(context).withValues(alpha: 0.85),
+                            color: AppColors.getTextPrimary(
+                              context,
+                            ).withValues(alpha: 0.85),
                             weight: AppTypography.semiBold,
                           ).copyWith(letterSpacing: 1.5),
                         ),
@@ -1019,7 +1037,9 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
                 AppMargin.gapHSmall(context),
                 Icon(
                   Icons.check_circle,
-                  color: AppColors.getSecondary(context).withValues(alpha: 0.80),
+                  color: AppColors.getSecondary(
+                    context,
+                  ).withValues(alpha: 0.80),
                   size: AppDesignSystem.scale(
                     context,
                     AppDesignSystem.iconLarge,
@@ -1058,7 +1078,10 @@ class _SwitchAccountBottomSheetState extends State<_SwitchAccountBottomSheet> {
             AppMargin.gapSmall(context),
             Text(
               'Add an account to get started',
-              style: AppTypography.body(context, color: AppColors.getTextTertiary(context)),
+              style: AppTypography.body(
+                context,
+                color: AppColors.getTextTertiary(context),
+              ),
             ),
           ],
         ),

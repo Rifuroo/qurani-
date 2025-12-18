@@ -15,6 +15,7 @@ import 'package:cuda_qurani/core/widgets/achievement_popup.dart';
 import 'package:cuda_qurani/core/widgets/rate_limit_banner.dart';
 import 'package:cuda_qurani/screens/main/home/screens/premium_offer_page.dart'; // ✅ NEW: Rate Limit
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
+import 'package:cuda_qurani/providers/premium_provider.dart'; // ✅ NEW: Premium gating for word colors
 
 class SttPage extends StatefulWidget {
   final int? suratId;
@@ -71,7 +72,7 @@ class _SttPageState extends State<SttPage> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) {
+          create: (context) {
             final controller = SttController(
               suratId: widget.suratId,
               pageId: widget.pageId,
@@ -80,6 +81,20 @@ class _SttPageState extends State<SttPage> {
               initialWordStatusMap: widget.initialWordStatusMap,
               resumeSessionId: widget.resumeSessionId, // ✅ NEW
             );
+
+            // ✅ NEW: Set PremiumProvider for word color gating
+            try {
+              final premium = Provider.of<PremiumProvider>(
+                context,
+                listen: false,
+              );
+              controller.setPremiumProvider(premium);
+            } catch (e) {
+              print(
+                '⚠️ SttPage: PremiumProvider not found - word colors will default to premium mode',
+              );
+            }
+
             Future.microtask(() => controller.initializeApp());
             return controller;
           },
@@ -112,7 +127,9 @@ class _SttPageState extends State<SttPage> {
                           horizontal: MediaQuery.of(context).size.width * 0.04,
                           vertical: MediaQuery.of(context).size.height * 0.015,
                         ),
-                        color: AppColors.getError(context).withValues(alpha: 0.9),
+                        color: AppColors.getError(
+                          context,
+                        ).withValues(alpha: 0.9),
                         child: Row(
                           children: [
                             Icon(
@@ -275,7 +292,7 @@ class _SttPageState extends State<SttPage> {
 
   Widget _buildQuranText(BuildContext context, SttController controller) {
     final controller = context.watch<SttController>();
-final isIndopak = controller.mushafLayout == MushafLayout.indopak;
+    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
     final screenWidth = MediaQuery.of(context).size.width;
     final padding = isIndopak ? screenWidth * 0.00 : screenWidth * 0.03;
 

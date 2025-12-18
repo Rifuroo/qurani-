@@ -33,6 +33,10 @@ enum PremiumFeature {
 
   // Search
   extendedSearchHistory,
+
+  // ✅ NEW: Session Features (Tarteel-style gating)
+  sessionResume, // Resume session from last state
+  permanentWordColors, // Permanent green/red word colors
 }
 
 /// Features that are ONLY available for Premium users
@@ -68,6 +72,10 @@ const Set<PremiumFeature> premiumOnlyFeatures = {
 
   // Search
   PremiumFeature.extendedSearchHistory,
+
+  // ✅ NEW: Session Features
+  PremiumFeature.sessionResume,
+  PremiumFeature.permanentWordColors,
 };
 
 /// Get human-readable name for a feature
@@ -113,6 +121,10 @@ String getFeatureName(PremiumFeature feature) {
       return 'Word by Word Audio';
     case PremiumFeature.extendedSearchHistory:
       return 'Extended Search History';
+    case PremiumFeature.sessionResume:
+      return 'Session Resume';
+    case PremiumFeature.permanentWordColors:
+      return 'Permanent Word Colors';
   }
 }
 
@@ -159,8 +171,9 @@ String getFeatureDescription(PremiumFeature feature) {
       return 'Follow along word by word';
     case PremiumFeature.extendedSearchHistory:
       return 'Keep more search history (15 vs 3)';
+    case PremiumFeature.sessionResume:
+      return 'Resume session from where you left off';
+    case PremiumFeature.permanentWordColors:
+      return 'Keep word colors (green/red) permanently';
   }
 }
-
-
-

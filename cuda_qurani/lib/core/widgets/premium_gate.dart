@@ -46,18 +46,19 @@ class PremiumGate extends StatelessWidget {
       onTap: () => showPremiumFeatureDialog(context, feature),
       child: Stack(
         children: [
-          // Blurred/disabled content
+          // Blurred/disabled content - DARKER opacity
           Opacity(
-            opacity: 0.4,
+            opacity: 0.15, // ✅ CHANGED: Much darker (was 0.4)
             child: IgnorePointer(child: child),
           ),
-          // Lock overlay
+          // Lock overlay - DARKER background
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: AppColors.getTextPrimary(context).withValues(alpha: 0.1),
+                color: AppColors.getTextPrimary(context).withValues(alpha: 0.6), // ✅ CHANGED: Much darker (was 0.1)
                 borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
               ),
+
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
