@@ -1,8 +1,6 @@
 import 'package:cuda_qurani/screens/main/auth/login/login_page.dart';
-import 'package:cuda_qurani/screens/main/stt/utils/constants.dart' as constants;
 import 'package:flutter/material.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
-// import 'package:cuda_qurani/screens/main/home/surah_list_page.dart'; // Tidak terpakai
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -49,22 +47,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Start animation
     _controller.forward();
 
-    // Navigate after animation
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const LoginPage(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
-      }
-    });
+    // ✅ Navigation is now handled by InitialSplashScreen, not here
   }
 
   @override
@@ -89,8 +72,8 @@ class _SplashScreenState extends State<SplashScreen>
             end: Alignment.bottomRight,
             colors: [
               AppColors.getBackground(context),
-              AppColors.getBackground(context).withOpacity(0.98),
-              AppColors.getBackground(context).withOpacity(0.95),
+              AppColors.getBackground(context).withValues(alpha: 0.98),
+              AppColors.getBackground(context).withValues(alpha: 0.95),
             ],
           ),
         ),
@@ -115,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen>
                             style: TextStyle(
                               fontFamily: 'surah_names',
                               fontSize: 150 * s,
-                              color: constants.primaryColor,
+                              color: AppColors.getPrimary(context),
                             ),
                           ),
                         ),
@@ -136,7 +119,7 @@ class _SplashScreenState extends State<SplashScreen>
                           Image.asset(
                             'assets/images/qurani-white-text.png',
                             height: 40 * s,
-                            color: constants.primaryColor,
+                            color: AppColors.getPrimary(context),
                           ),
                           SizedBox(height: 20 * s),
                         ],

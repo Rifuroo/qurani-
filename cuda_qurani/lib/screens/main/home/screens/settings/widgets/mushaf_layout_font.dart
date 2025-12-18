@@ -1,16 +1,19 @@
 // lib/screens/main/home/screens/settings/widgets/mushaf_layout_font.dart
+import 'dart:io';
+
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
-import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/preview_service.dart';
-import 'package:cuda_qurani/screens/main/stt/data/models.dart';
+import 'package:cuda_qurani/screens/main/stt/database/db_helper.dart';
+import 'package:cuda_qurani/services/local_database_service.dart';
 import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
-import 'package:cuda_qurani/services/local_database_service.dart';
-import 'package:cuda_qurani/screens/main/stt/services/quran_service.dart';
-import 'package:cuda_qurani/models/quran_models.dart';
 import 'package:flutter/material.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
+import 'package:path/path.dart' as path_helper;
+import 'package:sqflite/sqflite.dart';
+import 'package:cuda_qurani/core/services/language_service.dart';
+import 'package:restart_app/restart_app.dart';
 
 class MushafLayoutFontPage extends StatefulWidget {
   const MushafLayoutFontPage({Key? key}) : super(key: key);
@@ -63,11 +66,20 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
   }
 
   Future<void> _loadTranslations() async {
-    final trans = await context.loadTranslations('settings/mushaf_layout_font');
-    if (mounted) {
-      setState(() {
-        _translations = trans;
-      });
+    try {
+      // ✅ FIX: Use LanguageService directly (no context needed in initState)
+      final languageService = LanguageService();
+      final trans = await languageService.loadTranslation(
+        'settings/mushaf_layout_font',
+      );
+      if (mounted) {
+        setState(() {
+          _translations = trans;
+        });
+      }
+    } catch (e) {
+      print('⚠️ Failed to load translations: $e');
+      // Continue with empty translations
     }
   }
 
@@ -99,49 +111,102 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
     });
 
     try {
-      // 1. Save to SharedPreferences
-      await _settingsService.setMushafLayout(newLayout);
-
-      // 2. Rebuild metadata cache for new layout
-      print('🔄 Rebuilding metadata cache for ${newLayout.displayName}...');
-      await _metadataCache.rebuildForLayout(newLayout);
-
-      // 3. Update UI state
+      // ✅ STEP 1: Show loading dialog FIRST (user feedback)
       if (mounted) {
-        setState(() {
-          _selectedLayout = newLayout;
-          _isSaving = false;
-        });
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Layout changed to ${newLayout.displayName}',
-              style: const TextStyle(fontSize: 14),
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => WillPopScope(
+            onWillPop: () async => false, // Prevent back button
+            child: Center(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [CircularProgressIndicator()],
+                  ),
+                ),
+              ),
             ),
-            backgroundColor: AppColors.primary,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
           ),
         );
       }
 
-      print('✅ Layout saved: ${newLayout.displayName}');
+      // ✅ STEP 2: Wait for UI to render loading dialog
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // ✅ STEP 3: Close ALL databases FIRST (prevent lock)
+      print('🔒 Closing all databases before layout switch...');
+      await DBHelper.closeAllDatabases();
+      await LocalDatabaseService.closePageDatabase();
+      print('✅ All databases closed');
+
+      // ✅ STEP 4: Wait for file system to release locks
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // ✅ STEP 5: Delete old database files
+      print('🗑️ Deleting old layout database files...');
+      try {
+        final databasesPath = await getDatabasesPath();
+        final qpcPath = path_helper.join(databasesPath, 'qpc-v1-15-lines.db');
+        final indopakPath = path_helper.join(
+          databasesPath,
+          'qudratullah-indopak-15-lines.db',
+        );
+
+        if (await File(qpcPath).exists()) {
+          await File(qpcPath).delete();
+          print('   Deleted: qpc-v1-15-lines.db');
+        }
+
+        if (await File(indopakPath).exists()) {
+          await File(indopakPath).delete();
+          print('   Deleted: qudratullah-indopak-15-lines.db');
+        }
+      } catch (e) {
+        // print('⚠️ Error deleting databases: <span class="hljs-subst">$e');
+        // Continue anyway
+      }
+
+      // ✅ STEP 6: Save to SharedPreferences (HARUS sebelum restart)
+      await _settingsService.setMushafLayout(newLayout);
+      // print(
+      //   '✅ Layout preference saved: <span class="hljs-subst">${newLayout.displayName}',
+      // );
+
+      // ✅ STEP 7: Wait a bit to ensure SharedPreferences is written to disk
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // ✅ STEP 8: Restart aplikasi (ini akan clear SEMUA cache termasuk font)
+      print('🔄 Restarting app to clear all caches...');
+      Restart.restartApp();
     } catch (e) {
-      print('❌ Failed to save layout: $e');
+      // print('❌ Failed to save layout: <span class="hljs-subst">$e');
+
+      // Close loading dialog if open
+      if (mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {
+          // Dialog might not be open
+        }
+      }
+
       if (mounted) {
         setState(() {
           _isSaving = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to change layout: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text(
+        //       'Failed to change layout: <span class="hljs-subst">$e',
+        //     ),
+        //     backgroundColor: AppColors.error,
+        //     duration: const Duration(seconds: 3),
+        //   ),
+        // );
       }
     }
   }
@@ -154,7 +219,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
 
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.getBackground(context),
         appBar: SettingsAppBar(
           title: _translations.isNotEmpty
               ? LanguageHelper.tr(_translations, 'mushaf_type.title')
@@ -165,7 +230,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: SettingsAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'mushaf_type.title')
@@ -181,20 +246,24 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Book Settings Header
-                Text(
-                  _translations.isNotEmpty
-                      ? LanguageHelper.tr(
-                          _translations,
-                          'mushaf_type.book_settings',
-                        ).toUpperCase()
-                      : 'BOOK SETTINGS',
-                  style: TextStyle(
-                    fontSize: 13 * s,
-                    fontWeight: AppTypography.bold,
-                    color: AppColors.textPrimary,
-                    letterSpacing: 0.5,
-                  ),
+                // Book Settings Header with Info Icon
+                Row(
+                  children: [
+                    Text(
+                      _translations.isNotEmpty
+                          ? LanguageHelper.tr(
+                              _translations,
+                              'mushaf_type.book_settings',
+                            ).toUpperCase()
+                          : 'BOOK SETTINGS',
+                      style: TextStyle(
+                        fontSize: 13 * s,
+                        fontWeight: AppTypography.bold,
+                        color: AppColors.getTextPrimary(context),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
 
                 SizedBox(height: AppDesignSystem.space12 * s),
@@ -210,7 +279,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                   style: TextStyle(
                     fontSize: 14 * s,
                     fontWeight: AppTypography.regular,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                     height: 1.4,
                   ),
                 ),
@@ -273,10 +342,12 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
         duration: const Duration(milliseconds: 200),
         width: cardWidth,
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.getSurface(context),
           borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.borderLight,
+            color: isSelected
+                ? AppColors.primary
+                : AppColors.getBorderLight(context),
             width: isSelected ? 2.5 * s : 1.0 * s,
           ),
         ),
@@ -296,7 +367,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                       style: TextStyle(
                         fontSize: 18 * s,
                         fontWeight: AppTypography.semiBold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.getTextPrimary(context),
                       ),
                     ),
                   ),
@@ -308,7 +379,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                       height: 24 * s,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.primary,
+                        color: const Color.fromARGB(255, 0, 0, 0),
                       ),
                     )
                   else if (isSelected)
@@ -322,26 +393,46 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                       child: Icon(
                         Icons.check,
                         size: 18 * s,
-                        color: Colors.white,
+                        color: AppColors.textInverse,
                       ),
                     ),
                 ],
               ),
             ),
 
+            // Subtitle if exists
+            if (mushaf.containsKey('subtitle') &&
+                mushaf['subtitle'] != null &&
+                mushaf['subtitle'].toString().isNotEmpty)
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppDesignSystem.space16 * s,
+                ),
+                child: Text(
+                  mushaf['subtitle'],
+                  style: TextStyle(
+                    fontSize: 16 * s,
+                    fontWeight: AppTypography.semiBold,
+                    color: AppColors.getTextPrimary(context),
+                  ),
+                ),
+              ),
+
+            SizedBox(height: AppDesignSystem.space12 * s),
+
             // Mushaf Preview
             Container(
-              height: screenHeight * 0.38,
+              height: screenHeight * 0.38, // ✅ Already optimal
               margin: EdgeInsets.symmetric(
                 horizontal: AppDesignSystem.space16 * s,
               ),
               decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLowest,
+                color: AppColors.getSurfaceContainerLowest(context),
                 borderRadius: BorderRadius.circular(
                   AppDesignSystem.radiusSmall * s,
                 ),
                 border: Border.all(
-                  color: AppColors.borderLight,
+                  color: AppColors.getBorderLight(context),
                   width: 1.0 * s,
                 ),
               ),
@@ -368,7 +459,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                 style: TextStyle(
                   fontSize: 13 * s,
                   fontWeight: AppTypography.regular,
-                  color: AppColors.textSecondary,
+                  color: AppColors.getTextSecondary(context),
                   height: 1.4,
                 ),
                 maxLines: 3,
@@ -388,7 +479,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
                 style: TextStyle(
                   fontSize: 14 * s,
                   fontWeight: AppTypography.semiBold,
-                  color: AppColors.textPrimary,
+                  color: AppColors.getTextPrimary(context),
                 ),
               ),
             ),
@@ -401,8 +492,8 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
   }
 }
 
-/// ✅ REAL DATABASE PREVIEW: Load actual Surah Yasin first page from database
-class _OptimizedMushafPreview extends StatefulWidget {
+/// ✅ OPTIMIZED: Use pre-rendered AssetImage for instant preview
+class _OptimizedMushafPreview extends StatelessWidget {
   final MushafLayout layout;
   final int previewPage;
 
@@ -411,281 +502,56 @@ class _OptimizedMushafPreview extends StatefulWidget {
     required this.previewPage,
   });
 
-  @override
-  State<_OptimizedMushafPreview> createState() =>
-      _OptimizedMushafPreviewState();
-}
+  String _getImagePath(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-class _OptimizedMushafPreviewState extends State<_OptimizedMushafPreview> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<MushafPageLine>? _pageLines;
-  int? _yasinFirstPage;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPreview();
-  }
-
-  @override
-  void didUpdateWidget(_OptimizedMushafPreview oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.layout != widget.layout) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-        _pageLines = null;
-      });
-      _loadPreview();
-    }
-  }
-
-  Future<void> _loadPreview() async {
-    try {
-      // ✅ Get Yasin page number (Surah 36, Ayah 1)
-      final yasinPage = await LocalDatabaseService.getPageNumber(36, 1);
-
-      // ✅ ULTRA-FAST: Use PreviewService (no controller overhead)
-      final previewService = PreviewService();
-      final lines = await previewService.getPreviewPage(
-        widget.layout,
-        yasinPage,
-      );
-
-      if (mounted) {
-        setState(() {
-          _yasinFirstPage = yasinPage;
-          _pageLines = lines;
-          _isLoading = false;
-        });
-      }
-
-      print('✅ Preview loaded INSTANTLY: ${lines.length} lines');
-    } catch (e) {
-      print('❌ Preview error: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Failed to load preview';
-        });
-      }
+    switch (layout) {
+      case MushafLayout.indopak:
+        return isDark
+            ? 'assets/images/indopak_preview_dark.png'
+            : 'assets/images/indopak_preview.png';
+      case MushafLayout.qpc:
+        return isDark
+            ? 'assets/images/qpc_preview_dark.png'
+            : 'assets/images/qpc_preview.png';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(
-        child: SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      );
-    }
-
-    if (_errorMessage != null || _pageLines == null) {
-      return Center(
-        child: Text(
-          _errorMessage ?? 'No data',
-          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-        ),
-      );
-    }
-
-    return _MushafPreviewRenderer(
-      layout: widget.layout,
-      pageLines: _pageLines!,
-      pageNumber: _yasinFirstPage!,
-    );
-  }
-}
-
-/// ✅ OPTIMIZED: Preview renderer with perfect layout
-class _MushafPreviewRenderer extends StatelessWidget {
-  final MushafLayout layout;
-  final List<MushafPageLine> pageLines;
-  final int pageNumber;
-
-  const _MushafPreviewRenderer({
-    required this.layout,
-    required this.pageLines,
-    required this.pageNumber,
-  });
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    final fontFamily = layout.isGlyphBased
-        ? 'p$pageNumber'
-        : 'IndoPak-Nastaleeq';
-
-    return AbsorbPointer(
-      child: Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: Colors.white,
-        child: ClipRect(
-          // ✅ ADD: Prevent overflow
-          child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: screenWidth * 0.04,
-                vertical: screenHeight * 0.015,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: _buildPreviewLines(
-                  screenWidth,
-                  screenHeight,
-                  fontFamily,
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Color(0xFF1E1E1E)
+          : Colors.white,
+      child: Image.asset(
+        _getImagePath(context),
+        fit: BoxFit.contain, // Maintain aspect ratio
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stackTrace) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.image_not_supported,
+                  size: 48,
+                  color: AppColors.getTextTertiary(context),
                 ),
-              ),
+                const SizedBox(height: 8),
+                Text(
+                  'Preview not available',
+                  style: TextStyle(
+                    color: AppColors.getTextSecondary(context),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildPreviewLines(
-    double screenWidth,
-    double screenHeight,
-    String fontFamily,
-  ) {
-    final widgets = <Widget>[];
-
-    for (final line in pageLines) {
-      switch (line.lineType) {
-        case 'surah_name':
-          widgets.add(_buildSurahHeader(line, screenHeight));
-          break;
-
-        case 'basmallah':
-          widgets.add(_buildBasmallah(screenHeight));
-          break;
-
-        case 'ayah':
-          widgets.add(
-            _buildAyahLine(line, screenWidth, screenHeight, fontFamily),
           );
-          break;
-      }
-    }
-
-    return widgets;
-  }
-
-  Widget _buildSurahHeader(MushafPageLine line, double screenHeight) {
-    final surahId = line.surahNumber ?? 1;
-    final surahGlyphCode = _formatSurahGlyph(surahId);
-
-    return Container(
-      alignment: Alignment.center,
-      margin: EdgeInsets.symmetric(vertical: screenHeight * 0.008),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Text(
-            'header',
-            style: TextStyle(
-              fontSize: screenHeight * 0.028, // ✅ Slightly bigger
-              fontFamily: 'Quran-Common',
-              color: Colors.black87,
-            ),
-          ),
-          Text(
-            surahGlyphCode,
-            style: TextStyle(
-              fontSize: screenHeight * 0.024, // ✅ Proportional
-              fontFamily: 'surah-name-v2',
-              color: Colors.black,
-            ),
-            textDirection: TextDirection.rtl,
-          ),
-        ],
+        },
       ),
     );
-  }
-
-  Widget _buildBasmallah(double screenHeight) {
-    return Container(
-      alignment: Alignment.center,
-      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.006),
-      child: Text(
-        '﷽',
-        style: TextStyle(
-          fontSize: screenHeight * 0.022, // ✅ Balanced size
-          fontFamily: 'Quran-Common',
-          color: Colors.black87,
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-
-  Widget _buildAyahLine(
-    MushafPageLine line,
-    double screenWidth,
-    double screenHeight,
-    String fontFamily,
-  ) {
-    if (line.ayahSegments == null || line.ayahSegments!.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final spans = <InlineSpan>[];
-
-    // ✅ OPTIMIZED: Perfect font size for both layouts
-    final baseFontSize = layout == MushafLayout.indopak
-        ? screenWidth *
-              0.035 // Indopak slightly bigger
-        : screenWidth * 0.030; // QPC standard
-
-    for (final segment in line.ayahSegments!) {
-      for (final word in segment.words) {
-        spans.add(
-          TextSpan(
-            text: word.text,
-            style: TextStyle(
-              fontSize: baseFontSize,
-              fontFamily: fontFamily,
-              color: Colors.black87,
-              fontWeight: FontWeight.w400,
-              height: 2.0, // ✅ FIXED: Consistent line height
-              letterSpacing: layout.isGlyphBased ? -2.0 : 0.5,
-            ),
-          ),
-        );
-
-        // ✅ Consistent word spacing
-        spans.add(
-          TextSpan(
-            text: ' ',
-            style: TextStyle(fontSize: baseFontSize * 0.4),
-          ),
-        );
-      }
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.004),
-      child: Directionality(
-        textDirection: TextDirection.rtl,
-        child: RichText(
-          textAlign: line.isCentered ? TextAlign.center : TextAlign.justify,
-          text: TextSpan(children: spans),
-        ),
-      ),
-    );
-  }
-
-  String _formatSurahGlyph(int surahId) {
-    if (surahId <= 9) return 'surah00$surahId';
-    if (surahId <= 99) return 'surah0$surahId';
-    return 'surah$surahId';
   }
 }

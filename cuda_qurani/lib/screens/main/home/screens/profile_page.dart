@@ -38,7 +38,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.getBackground(context),
+      backgroundColor: AppColors.getSurfaceVariant(context),
       appBar: ProfileAppBar(
         title: _translations.isNotEmpty
             ? LanguageHelper.tr(_translations, 'profile.account_text')

@@ -95,10 +95,10 @@ class _DataUsagePageState extends State<DataUsagePage> {
           Switch(
             value: isEnabled,
             onChanged: onChanged,
-            activeTrackColor: AppColors.getSuccess(context),
-            activeThumbColor: AppColors.getSuccess(context),
+            activeTrackColor: AppColors.getPrimary(context).withValues(alpha: 0.5),
+            activeThumbColor: Colors.white,
             inactiveThumbColor: AppColors.getBorderMedium(context),
-            inactiveTrackColor: AppColors.borderLight,
+            inactiveTrackColor: AppColors.getBorderLight(context),
           ),
         ],
       ),
@@ -113,7 +113,7 @@ class _DataUsagePageState extends State<DataUsagePage> {
       style: TextStyle(
         fontSize: 14 * s * 0.9,
         fontWeight: AppTypography.regular,
-        color: AppColors.textSecondary,
+        color: AppColors.getTextSecondary(context),
         height: 1.5,
       ),
     );
@@ -145,7 +145,7 @@ class _DataUsagePageState extends State<DataUsagePage> {
               style: TextStyle(
                 fontSize: 14 * s * 0.9,
                 fontWeight: AppTypography.medium,
-                color: AppColors.textSecondary,
+                color: AppColors.getTextSecondary(context),
               ),
             ),
 

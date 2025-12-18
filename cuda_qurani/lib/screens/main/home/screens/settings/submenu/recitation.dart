@@ -109,7 +109,7 @@ class _RecitationPageState extends State<RecitationPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.medium,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
 
@@ -123,7 +123,7 @@ class _RecitationPageState extends State<RecitationPage> {
                       AppDesignSystem.radiusMedium * s * 0.9,
                     ),
                     border: Border.all(
-                      color: AppColors.borderLight,
+                      color: AppColors.getBorderLight(context),
                       width: 1.0 * s * 0.9,
                     ),
                   ),
@@ -235,7 +235,7 @@ class _RecitationPageState extends State<RecitationPage> {
                                 style: TextStyle(
                                   fontSize: 13 * s * 0.9,
                                   fontWeight: AppTypography.regular,
-                                  color: AppColors.textSecondary,
+                                  color: AppColors.getTextSecondary(context),
                                   height: 1.4,
                                 ),
                               ),
@@ -288,8 +288,8 @@ class _RecitationPageState extends State<RecitationPage> {
                                 Switch(
                                   value: _dontProgressUntilFixed,
                                   onChanged: _toggleDontProgress,
-                                  activeTrackColor: AppColors.getSuccess(context),
-                                  activeThumbColor: AppColors.getSuccess(context),
+                                  activeTrackColor: AppColors.getPrimary(context).withValues(alpha: 0.5),
+                                  activeThumbColor: Colors.white,
                                   inactiveThumbColor: AppColors.getBorderMedium(context),
                                   inactiveTrackColor: AppColors.getBorderLight(context),
                                 ),
@@ -442,7 +442,7 @@ class _RecitationPageState extends State<RecitationPage> {
               margin: EdgeInsets.only(right: 8 * s),
               padding: EdgeInsets.symmetric(horizontal: 6 * s, vertical: 2 * s),
               decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.15),
+                color: AppColors.getWarning(context).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4 * s),
               ),
               child: Row(
@@ -451,7 +451,7 @@ class _RecitationPageState extends State<RecitationPage> {
                   Icon(
                     Icons.lock,
                     size: 10 * s,
-                    color: AppColors.warning,
+                    color: AppColors.getWarning(context),
                   ),
                   SizedBox(width: 2 * s),
                   Text(
@@ -459,7 +459,7 @@ class _RecitationPageState extends State<RecitationPage> {
                     style: TextStyle(
                       fontSize: 8 * s,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.warning,
+                      color: AppColors.getWarning(context),
                     ),
                   ),
                 ],
@@ -472,10 +472,10 @@ class _RecitationPageState extends State<RecitationPage> {
           onChanged: canAccess
               ? onChanged
               : (_) => showPremiumFeatureDialog(context, feature),
-          activeTrackColor: AppColors.getSuccess(context),
-          activeThumbColor: AppColors.getSuccess(context),
-          inactiveThumbColor: AppColors.borderMedium,
-          inactiveTrackColor: AppColors.borderLight,
+          activeTrackColor: AppColors.getPrimary(context).withValues(alpha: 0.5),
+          activeThumbColor: Colors.white,
+          inactiveThumbColor: AppColors.getBorderMedium(context),
+          inactiveTrackColor: AppColors.getBorderLight(context),
         ),
       ],
     );

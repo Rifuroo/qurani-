@@ -589,7 +589,7 @@ class AppColors {
   
   static Color getSurfaceContainerMedium(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    return brightness == Brightness.dark ? surfaceContainerMediumDark : surfaceContainerMedium;
+    return brightness == Brightness.dark ? surfaceContainerMediumDark : const Color.fromARGB(255, 255, 255, 255);
   }
   
   static Color getSurfaceContainerHigh(BuildContext context) {
@@ -757,6 +757,50 @@ class AppColors {
         ? const Color(0xFF4A4A4A) // Lighter border for dark theme
         : const Color(0xFFBDBDBD); // Darker border for light theme
   }
+
+  // ==================== MISSING CONTEXT-AWARE GETTERS ====================
+  
+  /// Get primary color (context-aware) - this is the main brand color
+  static Color getPrimaryColor(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? primaryDarkTheme : primary;
+  }
+  
+  /// Get accent color (context-aware)
+  static Color getAccent(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? accentLight : accent;
+  }
+  
+  /// Get listening state color (context-aware)
+  static Color getListening(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? infoLight : listening;
+  }
+  
+  /// Get correct state color (context-aware)
+  static Color getCorrect(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? successLight : correct;
+  }
+  
+  /// Get incorrect state color (context-aware)
+  static Color getIncorrect(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? errorLight : incorrect;
+  }
+  
+  /// Get skipped state color (context-aware)
+  static Color getSkipped(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? textTertiaryDark : skipped;
+  }
+  
+  /// Get unread state color (context-aware)
+  static Color getUnread(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return brightness == Brightness.dark ? textDisabledDark : unread;
+  }
 }
 
 /// ==================== TYPOGRAPHY SYSTEM ====================
@@ -839,7 +883,7 @@ class AppTypography {
       fontWeight: weight ?? semiBold,
       height: lineHeightNormal,
       letterSpacing: letterSpacingTight,
-      color: color ?? AppColors.textPrimary,
+      color: color ?? AppColors.getTextPrimary(context),
     );
   }
   
@@ -875,7 +919,7 @@ class AppTypography {
       fontWeight: weight ?? semiBold,
       height: lineHeightNormal,
       letterSpacing: letterSpacingNormal,
-      color: color ?? AppColors.textPrimary,
+      color: color ?? AppColors.getTextPrimary(context),
     );
   }
 
@@ -911,7 +955,7 @@ class AppTypography {
       fontWeight: weight ?? regular,
       height: lineHeightRelaxed,
       letterSpacing: letterSpacingWide,
-      color: color ?? AppColors.textSecondary,
+      color: color ?? AppColors.getTextSecondary(context),
     );
   }
   
@@ -923,7 +967,7 @@ class AppTypography {
       fontWeight: weight ?? regular,
       height: lineHeightRelaxed,
       letterSpacing: letterSpacingWide,
-      color: color ?? AppColors.textSecondary,
+      color: color ?? AppColors.getTextSecondary(context),
     );
   }
 
@@ -935,7 +979,7 @@ class AppTypography {
       fontWeight: weight ?? regular,
       height: lineHeightRelaxed,
       letterSpacing: letterSpacingWide,
-      color: color ?? AppColors.textSecondary,
+      color: color ?? AppColors.getTextSecondary(context),
     );
   }
   
@@ -1270,8 +1314,8 @@ class AppComponentStyles {
   static ButtonStyle primaryButton(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
     return ElevatedButton.styleFrom(
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.getPrimary(context),
+      foregroundColor: AppColors.getTextInverse(context),
       elevation: 0,
       shadowColor: Colors.transparent,
       padding: EdgeInsets.symmetric(
@@ -1281,7 +1325,7 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
       ),
-      textStyle: AppTypography.label(context, color: Colors.white, weight: AppTypography.semiBold),
+      textStyle: AppTypography.label(context, color: AppColors.getTextInverse(context), weight: AppTypography.semiBold),
     );
   }
 
@@ -1289,10 +1333,10 @@ class AppComponentStyles {
   static ButtonStyle secondaryButton(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
     return OutlinedButton.styleFrom(
-      foregroundColor: AppColors.primary,
+      foregroundColor: AppColors.getPrimary(context),
       backgroundColor: Colors.transparent,
       elevation: 0,
-      side: BorderSide(color: AppColors.primary, width: 1.5 * s),
+      side: BorderSide(color: AppColors.getPrimary(context), width: 1.5 * s),
       padding: EdgeInsets.symmetric(
         horizontal: AppDesignSystem.space24 * s,
         vertical: AppDesignSystem.space16 * s,
@@ -1300,7 +1344,7 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
       ),
-      textStyle: AppTypography.label(context, color: AppColors.primary, weight: AppTypography.semiBold),
+      textStyle: AppTypography.label(context, color: AppColors.getPrimary(context), weight: AppTypography.semiBold),
     );
   }
 
@@ -1308,7 +1352,7 @@ class AppComponentStyles {
   static ButtonStyle textButton(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
     return TextButton.styleFrom(
-      foregroundColor: AppColors.primary,
+      foregroundColor: AppColors.getPrimary(context),
       backgroundColor: Colors.transparent,
       elevation: 0,
       padding: EdgeInsets.symmetric(
@@ -1318,7 +1362,7 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
       ),
-      textStyle: AppTypography.label(context, color: AppColors.primary, weight: AppTypography.semiBold),
+      textStyle: AppTypography.label(context, color: AppColors.getPrimary(context), weight: AppTypography.semiBold),
     );
   }
 
@@ -1326,8 +1370,8 @@ class AppComponentStyles {
   static ButtonStyle smallButton(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
     return ElevatedButton.styleFrom(
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.getPrimary(context),
+      foregroundColor: AppColors.getTextInverse(context),
       elevation: 0,
       padding: EdgeInsets.symmetric(
         horizontal: AppDesignSystem.space16 * s,
@@ -1337,7 +1381,7 @@ class AppComponentStyles {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
       ),
-      textStyle: AppTypography.labelSmall(context, color: Colors.white, weight: AppTypography.semiBold),
+      textStyle: AppTypography.labelSmall(context, color: AppColors.getTextInverse(context), weight: AppTypography.semiBold),
     );
   }
 
@@ -1372,12 +1416,12 @@ class AppComponentStyles {
     return InputDecoration(
       hintText: hintText,
       labelText: labelText,
-      hintStyle: AppTypography.body(context, color: AppColors.textHint),
-      labelStyle: AppTypography.body(context, color: AppColors.textTertiary),
+      hintStyle: AppTypography.body(context, color: AppColors.getTextHint(context)),
+      labelStyle: AppTypography.body(context, color: AppColors.getTextTertiary(context)),
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       filled: filled,
-      fillColor: fillColor ?? AppColors.surfaceContainerLowest,
+      fillColor: fillColor ?? AppColors.getSurfaceContainerLowest(context),
       contentPadding: EdgeInsets.symmetric(
         horizontal: AppDesignSystem.space16 * s,
         vertical: AppDesignSystem.space12 * s,
@@ -1385,35 +1429,35 @@ class AppComponentStyles {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
         borderSide: BorderSide(
-          color: borderColor ?? AppColors.borderMedium,
+          color: borderColor ?? AppColors.getBorderLight(context),
           width: 1.0 * s,
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
         borderSide: BorderSide(
-          color: borderColor ?? Colors.transparent,
+          color: borderColor ?? AppColors.getBorderLight(context),
           width: 1.0 * s,
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
         borderSide: BorderSide(
-          color: error ? AppColors.error : AppColors.borderFocus,
+          color: error ? AppColors.getError(context) : AppColors.getBorderFocus(context),
           width: 1.5 * s,
         ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
         borderSide: BorderSide(
-          color: AppColors.borderError,
+          color: AppColors.getBorderError(context),
           width: 1.5 * s,
         ),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
         borderSide: BorderSide(
-          color: AppColors.error,
+          color: AppColors.getError(context),
           width: 2.0 * s,
         ),
       ),
@@ -1426,10 +1470,11 @@ class AppComponentStyles {
   static SnackBar successSnackBar({
     required String message,
     Duration? duration,
+    BuildContext? context,
   }) {
     return SnackBar(
       content: Text(message),
-      backgroundColor: AppColors.success,
+      backgroundColor: context != null ? AppColors.getSuccess(context) : AppColors.success,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall),
@@ -1442,10 +1487,11 @@ class AppComponentStyles {
   static SnackBar errorSnackBar({
     required String message,
     Duration? duration,
+    BuildContext? context,
   }) {
     return SnackBar(
       content: Text(message),
-      backgroundColor: AppColors.error,
+      backgroundColor: context != null ? AppColors.getError(context) : AppColors.error,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall),
@@ -1458,10 +1504,11 @@ class AppComponentStyles {
   static SnackBar infoSnackBar({
     required String message,
     Duration? duration,
+    BuildContext? context,
   }) {
     return SnackBar(
       content: Text(message),
-      backgroundColor: AppColors.info,
+      backgroundColor: context != null ? AppColors.getInfo(context) : AppColors.info,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall),
@@ -1501,17 +1548,20 @@ class AppComponentStyles {
   // ==================== APP BAR THEME ====================
   
   static AppBarTheme appBarTheme(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
     return AppBarTheme(
-      backgroundColor: AppColors.surface,
-      foregroundColor: AppColors.textPrimary,
+      backgroundColor: AppColors.getSurface(context),
+      foregroundColor: AppColors.getTextPrimary(context),
       elevation: 0,
       centerTitle: true,
-      titleTextStyle: AppTypography.titleLarge(context),
-      iconTheme: const IconThemeData(
-        color: AppColors.textPrimary,
+      titleTextStyle: AppTypography.titleLarge(context, color: AppColors.getTextPrimary(context)),
+      iconTheme: IconThemeData(
+        color: AppColors.getTextPrimary(context),
         size: AppDesignSystem.iconLarge,
       ),
-      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      systemOverlayStyle: brightness == Brightness.dark 
+          ? SystemUiOverlayStyle.light 
+          : SystemUiOverlayStyle.dark,
     );
   }
 
@@ -1519,13 +1569,13 @@ class AppComponentStyles {
   
   static TabBarThemeData tabBarTheme(BuildContext context) {
     return TabBarThemeData(
-      labelColor: AppColors.primary,
-      unselectedLabelColor: AppColors.textDisabled,
-      labelStyle: AppTypography.label(context, weight: AppTypography.semiBold),
-      unselectedLabelStyle: AppTypography.label(context),
-      indicator: const UnderlineTabIndicator(
+      labelColor: AppColors.getPrimary(context),
+      unselectedLabelColor: AppColors.getTextDisabled(context),
+      labelStyle: AppTypography.label(context, color: AppColors.getPrimary(context), weight: AppTypography.semiBold),
+      unselectedLabelStyle: AppTypography.label(context, color: AppColors.getTextDisabled(context)),
+      indicator: UnderlineTabIndicator(
         borderSide: BorderSide(
-          color: AppColors.primary,
+          color: AppColors.getPrimary(context),
           width: 2.5,
         ),
       ),

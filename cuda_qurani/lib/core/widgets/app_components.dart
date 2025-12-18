@@ -16,6 +16,8 @@ class AppListTile extends StatelessWidget {
   final bool showDivider;
   final bool enabled;
   final Color? backgroundColor;
+  final TextStyle? titleStyle;
+  final TextStyle? subtitleStyle;
 
   const AppListTile({
     Key? key,
@@ -29,6 +31,8 @@ class AppListTile extends StatelessWidget {
     this.showDivider = true,
     this.enabled = true,
     this.backgroundColor,
+    this.titleStyle,
+    this.subtitleStyle,
   }) : super(key: key);
 
   @override
@@ -53,18 +57,18 @@ class AppListTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTypography.title(
+                      style: titleStyle ?? AppTypography.title(
                         context,
-                        color: enabled ? null : AppColors.getTextDisabled(context),
+                        color: enabled ? AppColors.getTextPrimary(context) : AppColors.getTextDisabled(context),
                       ),
                     ),
                     if (subtitle != null) ...[
                       AppMargin.gapSmall(context),
                       Text(
                         subtitle!,
-                        style: AppTypography.caption(
+                        style: subtitleStyle ?? AppTypography.caption(
                           context,
-                          color: enabled ? null : AppColors.getTextDisabled(context),
+                          color: enabled ? AppColors.getTextSecondary(context) : AppColors.getTextDisabled(context),
                         ),
                       ),
                     ],

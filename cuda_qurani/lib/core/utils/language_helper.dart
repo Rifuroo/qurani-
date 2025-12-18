@@ -11,6 +11,15 @@ import 'package:cuda_qurani/core/providers/language_provider.dart';
 /// 2. Akses dengan tr('key.nested') atau trParams('key', {'param': 'value'})
 
 class LanguageHelper {
+
+  /// Load translation (alias untuk loadFrom)
+  /// Example: await LanguageHelper.loadTranslations(context, 'settings/appearances')
+  static Future<Map<String, dynamic>> loadTranslations(
+    BuildContext context,
+    String path,
+  ) async {
+    return await loadFrom(context, path);
+  }
   /// Get translation dengan key
   /// Example: tr(translations, 'home.welcome')
   static String tr(Map<String, dynamic> translations, String key) {

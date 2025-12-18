@@ -19,35 +19,67 @@ import 'package:cuda_qurani/providers/premium_provider.dart';
 import 'package:cuda_qurani/providers/theme_provider.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 
-// Global flag to track DB initialization
+// Global flags to track initialization
 bool _isDatabaseInitialized = false;
+bool _isAppFullyInitialized = false;
+
+/// Check if app is fully initialized for heavy operations
+bool get isAppReady => _isAppFullyInitialized;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ✅ OPTIMIZATION: Only initialize critical services synchronously
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
     anonKey: AppConfig.supabaseAnonKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
   );
-  await MushafSettingsService().initialize();
-  await _initializeDatabases();
-  await JuzService.initialize();
-  await _initializeListeningServices();
-  await _initializeLanguageService();
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp, // portrait normal
     // DeviceOrientation.portraitDown, // kalau mau ijinkan portrait terbalik
   ]);
 
+  // ✅ Start app immediately, initialize heavy services in background
   runApp(const MainApp());
+  
+  // ✅ Initialize heavy services asynchronously after app starts
+  _initializeServicesInBackground();
+}
+
+/// Initialize heavy services in background to prevent blocking UI
+Future<void> _initializeServicesInBackground() async {
+  try {
+    print('[STARTUP] 🚀 Starting background initialization...');
+    
+    // Initialize in parallel for better performance
+    await Future.wait([
+      MushafSettingsService().initialize(),
+      _initializeLanguageService(),
+      _initializeListeningServices(),
+    ]);
+    
+    // Initialize databases (heaviest operation)
+    await _initializeDatabases();
+    await JuzService.initialize();
+    
+    _isAppFullyInitialized = true;
+    print('[STARTUP] ✅ Background initialization complete');
+  } catch (e) {
+    print('[STARTUP] ❌ Background initialization failed: $e');
+    // Don't crash the app, just log the error
+    _isAppFullyInitialized = true; // Set to true to prevent infinite loading
+  }
 }
 
 Future<void> _initializeLanguageService() async {
   try {
     final languageProvider = LanguageProvider();
     await languageProvider.initialize();
-  } catch (e, stackTrace) {
+  } catch (e) {
     // Don't throw - app should still work with default language
   }
 }
@@ -64,14 +96,27 @@ Future<void> _initializeDatabases() async {
   }
 
   try {
+    print('[DB] 🔄 Starting database initialization...');
+    final startTime = DateTime.now();
+    
+    // ✅ Initialize databases in parallel
     await Future.wait([
       DBHelper.preInitializeAll(),
       LocalDatabaseService.preInitialize(),
     ]);
+    
+    // ✅ Initialize metadata cache (this is the heavy operation)
     await MetadataCacheService().initialize();
 
     _isDatabaseInitialized = true;
-  } catch (e, stackTrace) {}
+    
+    final duration = DateTime.now().difference(startTime);
+    print('[DB] ✅ Database initialization complete in ${duration.inMilliseconds}ms');
+  } catch (e) {
+    print('[DB] ❌ Database initialization failed: $e');
+    // Don't crash the app, set flag to prevent retries
+    _isDatabaseInitialized = true;
+  }
 }
 
 class MainApp extends StatelessWidget {
@@ -82,11 +127,13 @@ class MainApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        // ✅ AuthProvider must be initialized first and not lazy
         ChangeNotifierProvider(create: (_) => AuthProvider(), lazy: false),
         ChangeNotifierProvider(
           create: (_) => LanguageProvider()..initialize(),
           lazy: false,
         ),
+        // ✅ PremiumProvider depends on AuthProvider, so initialize after
         ChangeNotifierProvider(
           create: (_) => PremiumProvider()..initialize(),
           lazy: false,
@@ -160,18 +207,50 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
   }
 
   Future<void> _navigateToAuth() async {
-    // Show splash for minimum 2 seconds (for branding)
-    await Future.delayed(const Duration(seconds: 2));
+    // ✅ Wait for splash animation to complete (2 seconds) AND AuthProvider ready
+    final startTime = DateTime.now();
+    const minSplashDuration = Duration(milliseconds: 2000); // Match original splash timing
+    
+    // Wait for AuthProvider to finish initialization
+    int attempts = 0;
+    const maxAttempts = 50; // 5 seconds max (50 * 100ms)
+    
+    while (attempts < maxAttempts) {
+      try {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        if (!authProvider.isLoading) {
+          print('✅ AuthProvider ready');
+          break;
+        }
+      } catch (e) {
+        // Provider not ready yet
+      }
+      
+      await Future.delayed(const Duration(milliseconds: 100));
+      attempts++;
+    }
+    
+    // ✅ Ensure minimum splash duration for animation to complete
+    final elapsed = DateTime.now().difference(startTime);
+    if (elapsed < minSplashDuration) {
+      final remaining = minSplashDuration - elapsed;
+      print('⏱️ Waiting ${remaining.inMilliseconds}ms more for splash animation...');
+      await Future.delayed(remaining);
+    }
 
     if (!mounted) return;
 
-    // Navigate to AuthWrapper (no animation for smooth transition)
+    print('🚀 Navigating to AuthWrapper...');
+    // Navigate to AuthWrapper
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             const AuthWrapper(),
-        transitionDuration: Duration.zero, // No animation
+        transitionDuration: const Duration(milliseconds: 300),
         reverseTransitionDuration: Duration.zero,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
       ),
     );
   }
@@ -226,4 +305,13 @@ extension NumberFormattingExtension on BuildContext {
   String formatNumber(dynamic number) {
     return AppLocalizations.formatNumber(this, number);
   }
+}
+
+/// Extension untuk check app initialization status
+extension AppStatusExtension on BuildContext {
+  /// Check if app is fully initialized for heavy operations
+  bool get isAppReady => _isAppFullyInitialized;
+  
+  /// Check if databases are initialized
+  bool get isDatabaseReady => _isDatabaseInitialized;
 }

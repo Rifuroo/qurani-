@@ -71,29 +71,44 @@ class _SliderGuidePopupState extends State<SliderGuidePopup>
     await prefs.setInt(_popupCountKey, _showCount);
   }
 
-  Future<void> _loadAndCompressImage() async {
-    try {
-      final ByteData data = await rootBundle.load('assets/images/sliderbutton_guide.jpeg');
-      final Uint8List bytes = data.buffer.asUint8List();
+Future<void> _loadAndCompressImage() async {
+  try {
+    final ByteData data = await rootBundle.load('assets/images/sliderbutton_guide.jpeg');
+    final Uint8List bytes = data.buffer.asUint8List();
 
-      // Compress image: 1440x1080 -> ~240x180 (lebih kecil untuk popup)
-      final compressedBytes = await FlutterImageCompress.compressWithList(
-        bytes,
-        minWidth: 240,
-        minHeight: 180,
-        quality: 1000,
-        format: CompressFormat.jpeg,
-      );
+    // ✅ FIX: quality harus 0-100, bukan 1000!
+    final Uint8List? compressedBytes = await FlutterImageCompress.compressWithList(
+      bytes,
+      minWidth: 240,
+      minHeight: 180,
+      quality: 85, // ✅ UBAH: dari 1000 jadi 85 (valid range: 0-100)
+      format: CompressFormat.jpeg,
+    );
 
+    // ✅ Handle null result
+    if (compressedBytes == null) {
+      print('⚠️ Image compression returned null - using original image');
+      // Fallback: use original bytes if compression fails
       if (mounted) {
         setState(() {
-          _compressedImage = compressedBytes;
+          _compressedImage = bytes; // Use original uncompressed
         });
       }
-    } catch (e) {
-      print('❌ Failed to load/compress guide image: $e');
+      return;
     }
+
+    if (mounted) {
+      setState(() {
+        _compressedImage = compressedBytes;
+      });
+      print('✅ Image compressed successfully: ${compressedBytes.length} bytes');
+    }
+  } catch (e, stackTrace) {
+    print('❌ Failed to load/compress guide image: $e');
+    print('Stack trace: $stackTrace');
+    // ✅ Don't set _compressedImage - popup will work without image
   }
+}
 
   void _startIdleDetection() {
     _lastInteractionTime = DateTime.now();

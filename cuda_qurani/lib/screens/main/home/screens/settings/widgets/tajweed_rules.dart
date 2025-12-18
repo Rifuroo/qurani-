@@ -149,7 +149,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
                         style: TextStyle(
                           fontSize: 16 * s * 0.9,
                           fontWeight: AppTypography.semiBold,
-                          color: AppColors.textPrimary,
+                          color: AppColors.getTextPrimary(context),
                         ),
                       ),
                       SizedBox(height: 2 * s * 0.9),
@@ -158,7 +158,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
                         style: TextStyle(
                           fontSize: 14 * s * 0.9,
                           fontWeight: AppTypography.regular,
-                          color: AppColors.textSecondary,
+                          color: AppColors.getTextSecondary(context),
                         ),
                       ),
                     ],
@@ -170,7 +170,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
                       ? Icons.keyboard_arrow_up
                       : Icons.keyboard_arrow_down,
                   size: 24 * s * 0.9,
-                  color: AppColors.textSecondary,
+                  color: AppColors.getTextSecondary(context),
                 ),
               ],
             ),
@@ -181,7 +181,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
           Divider(
             height: 1,
             thickness: 1 * s * 0.9,
-            color: AppColors.borderLight,
+            color: AppColors.getBorderLight(context),
           ),
           Padding(
             padding: EdgeInsets.all(AppDesignSystem.space16 * s * 0.9),
@@ -190,7 +190,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
               style: TextStyle(
                 fontSize: 14 * s * 0.9,
                 fontWeight: AppTypography.regular,
-                color: AppColors.textPrimary,
+                color: AppColors.getTextPrimary(context),
                 height: 1.5,
               ),
             ),
@@ -201,7 +201,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
           Divider(
             height: 1,
             thickness: 1 * s * 0.9,
-            color: AppColors.borderLight,
+            color: AppColors.getBorderLight(context),
           ),
       ],
     );
@@ -213,14 +213,14 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
     final rules = _getRules(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.getBackground(context),
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
-            color: AppColors.textPrimary,
+            color: AppColors.getTextPrimary(context),
             size: 24 * s * 0.9,
           ),
           onPressed: () {
@@ -267,7 +267,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
           style: TextStyle(
             fontSize: 18 * s * 0.9,
             fontWeight: AppTypography.semiBold,
-            color: AppColors.textPrimary,
+            color: AppColors.getTextPrimary(context),
           ),
         ),
         centerTitle: false,
@@ -284,7 +284,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
               style: TextStyle(
                 fontSize: 14 * s * 0.9,
                 fontWeight: AppTypography.regular,
-                color: AppColors.textSecondary,
+                color: AppColors.getTextSecondary(context),
                 height: 1.5,
               ),
             ),
@@ -302,7 +302,7 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
                 style: TextStyle(
                   fontSize: 14 * s * 0.9,
                   fontWeight: AppTypography.regular,
-                  color: AppColors.textSecondary,
+                  color: AppColors.getTextSecondary(context),
                   decoration: TextDecoration.underline,
                   height: 1.5,
                 ),
@@ -312,12 +312,12 @@ class _TajweedRulesPageState extends State<TajweedRulesPage> {
             // All rules in one container
             Container(
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: AppColors.getSurface(context),
                 borderRadius: BorderRadius.circular(
                   AppDesignSystem.radiusMedium * s * 0.9,
                 ),
                 border: Border.all(
-                  color: AppColors.borderLight,
+                  color: AppColors.getBorderLight(context),
                   width: 1.0 * s * 0.9,
                 ),
               ),

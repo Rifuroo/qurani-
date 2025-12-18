@@ -221,8 +221,8 @@ class PremiumSwitch extends StatelessWidget {
               onChanged: canAccess
                   ? onChanged
                   : (_) => showPremiumFeatureDialog(context, feature),
-              activeTrackColor: AppColors.getSuccess(context),
-              activeThumbColor: AppColors.getSuccess(context),
+              activeTrackColor: AppColors.getPrimary(context).withValues(alpha: 0.5),
+              activeThumbColor: Colors.white,
               inactiveThumbColor: AppColors.getBorderMedium(context),
             ),
           ],

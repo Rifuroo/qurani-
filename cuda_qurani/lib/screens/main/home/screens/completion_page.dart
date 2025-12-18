@@ -567,7 +567,7 @@ class _CompletionPageState extends State<CompletionPage> {
                           ? AppColors.getPrimary(context)
                           : percentage > 0
                           ? AppColors.getWarning(context)
-                          : AppColors.getBorderLight(context),
+                          : AppColors.getBorderMedium(context),
                     ),
                   ),
                 ),
@@ -621,7 +621,17 @@ class _CompletionPageState extends State<CompletionPage> {
     return Container(
       margin: EdgeInsets.all(AppDesignSystem.space16 * s),
       padding: EdgeInsets.all(AppDesignSystem.space16 * s),
-      decoration: AppComponentStyles.card(),
+      decoration: BoxDecoration(
+        color: AppColors.getSurface(context),
+        borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.getShadowLight(context),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         children: [
           // Circular Progress Chart
@@ -659,6 +669,7 @@ class _CompletionPageState extends State<CompletionPage> {
                       style: AppTypography.h2(
                         context,
                         weight: AppTypography.bold,
+                        color: AppColors.getTextPrimary(context),
                       ),
                     ),
                   ],
@@ -681,6 +692,7 @@ class _CompletionPageState extends State<CompletionPage> {
                 style: AppTypography.title(
                   context,
                   weight: AppTypography.semiBold,
+                  color: AppColors.getTextPrimary(context),
                 ),
               ),
               Text(
@@ -777,6 +789,7 @@ class _CompletionPageState extends State<CompletionPage> {
               style: AppTypography.titleLarge(
                 context,
                 weight: AppTypography.bold,
+                color: AppColors.getTextPrimary(context),
               ),
               textAlign: TextAlign.center,
             ),
@@ -808,7 +821,11 @@ class _CompletionPageState extends State<CompletionPage> {
                     'completion.continue_reading_text',
                   )
                 : 'Continue Reading',
-            style: AppTypography.title(context, weight: AppTypography.semiBold),
+            style: AppTypography.title(
+              context, 
+              weight: AppTypography.semiBold,
+              color: AppColors.getTextSecondary(context),
+            ),
           ),
           SizedBox(height: AppDesignSystem.space8 * s),
           Material(
@@ -905,7 +922,7 @@ class _CompletionPageState extends State<CompletionPage> {
               border: Border.all(
                 color: _searchController.text.isNotEmpty
                     ? AppColors.getBorderFocus(context)
-                    : AppColors.getBorderLight(context),
+                    : AppColors.getBorderMedium(context),
                 width: AppDesignSystem.borderNormal * s,
               ),
             ),
@@ -919,7 +936,7 @@ class _CompletionPageState extends State<CompletionPage> {
                     : 'Search by surah',
                 hintStyle: AppTypography.body(
                   context,
-                  color: AppColors.getTextHint(context),
+                  color: AppColors.getTextSecondary(context),
                 ),
                 prefixIcon: Padding(
                   padding: EdgeInsets.only(

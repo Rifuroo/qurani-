@@ -447,7 +447,7 @@ class _PageHeader extends StatelessWidget {
             'Juz $juzNumber',
             style: TextStyle(
               fontSize: fontSize,
-              color: Colors.black,
+              color: AppColors.getTextPrimary(context),
               fontWeight: FontWeight.w100,
             ),
           ),
@@ -455,7 +455,7 @@ class _PageHeader extends StatelessWidget {
             '$pageNumber',
             style: TextStyle(
               fontSize: fontSize,
-              color: Colors.black,
+              color: AppColors.getTextPrimary(context),
               fontWeight: FontWeight.w100,
             ),
           ),
@@ -487,7 +487,7 @@ class _SurahHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: screenHeight * 0.056,
               fontFamily: 'Quran-Common',
-              color: Colors.black87,
+              color: AppColors.getTextPrimary(context),
             ),
           ),
           Text(
@@ -495,7 +495,7 @@ class _SurahHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: screenHeight * 0.0475,
               fontFamily: 'surah-name-v2',
-              color: Colors.black,
+              color: AppColors.getTextPrimary(context),
             ),
             textDirection: TextDirection.rtl,
           ),
@@ -525,7 +525,7 @@ class _Basmallah extends StatelessWidget {
         style: TextStyle(
           fontSize: screenHeight * 0.04,
           fontFamily: 'Quran-Common',
-          color: Colors.black87,
+          color: AppColors.getTextPrimary(context),
         ),
       ),
     );
@@ -563,9 +563,12 @@ class _CompleteAyahWidget extends StatelessWidget {
 
         return Container(
           width: double.infinity,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(
-              bottom: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+              bottom: BorderSide(
+                color: AppColors.getBorderLight(context), 
+                width: 0.5
+              ),
             ),
           ),
           padding: EdgeInsets.only(
@@ -591,7 +594,7 @@ class _CompleteAyahWidget extends StatelessWidget {
                         border: Border.all(
                           color: state.isCurrentAyat
                               ? AppColors.getPrimary(context)
-                              : Colors.black54,
+                              : AppColors.getTextSecondary(context),
                           width: 1,
                         ),
                         borderRadius: BorderRadius.circular(4),
@@ -601,7 +604,7 @@ class _CompleteAyahWidget extends StatelessWidget {
                         style: TextStyle(
                           color: state.isCurrentAyat
                               ? AppColors.getPrimary(context)
-                              : Colors.black87,
+                              : AppColors.getTextPrimary(context),
                           fontWeight: FontWeight.w600,
                           fontSize: screenWidth * 0.0275,
                         ),
@@ -735,7 +738,7 @@ class _CompleteAyahWidget extends StatelessWidget {
                   0.0625 // IndoPak lebih besar
             : screenWidth * 0.0625, // QPC
         fontFamily: fontFamily,
-        color: isCurrentAyat ? AppColors.getInfo(context) : Colors.black87,
+        color: isCurrentAyat ? AppColors.getInfo(context) : AppColors.getTextPrimary(context),
         fontWeight: FontWeight.w400,
         height: isIndopak ? 1.8 : 1.7,
         letterSpacing: isIndopak ? 0 : -5,

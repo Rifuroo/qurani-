@@ -17,6 +17,7 @@ import 'package:cuda_qurani/screens/main/home/screens/settings/submenu/translati
 import 'package:cuda_qurani/screens/main/home/screens/settings/submenu/data_usage.dart';
 import 'package:flutter/material.dart';
 import 'package:cuda_qurani/screens/main/home/widgets/navigation_bar.dart';
+import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/widgets/app_components.dart';
 
@@ -71,9 +72,9 @@ class _SettingsPageState extends State<SettingsPage> {
             Expanded(
               child: Text(
                 label,
-                style: TextStyle(
-                  fontSize: 14 * s,
-                  fontWeight: AppTypography.medium,
+                style: AppTypography.body(
+                  context,
+                  weight: AppTypography.medium,
                   color: AppColors.getTextPrimary(context),
                 ),
               ),
@@ -95,10 +96,8 @@ class _SettingsPageState extends State<SettingsPage> {
       padding: EdgeInsets.only(bottom: AppDesignSystem.space8 * s),
       child: Text(
         title,
-        style: TextStyle(
-          fontSize: 11 * s,
-          fontWeight: AppTypography.bold,
-          letterSpacing: 1.2,
+        style: AppTypography.overline(
+          context,
           color: AppColors.getTextTertiary(context),
         ),
       ),
@@ -108,10 +107,13 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.getBackground(context),
-      appBar: ProfileAppBar(title: _translations.isNotEmpty 
-              ? LanguageHelper.tr(_translations, 'settings.settings_text')
-              : 'Settings',),
+      backgroundColor: AppColors.getSurfaceVariant(context),
+      appBar: SettingsAppBar(
+        title: _translations.isNotEmpty 
+            ? LanguageHelper.tr(_translations, 'settings.settings_text')
+            : 'Settings',
+        showBackButton: true,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -1042,6 +1044,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: AppTypography.h3(
                         context,
                         weight: AppTypography.bold,
+                        color: AppColors.getTextPrimary(context),
                       ),
                     ),
                   ),

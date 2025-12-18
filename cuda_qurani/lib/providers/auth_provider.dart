@@ -19,35 +19,48 @@ class AuthProvider extends ChangeNotifier {
   String? get accessToken => _authService.accessToken;
 
   AuthProvider() {
+    // ✅ Check session immediately without waiting
+    _checkImmediateSession();
     _initialize();
+  }
+  
+  void _checkImmediateSession() {
+    // ✅ Quick check for existing session
+    final currentSession = Supabase.instance.client.auth.currentSession;
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    
+    if (currentSession != null && currentUser != null) {
+      print('🚀 AuthProvider: Immediate session found, setting loading to false');
+      _isLoading = false;
+      // Don't notify listeners yet, let _initialize() handle it properly
+    }
   }
 
   Future<void> _initialize() async {
     print('🔧 AuthProvider: Initializing...');
     
-    await _authService.initialize();
-    
-    if (_authService.isAuthenticated) {
-      print('🔄 AuthProvider: Validating session token...');
-      try {
-        await Supabase.instance.client.auth.refreshSession();
-        print('✅ AuthProvider: Session token valid');
-      } catch (e) {
-        print('⚠️ AuthProvider: Session expired/invalid, signing out...');
-        try {
-          await _authService.signOut();
-        } catch (_) {}
+    try {
+      // ✅ Initialize AuthService (now faster)
+      await _authService.initialize();
+      
+      // ✅ Setup auth state listener
+      _authStateSubscription = _authService.authStateChanges.listen((AuthState state) {
+        print('🔔 AuthProvider: Auth state changed');
+        print('   - Event: ${state.event}');
+        print('   - User: ${state.session?.user.email ?? "null"}');
+        notifyListeners();
+      });
+      
+      // ✅ Skip session validation if already authenticated (faster)
+      if (_authService.isAuthenticated) {
+        print('✅ AuthProvider: User already authenticated, skipping validation');
       }
+      
+      print('✅ AuthProvider: Initialized (isAuthenticated=${_authService.isAuthenticated})');
+    } catch (e) {
+      print('❌ AuthProvider: Initialization failed: $e');
+      // Don't crash, just continue with unauthenticated state
     }
-    
-    _authStateSubscription = _authService.authStateChanges.listen((AuthState state) {
-      print('🔔 AuthProvider: Auth state changed');
-      print('   - Event: ${state.event}');
-      print('   - User: ${state.session?.user.email ?? "null"}');
-      notifyListeners();
-    });
-    
-    print('✅ AuthProvider: Initialized (isAuthenticated=${_authService.isAuthenticated})');
     
     _isLoading = false;
     notifyListeners();

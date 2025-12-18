@@ -44,11 +44,10 @@ class AuthService {
   /// Initialize
   Future<void> initialize() async {
     print('🔐 Initializing AuthService...');
+    
     print('   - Current User: ${supabaseUser?.email ?? "null"}');
     print('   - Current Session: ${_supabase.auth.currentSession != null}');
-
-    // ✅ Initialize Google Sign In akan dilakukan saat sign in
-    // Tidak perlu initialize di sini karena akan menggunakan clientId yang berbeda
+    print('   - Session Access Token: ${_supabase.auth.currentSession?.accessToken != null ? "exists" : "null"}');
 
     if (supabaseUser != null) {
       _currentUser = UserModel.fromSupabaseUser(supabaseUser!);
@@ -56,9 +55,6 @@ class AuthService {
     } else {
       print('⚠️ No user session found');
     }
-
-    // Warm up Google Sign In to reduce first-time dialog delay
-    await warmUpGoogleSignIn();
 
     // Listen to auth changes
     authStateChanges.listen((AuthState data) {
@@ -72,6 +68,9 @@ class AuthService {
         print('⚠️ User logged out');
       }
     });
+
+    // ✅ Warm up Google Sign In in background (non-blocking)
+    warmUpGoogleSignIn();
 
     print('✅ AuthService initialized');
   }
@@ -134,10 +133,16 @@ class AuthService {
       if (response.user != null) {
         _currentUser = UserModel.fromSupabaseUser(response.user!);
 
-        // Save remember me preference
-        if (rememberMe) {
+        // ✅ Save remember me preference and user info
+        try {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('remember_me', true);
+          await prefs.setBool('remember_me', rememberMe);
+          if (rememberMe) {
+            await prefs.setString('last_user_email', email);
+          }
+          print('✅ Remember me preference saved: $rememberMe');
+        } catch (e) {
+          print('⚠️ Failed to save remember me preference: $e');
         }
 
         print('✅ Sign in successful');
@@ -212,6 +217,17 @@ class AuthService {
 
       if (response.user != null && response.session != null) {
         _currentUser = UserModel.fromSupabaseUser(response.user!);
+        
+        // ✅ Save remember me for Google Sign In
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('remember_me', true);
+          await prefs.setString('last_user_email', response.user!.email ?? '');
+          print('✅ Google Sign In remember me saved');
+        } catch (e) {
+          print('⚠️ Failed to save Google Sign In remember me: $e');
+        }
+        
         print('✅ Supabase sign in successful');
         print('   - User: ${_currentUser!.email}');
         print('   - User ID: ${_currentUser!.id}');
@@ -280,9 +296,11 @@ class AuthService {
       await _supabase.auth.signOut();
       _currentUser = null;
 
-      // Clear remember me
+      // ✅ Clear all auth-related preferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('remember_me');
+      await prefs.remove('last_user_email');
+      print('✅ Auth preferences cleared');
 
       print('✅ Signed out completely');
     } catch (e) {

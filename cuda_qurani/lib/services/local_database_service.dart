@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
+import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
@@ -31,12 +32,27 @@ class LocalDatabaseService {
   }
 
   /// ✅ NEW: Get first and last ayah in a page using word_id mapping
-  static Future<Map<String, dynamic>> getAyahRangeInPage(int pageNumber) async {
+  static Future<Map<String, dynamic>> getAyahRangeInPage(
+    int pageNumber,
+    MushafLayout layout, // ✅ ADD: Pass layout as parameter
+  ) async {
     await _ensureInitialized();
 
     try {
       final databasesPath = await getDatabasesPath();
-      final pagesPath = join(databasesPath, 'qpc-v1-15-lines.db');
+
+      // ✅ Use passed layout parameter instead of controller
+      final String dbFileName;
+      switch (layout) {
+        case MushafLayout.qpc:
+          dbFileName = 'qpc-v1-15-lines.db';
+          break;
+        case MushafLayout.indopak:
+          dbFileName = 'qudratullah-indopak-15-lines.db';
+          break;
+      }
+
+      final pagesPath = join(databasesPath, dbFileName);
 
       // 1. Open pages database
       final pagesDb = await openDatabase(pagesPath, readOnly: true);
@@ -410,11 +426,11 @@ class LocalDatabaseService {
 
       // Query pages database to find page containing this word
       final databasesPath = await getDatabasesPath();
-      
+
       // ✅ FIX: Get current layout to determine which DB to use
       final currentLayout = await MushafSettingsService().getMushafLayout();
       final String dbFileName;
-      
+
       switch (currentLayout) {
         case MushafLayout.qpc:
           dbFileName = 'qpc-v1-15-lines.db';
@@ -423,7 +439,7 @@ class LocalDatabaseService {
           dbFileName = 'qudratullah-indopak-15-lines.db';
           break;
       }
-      
+
       final pagesPath = join(databasesPath, dbFileName);
 
       if (!await File(pagesPath).exists()) {
@@ -559,14 +575,14 @@ class LocalDatabaseService {
   }
 
   static Future<Map<int, List<int>>> buildPageSurahMapping({
-    required MushafLayout layout, // ✅ NEW PARAMETER
+    required MushafLayout layout,
   }) async {
     await _ensureInitialized();
 
     try {
       final databasesPath = await getDatabasesPath();
 
-      // ✅ DYNAMIC: Pilih database berdasarkan layout
+      // ✅ DYNAMIC: Choose database based on layout
       final String dbFileName;
       switch (layout) {
         case MushafLayout.qpc:
@@ -582,7 +598,6 @@ class LocalDatabaseService {
       if (!await File(pagesPath).exists()) {
         print('[LocalDB] Pages database not found, copying $dbFileName...');
 
-        // ✅ CRITICAL: Copy correct database based on layout
         final String assetPath;
         switch (layout) {
           case MushafLayout.qpc:
@@ -599,9 +614,10 @@ class LocalDatabaseService {
         await File(pagesPath).writeAsBytes(bytes, flush: true);
         print('[LocalDB] ✅ Copied $dbFileName successfully');
       }
+
       final pagesDb = await openDatabase(pagesPath, readOnly: true);
 
-      // ✅ NEW ALGORITHM: Get all pages and extract surah from first_word_id
+      // ✅ STEP 1: Get all page lines with word IDs
       final pageLines = await pagesDb.query(
         'pages',
         columns: ['page_number', 'first_word_id'],
@@ -618,8 +634,9 @@ class LocalDatabaseService {
         return {};
       }
 
-      // Build mapping: page → [list of surahs]
-      final Map<int, Set<int>> tempMapping = {}; // Use Set to avoid duplicates
+      // ✅ STEP 2: Collect all unique word IDs for batch query
+      final Set<int> wordIds = {};
+      final Map<int, List<int>> pageToWordIds = {};
 
       for (final line in pageLines) {
         final pageNum = line['page_number'] as int;
@@ -627,24 +644,48 @@ class LocalDatabaseService {
 
         if (firstWordId == null || firstWordId == '') continue;
 
-        // Query word to get surah
-        final wordResult = await _wordsDb!.query(
-          'words',
-          columns: ['surah'],
-          where: 'id = ?',
-          whereArgs: [int.parse(firstWordId.toString())],
-          limit: 1,
+        final wordId = int.parse(firstWordId.toString());
+        wordIds.add(wordId);
+
+        if (!pageToWordIds.containsKey(pageNum)) {
+          pageToWordIds[pageNum] = [];
+        }
+        pageToWordIds[pageNum]!.add(wordId);
+      }
+
+      // ✅ STEP 3: Batch query all words at once
+      final wordIdsList = wordIds.toList();
+      final Map<int, int> wordToSurah = {};
+
+      // Query in batches of 500 to avoid SQL limits
+      for (int i = 0; i < wordIdsList.length; i += 500) {
+        final batch = wordIdsList.skip(i).take(500).toList();
+        final placeholders = List.filled(batch.length, '?').join(',');
+
+        final wordResults = await _wordsDb!.rawQuery(
+          'SELECT id, surah FROM words WHERE id IN ($placeholders)',
+          batch,
         );
 
-        if (wordResult.isEmpty) continue;
-
-        final surahId = wordResult.first['surah'] as int;
-
-        if (!tempMapping.containsKey(pageNum)) {
-          tempMapping[pageNum] = {};
+        for (final word in wordResults) {
+          wordToSurah[word['id'] as int] = word['surah'] as int;
         }
-        tempMapping[pageNum]!.add(surahId);
       }
+
+      // ✅ STEP 4: Build page-surah mapping
+      final Map<int, Set<int>> tempMapping = {};
+
+      pageToWordIds.forEach((pageNum, wordIds) {
+        for (final wordId in wordIds) {
+          final surahId = wordToSurah[wordId];
+          if (surahId != null) {
+            if (!tempMapping.containsKey(pageNum)) {
+              tempMapping[pageNum] = {};
+            }
+            tempMapping[pageNum]!.add(surahId);
+          }
+        }
+      });
 
       // Convert Set to List
       final Map<int, List<int>> mapping = {};
@@ -652,14 +693,15 @@ class LocalDatabaseService {
         mapping[page] = surahs.toList()..sort();
       });
 
-      print('[LocalDB] Built page-surah mapping: ${mapping.length} pages');
+      print('[LocalDB] ✅ Built page-surah mapping: ${mapping.length} pages');
 
       // Debug: Print sample
       if (mapping.isNotEmpty) {
         print('[LocalDB] Sample mapping:');
         print('  Page 1: ${mapping[1]}');
         print('  Page 2: ${mapping[2]}');
-        print('  Page 604: ${mapping[604]}');
+        final lastPage = mapping.keys.reduce((a, b) => a > b ? a : b);
+        print('  Page $lastPage: ${mapping[lastPage]}');
       }
 
       return mapping;

@@ -8,6 +8,8 @@ import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
 
 import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
@@ -84,7 +86,9 @@ class MushafRenderer {
         child: RichText(
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.justify,
-          text: wordSpans.first as TextSpan,
+          text: TextSpan(
+            children: [wordSpans.first],
+          ), // ✅ UBAH: wrap dalam children
         ),
       );
     }
@@ -95,7 +99,9 @@ class MushafRenderer {
 
     for (final span in wordSpans) {
       final textPainter = TextPainter(
-        text: span as TextSpan,
+        text: span is TextSpan
+            ? span
+            : TextSpan(children: [span]), // ✅ UBAH: handle InlineSpan
         textDirection: TextDirection.rtl,
       );
       textPainter.layout();
@@ -104,18 +110,13 @@ class MushafRenderer {
       totalTextWidth += width;
     }
 
-    // Calculate spacing needed to fill the line (for future use if needed)
-    // final remainingSpace = maxWidth - totalTextWidth;
-    // final numberOfGaps = wordSpans.length - 1;
-
     // Build justified row with proper centering and tight spacing
     return SizedBox(
-      width: maxWidth, // Use full width for proper positioning
+      width: maxWidth,
       height: lineH,
       child: Row(
         textDirection: TextDirection.rtl,
-        mainAxisAlignment: MainAxisAlignment
-            .spaceBetween, // ✅ UBAH: dari center jadi spaceBetween
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           for (int i = 0; i < wordSpans.length; i++) ...[
@@ -123,12 +124,11 @@ class MushafRenderer {
               textDirection: TextDirection.rtl,
               overflow: TextOverflow.visible,
               maxLines: 1,
-              text: wordSpans[i] as TextSpan,
+              text: TextSpan(
+                children: [wordSpans[i]],
+              ), // ✅ UBAH: wrap dalam children, hapus casting
             ),
-            if (i < wordSpans.length - 1)
-              const SizedBox(
-                width: 0.0, // No spacing for any words to prevent overflow
-              ),
+            if (i < wordSpans.length - 1) const SizedBox(width: 0.0),
           ],
         ],
       ),
@@ -146,18 +146,22 @@ class MushafDisplay extends StatefulWidget {
 class _MushafDisplayState extends State<MushafDisplay> {
   bool _isSwipeInProgress = false;
   double _dragStartPosition = 0;
+  bool _isUpdating = false; // ✅ FIX: Prevent concurrent updates
 
   @override
   Widget build(BuildContext context) {
     final controller = context.read<SttController>();
 
     return GestureDetector(
-      behavior: HitTestBehavior.opaque, // ✅ Detect gestures on empty space
+      behavior: HitTestBehavior
+          .translucent, // ✅ FIX: Ganti dari opaque ke translucent
       onHorizontalDragStart: (details) {
+        if (!mounted) return; // ✅ FIX: Check mounted state
         _dragStartPosition = details.globalPosition.dx;
         _isSwipeInProgress = false;
       },
       onHorizontalDragUpdate: (details) {
+        if (!mounted) return; // ✅ FIX: Check mounted state
         // Detect significant horizontal movement
         final dragDistance = (details.globalPosition.dx - _dragStartPosition)
             .abs();
@@ -166,7 +170,8 @@ class _MushafDisplayState extends State<MushafDisplay> {
         }
       },
       onHorizontalDragEnd: (details) {
-        if (!_isSwipeInProgress) return;
+        if (!mounted || !_isSwipeInProgress)
+          return; // ✅ FIX: Check mounted state
 
         final velocity = details.primaryVelocity ?? 0;
 
@@ -179,14 +184,18 @@ class _MushafDisplayState extends State<MushafDisplay> {
           controller.navigateToPage(controller.currentPage - 1);
         }
 
-        // Reset swipe state
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) {
-            setState(() {
-              _isSwipeInProgress = false;
-            });
-          }
-        });
+        // Reset swipe state dengan safety check dan debouncing
+        if (!_isUpdating) {
+          _isUpdating = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _isSwipeInProgress = false;
+                _isUpdating = false;
+              });
+            }
+          });
+        }
       },
       child: SizedBox.expand(
         // ✅ Fill entire screen for gesture detection
@@ -194,7 +203,10 @@ class _MushafDisplayState extends State<MushafDisplay> {
           // ✅ Allow scrolling if content exceeds screen
           physics:
               const NeverScrollableScrollPhysics(), // ✅ Disable scroll (only swipe)
-          child: _buildMushafPageOptimized(context),
+          child: RepaintBoundary(
+            // ✅ FIX: Isolate repaints to prevent MouseTracker conflicts
+            child: _buildMushafPageOptimized(context),
+          ),
         ),
       ),
     );
@@ -388,6 +400,9 @@ class _BasmallahLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final basmallahSize = screenHeight * 0.040;
+    final controller = context.watch<SttController>();
+    final isIndopakFontFamily = controller.mushafLayout == MushafLayout.indopak;
+    final isIndopakFontSize = controller.mushafLayout == MushafLayout.indopak;
 
     return Container(
       height: MushafRenderer.lineHeight(context),
@@ -395,8 +410,10 @@ class _BasmallahLine extends StatelessWidget {
       child: Text(
         '﷽',
         style: TextStyle(
-          fontSize: basmallahSize,
-          fontFamily: 'Quran-Common',
+          fontSize: isIndopakFontSize ? basmallahSize * 0.85 : basmallahSize,
+          fontFamily: isIndopakFontFamily
+              ? 'IndoPak-Nastaleeq'
+              : 'Quran-Common',
           color: AppColors.getTextPrimary(context),
           fontWeight: FontWeight.normal,
         ),
@@ -424,7 +441,7 @@ class _JustifiedAyahLine extends StatelessWidget {
 
     // Font size berbeda untuk QPC vs IndoPak
     final fontSizeMultiplier = isIndopak
-        ? 0.0690 // IndoPak: ukuran konsisten
+        ? 0.0610 // IndoPak: ukuran konsisten
         : ((pageNumber == 1 || pageNumber == 2)
               ? 0.080
               : 0.0690); // QPC: page 1-2 lebih besar
@@ -518,55 +535,64 @@ class _JustifiedAyahLine extends StatelessWidget {
             : baseFontSize;
 
         for (final textSegment in segments) {
-          for (final textSegment in segments) {
-            spans.add(
-              TextSpan(
-                text: textSegment.text,
-                style: TextStyle(
-                  fontSize: effectiveFontSize,
-                  fontFamily: fontFamily,
-                  color: _getWordColor(
-                    isCurrentAyat,
-                    context,
-                  ).withValues(alpha: wordOpacity),
-                  backgroundColor: wordBg,
-                  fontWeight: FontWeight.w400,
-                  height: isIndopak
-                      ? 1.9
-                      : 1.8, // ✅ TAMBAH: Line height berbeda
-                  letterSpacing: isIndopak
-                      ? -1.2
-                      : -5, // ✅ TAMBAH: Letter spacing berbeda
-                  decoration: (controller.hideUnreadAyat && !isLastWord)
-                      ? TextDecoration.underline
-                      : null,
-                  decorationColor: AppColors.getTextPrimary(
-                    context,
-                  ).withValues(alpha: 0.15),
-                  decorationThickness: 0.3,
-                ),
+          spans.add(
+            TextSpan(
+              text: textSegment.text,
+              style: TextStyle(
+                fontSize: effectiveFontSize,
+                fontFamily: fontFamily,
+                color: _getWordColor(
+                  isCurrentAyat,
+                  context,
+                ).withValues(alpha: wordOpacity),
+                backgroundColor: wordBg,
+                fontWeight: FontWeight.w400,
+                height: isIndopak ? 1.9 : 1.8,
+                // ✅ SOLUSI: Letterspace yang lebih negatif untuk "gepengin" text
+                letterSpacing: isIndopak
+                    ? -0.3 // ✅ Lebih negatif = lebih gepeng (coba -1.5 sampai -3.0)
+                    : -5,
+                decoration: (controller.hideUnreadAyat && !isLastWord)
+                    ? TextDecoration.underline
+                    : null,
+                decorationColor: AppColors.getTextPrimary(
+                  context,
+                ).withValues(alpha: 0.15),
+                decorationThickness: 0.3,
               ),
-            );
-          }
+            ),
+          );
         }
       }
     }
 
-    return MushafRenderer.renderJustifiedLine(
+    // ✅ Build line widget
+    final lineWidget = MushafRenderer.renderJustifiedLine(
       wordSpans: spans,
       isCentered: line.isCentered,
       availableWidth: MediaQuery.of(context).size.width,
       context: context,
       allowOverflow: false,
     );
-  }
 
-  // Methods tetap sama
-  Color _getWordColor(bool isCurrentWord, BuildContext context) {
-    return isCurrentWord
-        ? getListeningColor(context)
-        : AppColors.getTextPrimary(context);
+    // ✅ Wrap dengan Transform untuk IndoPak
+    if (isIndopak) {
+      return Transform.scale(
+        scaleX: 0.93, // Gepengin 10%
+        alignment: Alignment.center,
+        child: lineWidget,
+      );
+    }
+
+    return lineWidget;
   }
+}
+
+// Methods tetap sama
+Color _getWordColor(bool isCurrentWord, BuildContext context) {
+  return isCurrentWord
+      ? getListeningColor(context)
+      : AppColors.getTextPrimary(context);
 }
 
 class MushafPageHeader extends StatefulWidget {
@@ -613,11 +639,10 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
 
     return Container(
       height: headerHeight,
-      color: AppColors.getBackground(
-        context,
-      ), // ✅ ADD: Background to blend when hidden
-      padding: EdgeInsets
-          .zero, // ✅ CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
+      // ✅ FIX: Hapus background color sama sekali
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * 0.030,
+      ), // ✅ CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
       alignment: Alignment.center,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -626,7 +651,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             '$juzText ${context.formatNumber(juzNumber)}',
             style: TextStyle(
               fontSize: headerFontSize,
-              color: AppColors.getTextSecondary(context),
+              color: AppColors.getTextPrimary(context).withOpacity(0.8),
               fontWeight: FontWeight.w500,
             ),
             textDirection: TextDirection.rtl,
@@ -684,7 +709,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             '${context.formatNumber(controller.currentPage)}',
             style: TextStyle(
               fontSize: headerFontSize,
-              color: AppColors.getTextSecondary(context),
+              color: AppColors.getTextPrimary(context).withOpacity(0.8),
               fontWeight: FontWeight.w500,
             ),
           ),

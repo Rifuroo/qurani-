@@ -64,6 +64,7 @@ class SettingsAppBar extends StatelessWidget implements PreferredSizeWidget {
         style: AppTypography.titleLarge(
           context,
           weight: AppTypography.semiBold,
+          color: AppColors.getTextPrimary(context),
         ),
       ),
       actions: actions,

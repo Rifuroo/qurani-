@@ -165,8 +165,8 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                             Switch(
                               value: _playSound,
                               onChanged: _togglePlaySound,
-                              activeTrackColor: AppColors.getSuccess(context),
-                              activeThumbColor: AppColors.getSuccess(context),
+                              activeTrackColor: AppColors.getPrimary(context).withValues(alpha: 0.5),
+                              activeThumbColor: Colors.white,
                               inactiveThumbColor: AppColors.getBorderMedium(context),
                               inactiveTrackColor: AppColors.getBorderLight(context),
                             ),
@@ -301,8 +301,8 @@ class _MistakeFeedbackPageState extends State<MistakeFeedbackPage> {
                       Switch(
                         value: _vibrateDevice,
                         onChanged: _toggleVibrateDevice,
-                        activeTrackColor: AppColors.getSuccess(context),
-                        activeThumbColor: AppColors.getSuccess(context),
+                        activeTrackColor: AppColors.getPrimary(context).withValues(alpha: 0.5),
+                        activeThumbColor: Colors.white,
                         inactiveThumbColor: AppColors.getBorderMedium(context),
                         inactiveTrackColor: AppColors.getBorderLight(context),
                       ),

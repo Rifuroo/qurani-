@@ -141,7 +141,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
           style: TextStyle(
             fontSize: 14 * s * 0.9,
             fontWeight: AppTypography.medium,
-            color: AppColors.textSecondary,
+            color: AppColors.getTextSecondary(context),
           ),
         ),
         SizedBox(height: AppDesignSystem.space16 * s * 0.9),
@@ -156,7 +156,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
               AppDesignSystem.radiusMedium * s * 0.9,
             ),
             border: Border.all(
-              color: AppColors.borderLight,
+              color: AppColors.getBorderLight(context),
               width: 1.0 * s * 0.9,
             ),
           ),
@@ -168,7 +168,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
                 style: TextStyle(
                   fontSize: 16 * s * 0.9,
                   fontWeight: AppTypography.regular,
-                  color: AppColors.textPrimary,
+                  color: AppColors.getTextPrimary(context),
                 ),
               ),
               SizedBox(height: 4 * s * 0.9),
@@ -177,7 +177,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
                 style: TextStyle(
                   fontSize: 14 * s * 0.9,
                   fontWeight: AppTypography.regular,
-                  color: AppColors.textSecondary,
+                  color: AppColors.getTextSecondary(context),
                 ),
               ),
             ],
@@ -203,7 +203,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
           style: TextStyle(
             fontSize: 14 * s * 0.9,
             fontWeight: AppTypography.medium,
-            color: AppColors.textSecondary,
+            color: AppColors.getTextSecondary(context),
           ),
         ),
         SizedBox(height: AppDesignSystem.space16 * s * 0.9),
@@ -234,7 +234,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
         borderRadius: BorderRadius.circular(
           AppDesignSystem.radiusMedium * s * 0.9,
         ),
-        border: Border.all(color: AppColors.borderLight, width: 1.0 * s * 0.9),
+        border: Border.all(color: AppColors.getBorderLight(context), width: 1.0 * s * 0.9),
       ),
       child: Column(
         children: [
@@ -256,7 +256,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
                       style: TextStyle(
                         fontSize: 16 * s * 0.9,
                         fontWeight: AppTypography.regular,
-                        color: AppColors.textPrimary,
+                        color: AppColors.getTextPrimary(context),
                       ),
                     ),
                   ),
@@ -265,7 +265,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
                         ? Icons.keyboard_arrow_up
                         : Icons.keyboard_arrow_down,
                     size: 24 * s * 0.9,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ],
               ),
@@ -275,7 +275,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
             Divider(
               height: 1,
               thickness: 1 * s * 0.9,
-              color: AppColors.borderLight,
+              color: AppColors.getBorderLight(context),
             ),
             ...translations.asMap().entries.map((entry) {
               final index = entry.key;
@@ -292,7 +292,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
                     Divider(
                       height: 1,
                       thickness: 1 * s * 0.9,
-                      color: AppColors.borderLight,
+                      color: AppColors.getBorderLight(context),
                     ),
                 ],
               );
@@ -322,7 +322,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
                   style: TextStyle(
                     fontSize: 16 * s * 0.9,
                     fontWeight: AppTypography.regular,
-                    color: AppColors.textPrimary,
+                    color: AppColors.getTextPrimary(context),
                   ),
                 ),
                 SizedBox(height: 4 * s * 0.9),
@@ -331,7 +331,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
                   style: TextStyle(
                     fontSize: 14 * s * 0.9,
                     fontWeight: AppTypography.regular,
-                    color: AppColors.textSecondary,
+                    color: AppColors.getTextSecondary(context),
                   ),
                 ),
               ],
@@ -345,7 +345,7 @@ class _TranslationDownloadPageState extends State<TranslationDownloadPage> {
               height: 40 * s * 0.9,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.textPrimary,
+                color: AppColors.getTextPrimary(context),
               ),
               child: Icon(
                 Icons.arrow_downward,

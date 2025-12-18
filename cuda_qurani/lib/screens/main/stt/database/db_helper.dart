@@ -79,12 +79,24 @@ class DBHelper {
     return db;
   }
 
-  // TAMBAHAN: Method untuk menutup semua database
+  // ✅ IMPROVED: Close all databases with proper error handling
   static Future<void> closeAllDatabases() async {
-    for (final db in _dbInstances.values) {
-      await db.close();
+    print('[DBHelper] 🔒 Closing ${_dbInstances.length} database instances...');
+
+    for (final entry in _dbInstances.entries) {
+      try {
+        if (entry.value.isOpen) {
+          await entry.value.close();
+          print('[DBHelper] ✅ Closed ${entry.key}');
+        }
+      } catch (e) {
+        print('[DBHelper] ⚠️ Error closing ${entry.key}: $e');
+        // Continue closing others
+      }
     }
+
     _dbInstances.clear();
+    print('[DBHelper] ✅ All databases closed and cache cleared');
   }
 
   static Future<void> preInitializeAll() async {
@@ -141,6 +153,3 @@ class DBHelper {
     }
   }
 }
-
-
-

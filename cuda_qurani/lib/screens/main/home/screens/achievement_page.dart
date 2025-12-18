@@ -214,7 +214,7 @@ class _AchievementPageState extends State<AchievementPage> {
             children: [
               Text(
                 'Latest Badge',
-                style: AppTypography.h3(context, weight: AppTypography.bold),
+                style: AppTypography.h3(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
               ),
               Container(
                 padding: EdgeInsets.symmetric(
@@ -222,14 +222,14 @@ class _AchievementPageState extends State<AchievementPage> {
                   vertical: 2 * s,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryContainer,
+                  color: AppColors.getPrimaryContainer(context),
                   borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge * s),
                 ),
                 child: Text(
                   '$_earnedCount/$_totalCount',
                   style: AppTypography.captionSmall(
                     context,
-                    color: AppColors.primary,
+                    color: AppColors.getPrimary(context),
                     weight: AppTypography.bold,
                   ),
                 ),
@@ -240,10 +240,10 @@ class _AchievementPageState extends State<AchievementPage> {
 
           Container(
             decoration: AppComponentStyles.card(
-              color: AppColors.surface,
+              color: AppColors.getSurface(context),
               shadow: true,
               borderRadius: AppDesignSystem.radiusLarge * s,
-              borderColor: AppColors.borderLight,
+              borderColor: AppColors.getBorderLight(context),
             ),
             child: Material(
               color: Colors.transparent,
@@ -269,7 +269,7 @@ class _AchievementPageState extends State<AchievementPage> {
                                   Image.asset(
                                     'assets/images/qurani-white-text.png',
                                     height: 25 * s,
-                                    color: AppColors.primary,
+                                    color: AppColors.getPrimary(context),
                                     fit: BoxFit.contain,
                                   ),
                                   if (badge.badgeType != null)
@@ -279,7 +279,7 @@ class _AchievementPageState extends State<AchievementPage> {
                                         badge.badgeType!,
                                         style: AppTypography.bodyLarge(
                                           context,
-                                          color: AppColors.textSecondary,
+                                          color: AppColors.getTextSecondary(context),
                                         ),
                                       ),
                                     ),
@@ -287,7 +287,7 @@ class _AchievementPageState extends State<AchievementPage> {
                               ),
                               Icon(
                                 Icons.share_outlined,
-                                color: AppColors.textTertiary,
+                                color: AppColors.getTextTertiary(context),
                                 size: AppDesignSystem.iconMedium * s,
                               ),
                             ],
@@ -314,15 +314,15 @@ class _AchievementPageState extends State<AchievementPage> {
                                 width: 125 * s,
                                 height: 125 * s,
                                 decoration: BoxDecoration(
-                                  color: AppColors.surface,
+                                  color: AppColors.getSurface(context),
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: AppColors.borderLight,
+                                    color: AppColors.getBorderLight(context),
                                     width: 1 * s,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.shadowLight,
+                                      color: AppColors.getShadowLight(context),
                                       blurRadius: 15,
                                       offset: const Offset(0, 8),
                                     ),
@@ -345,15 +345,15 @@ class _AchievementPageState extends State<AchievementPage> {
                               vertical: AppDesignSystem.space4 * s,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerLowest,
-                              border: Border.all(color: AppColors.borderMedium),
+                              color: AppColors.getSurfaceContainerLowest(context),
+                              border: Border.all(color: AppColors.getBorderMedium(context)),
                               borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
                             ),
                             child: Text(
                               badge.subtitle,
                               style: AppTypography.caption(
                                 context,
-                                color: AppColors.textPrimary,
+                                color: AppColors.getTextPrimary(context),
                                 weight: AppTypography.medium,
                               ),
                             ),
@@ -366,14 +366,14 @@ class _AchievementPageState extends State<AchievementPage> {
                             textAlign: TextAlign.center,
                             style: AppTypography.body(
                               context,
-                              color: AppColors.textSecondary,
+                              color: AppColors.getTextSecondary(context),
                             ),
                           ),
                         ],
                       ),
                     ),
 
-                    Divider(height: 1, color: AppColors.borderLight),
+                    Divider(height: 1, color: AppColors.getBorderLight(context)),
 
                     Padding(
                       padding: EdgeInsets.symmetric(
@@ -391,7 +391,7 @@ class _AchievementPageState extends State<AchievementPage> {
                                 style: AppTypography.captionSmall(
                                   context,
                                   weight: AppTypography.bold,
-                                  color: AppColors.textTertiary,
+                                  color: AppColors.getTextTertiary(context),
                                 ),
                               ),
                               SizedBox(height: 2 * s),
@@ -402,14 +402,14 @@ class _AchievementPageState extends State<AchievementPage> {
                                 style: AppTypography.caption(
                                   context,
                                   weight: AppTypography.bold,
-                                  color: AppColors.textTertiary,
+                                  color: AppColors.getTextTertiary(context),
                                 ),
                               ),
                             ],
                           ),
                           Icon(
                             badge.isEarned ? Icons.verified_rounded : Icons.lock_outline,
-                            color: badge.isEarned ? AppColors.success : AppColors.textTertiary,
+                            color: badge.isEarned ? AppColors.getSuccess(context) : AppColors.getTextTertiary(context),
                             size: 24 * s,
                           ),
                         ],
@@ -437,7 +437,7 @@ class _AchievementPageState extends State<AchievementPage> {
             children: [
               Text(
                 'Earned Badges',
-                style: AppTypography.h3(context, weight: AppTypography.bold),
+                style: AppTypography.h3(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
               ),
               Container(
                 padding: EdgeInsets.symmetric(
@@ -445,14 +445,14 @@ class _AchievementPageState extends State<AchievementPage> {
                   vertical: 2 * s,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.successContainer,
+                  color: AppColors.getSuccessContainer(context),
                   borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge * s),
                 ),
                 child: Text(
                   '${_earnedBadges.length}',
                   style: AppTypography.captionSmall(
                     context,
-                    color: AppColors.successDark,
+                    color: AppColors.getSuccess(context),
                     weight: AppTypography.bold,
                   ),
                 ),
@@ -493,9 +493,9 @@ class _AchievementPageState extends State<AchievementPage> {
       ),
       margin: EdgeInsets.only(bottom: AppDesignSystem.space24 * s),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
+        color: AppColors.getSurfaceContainerLowest(context),
         border: Border.symmetric(
-          horizontal: BorderSide(color: AppColors.borderLight, width: 1.0),
+          horizontal: BorderSide(color: AppColors.getBorderLight(context), width: 1.0),
         ),
       ),
       child: Row(
@@ -504,7 +504,7 @@ class _AchievementPageState extends State<AchievementPage> {
           Icon(
             Icons.touch_app_outlined,
             size: 14 * s,
-            color: AppColors.textTertiary,
+            color: AppColors.getTextTertiary(context),
           ),
           SizedBox(width: AppDesignSystem.space8 * s),
           Text(
@@ -512,7 +512,7 @@ class _AchievementPageState extends State<AchievementPage> {
             style: AppTypography.captionSmall(
               context,
               weight: AppTypography.bold,
-              color: AppColors.textTertiary,
+              color: AppColors.getTextTertiary(context),
             ),
           ),
         ],
@@ -527,7 +527,7 @@ class _AchievementPageState extends State<AchievementPage> {
         padding: EdgeInsets.symmetric(horizontal: AppDesignSystem.space20 * s),
         child: Text(
           'All badges earned!',
-          style: AppTypography.body(context, color: AppColors.textSecondary),
+          style: AppTypography.body(context, color: AppColors.getTextSecondary(context)),
         ),
       );
     }
@@ -539,7 +539,7 @@ class _AchievementPageState extends State<AchievementPage> {
           padding: EdgeInsets.symmetric(horizontal: AppDesignSystem.space20 * s),
           child: Text(
             'Remaining Badges',
-            style: AppTypography.h3(context, weight: AppTypography.bold),
+            style: AppTypography.h3(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
           ),
         ),
         SizedBox(height: AppDesignSystem.space16 * s),
@@ -584,7 +584,7 @@ class _AchievementPageState extends State<AchievementPage> {
                 height: 72 * s,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: item.isLocked ? AppColors.surfaceContainerHigh : item.color,
+                  color: item.isLocked ? AppColors.getSurfaceContainerHigh(context) : item.color,
                   gradient: !item.isLocked
                       ? LinearGradient(
                           colors: [item.color, item.color.withValues(alpha: 0.8)],
@@ -617,12 +617,12 @@ class _AchievementPageState extends State<AchievementPage> {
                       Container(
                         padding: EdgeInsets.all(4 * s),
                         decoration: BoxDecoration(
-                          color: AppColors.surface.withValues(alpha: 0.6),
+                          color: AppColors.getSurface(context).withValues(alpha: 0.6),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.lock_rounded,
-                          color: AppColors.textPrimary,
+                          color: AppColors.getTextPrimary(context),
                           size: 16 * s,
                         ),
                       ),
@@ -636,16 +636,16 @@ class _AchievementPageState extends State<AchievementPage> {
                   child: Container(
                     padding: EdgeInsets.all(4 * s),
                     decoration: BoxDecoration(
-                      color: AppColors.error,
+                      color: AppColors.getError(context),
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.surface, width: 2 * s),
+                      border: Border.all(color: AppColors.getSurface(context), width: 2 * s),
                     ),
                     constraints: BoxConstraints(minWidth: 22 * s, minHeight: 22 * s),
                     child: Center(
                       child: Text(
                         item.count.toString(),
                         style: TextStyle(
-                          color: AppColors.textInverse,
+                          color: AppColors.getTextInverse(context),
                           fontSize: 10 * s,
                           fontWeight: FontWeight.bold,
                         ),
@@ -668,7 +668,7 @@ class _AchievementPageState extends State<AchievementPage> {
               style: AppTypography.label(
                 context,
                 weight: AppTypography.semiBold,
-                color: item.isLocked ? AppColors.textTertiary : AppColors.textPrimary,
+                color: item.isLocked ? AppColors.getTextTertiary(context) : AppColors.getTextPrimary(context),
               ),
             ),
           ),
@@ -682,7 +682,7 @@ class _AchievementPageState extends State<AchievementPage> {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.captionSmall(context, color: AppColors.textTertiary),
+              style: AppTypography.captionSmall(context, color: AppColors.getTextTertiary(context)),
             ),
           ),
         ],
@@ -700,11 +700,11 @@ class _AchievementPageState extends State<AchievementPage> {
             borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge * s),
           ),
           elevation: AppDesignSystem.elevationMedium,
-          backgroundColor: AppColors.surface,
+          backgroundColor: AppColors.getSurface(context),
           child: Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: AppColors.getSurface(context),
               borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge * s),
             ),
             child: Column(
@@ -727,7 +727,7 @@ class _AchievementPageState extends State<AchievementPage> {
                             ),
                             Text(
                               item.subtitle,
-                              style: AppTypography.body(context, color: AppColors.textSecondary),
+                              style: AppTypography.body(context, color: AppColors.getTextSecondary(context)),
                             ),
                           ],
                         ),
@@ -737,17 +737,17 @@ class _AchievementPageState extends State<AchievementPage> {
                         child: Container(
                           padding: EdgeInsets.all(4 * s),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceContainerLow,
+                            color: AppColors.getSurfaceContainerLow(context),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.close, size: 20 * s, color: AppColors.textPrimary),
+                          child: Icon(Icons.close, size: 20 * s, color: AppColors.getTextPrimary(context)),
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                Divider(height: 1, color: AppColors.borderLight),
+                Divider(height: 1, color: AppColors.getBorderLight(context)),
 
                 Padding(
                   padding: EdgeInsets.all(AppDesignSystem.space24 * s),
@@ -760,9 +760,9 @@ class _AchievementPageState extends State<AchievementPage> {
                             width: 120 * s,
                             height: 120 * s,
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerLowest,
+                              color: AppColors.getSurfaceContainerLowest(context),
                               borderRadius: BorderRadius.circular(AppDesignSystem.radiusXXLarge * s),
-                              border: Border.all(color: AppColors.borderLight, width: 1 * s),
+                              border: Border.all(color: AppColors.getBorderLight(context), width: 1 * s),
                             ),
                           ),
                           Positioned(
@@ -771,7 +771,7 @@ class _AchievementPageState extends State<AchievementPage> {
                             child: Icon(
                               item.isLocked ? Icons.lock_rounded : Icons.check_circle_rounded,
                               size: 28 * s,
-                              color: item.isLocked ? AppColors.textDisabled : item.color,
+                              color: item.isLocked ? AppColors.getTextDisabled(context) : item.color,
                             ),
                           ),
                           Opacity(
@@ -786,7 +786,7 @@ class _AchievementPageState extends State<AchievementPage> {
                       Text(
                         item.description,
                         textAlign: TextAlign.center,
-                        style: AppTypography.body(context, color: AppColors.textSecondary)
+                        style: AppTypography.body(context, color: AppColors.getTextSecondary(context))
                             .copyWith(height: 1.5),
                       ),
 
@@ -798,14 +798,14 @@ class _AchievementPageState extends State<AchievementPage> {
                             horizontal: AppDesignSystem.space12 * s,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceContainerLow,
+                            color: AppColors.getSurfaceContainerLow(context),
                             borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
                           ),
                           child: Text(
                             "Keep going to unlock this badge!",
                             style: AppTypography.caption(
                               context,
-                              color: AppColors.textTertiary,
+                              color: AppColors.getTextTertiary(context),
                               weight: AppTypography.medium,
                             ),
                           ),
@@ -819,7 +819,7 @@ class _AchievementPageState extends State<AchievementPage> {
                   width: double.infinity,
                   padding: EdgeInsets.all(AppDesignSystem.space12 * s),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerLowest,
+                    color: AppColors.getSurfaceContainerLowest(context),
                     borderRadius: BorderRadius.only(
                       bottomLeft: Radius.circular(AppDesignSystem.radiusLarge * s),
                       bottomRight: Radius.circular(AppDesignSystem.radiusLarge * s),
@@ -838,7 +838,7 @@ class _AchievementPageState extends State<AchievementPage> {
                               style: AppTypography.captionSmall(
                                 context,
                                 weight: AppTypography.medium,
-                                color: AppColors.textTertiary,
+                                color: AppColors.getTextTertiary(context),
                               ),
                             ),
                             Text(
@@ -848,7 +848,7 @@ class _AchievementPageState extends State<AchievementPage> {
                               style: AppTypography.caption(
                                 context,
                                 weight: AppTypography.medium,
-                                color: AppColors.textTertiary,
+                                color: AppColors.getTextTertiary(context),
                               ),
                             ),
                           ],
@@ -856,13 +856,13 @@ class _AchievementPageState extends State<AchievementPage> {
                         Container(
                           padding: EdgeInsets.all(6 * s),
                           decoration: BoxDecoration(
-                            color: AppColors.textInverse,
+                            color: AppColors.getTextInverse(context),
                             borderRadius: BorderRadius.circular(30 * s),
                           ),
                           child: Image.asset(
                             'assets/images/qurani-icon-green.png',
                             height: 28 * s,
-                            color: AppColors.primary,
+                            color: AppColors.getPrimary(context),
                             fit: BoxFit.contain,
                           ),
                         ),

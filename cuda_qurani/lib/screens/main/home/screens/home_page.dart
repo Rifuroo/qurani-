@@ -184,7 +184,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.getBackground(context),
+      backgroundColor: AppColors.getSurfaceVariant(context),
       appBar: const MenuAppBar(selectedIndex: 0),
       body: SafeArea(
         child: RefreshIndicator(
@@ -243,12 +243,12 @@ class _HomePageState extends State<HomePage> {
       children: [
         Text(
           displayName,
-          style: AppTypography.h1(context, weight: AppTypography.bold),
+          style: AppTypography.h1(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
         AppMargin.gapSmall(context),
-        Text(_getGreeting(), style: AppTypography.caption(context)),
+        Text(_getGreeting(), style: AppTypography.caption(context, color: AppColors.getTextSecondary(context))),
       ],
     );
   }
@@ -310,7 +310,7 @@ class _HomePageState extends State<HomePage> {
             AppMargin.gapSmall(context),
             Text(
               _t('home.start_first_recitation_text'),
-              style: AppTypography.caption(context),
+              style: AppTypography.caption(context, color: AppColors.getTextSecondary(context)),
             ),
           ],
         ),
@@ -393,7 +393,7 @@ class _HomePageState extends State<HomePage> {
                         status == 'paused'
                             ? _t('home.paused_Session_text').toUpperCase()
                             : _t('home.latest_Session_text').toUpperCase(),
-                        style: AppTypography.overline(context),
+                        style: AppTypography.overline(context, color: AppColors.getTextSecondary(context)),
                       ),
                     ],
                   ),
@@ -424,6 +424,7 @@ class _HomePageState extends State<HomePage> {
                               style: AppTypography.caption(
                                 context,
                                 weight: AppTypography.semiBold,
+                                color: AppColors.getTextSecondary(context),
                               ),
                             ),
                             AppMargin.customGapH(
@@ -446,12 +447,12 @@ class _HomePageState extends State<HomePage> {
               // Surah Title
               Text(
                 surahName,
-                style: AppTypography.h2(context, weight: AppTypography.bold),
+                style: AppTypography.h2(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
               ),
               AppMargin.gapSmall(context),
               Text(
                 '${_t('home.ayah_text')} ${context.formatNumber(ayah)}${totalAyahs > 0 ? '/${context.formatNumber(totalAyahs)}' : ''}, ${_t('home.word_text')} ${context.formatNumber(position + 1)} · $timeAgo',
-                style: AppTypography.caption(context),
+                style: AppTypography.caption(context, color: AppColors.getTextSecondary(context)),
               ),
               AppMargin.gap(context),
               // Continue Button
@@ -554,7 +555,7 @@ class _HomePageState extends State<HomePage> {
       children: [
         Text(
           _t('home.streak_text'),
-          style: AppTypography.titleLarge(context, weight: AppTypography.bold),
+          style: AppTypography.titleLarge(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
         ),
         AppMargin.gap(context),
         Row(
@@ -604,7 +605,7 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: AppTypography.caption(context)),
+          Text(label, style: AppTypography.caption(context, color: AppColors.getTextSecondary(context))),
           AppMargin.gapSmall(context),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -615,10 +616,11 @@ class _HomePageState extends State<HomePage> {
                 style: AppTypography.displaySmall(
                   context,
                   weight: AppTypography.bold,
+                  color: AppColors.getTextPrimary(context),
                 ),
               ),
               AppMargin.gapHSmall(context),
-              Text(unit, style: AppTypography.caption(context)),
+              Text(unit, style: AppTypography.caption(context, color: AppColors.getTextSecondary(context))),
             ],
           ),
         ],
@@ -636,7 +638,7 @@ class _HomePageState extends State<HomePage> {
       children: [
         Text(
           _t('home.progress_text'),
-          style: AppTypography.titleLarge(context, weight: AppTypography.bold),
+          style: AppTypography.titleLarge(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
         ),
         AppMargin.gap(context),
         Row(
@@ -655,7 +657,7 @@ class _HomePageState extends State<HomePage> {
                 context: context,
                 label: _t('home.memorized_text'),
                 value: '${context.formatNumber(_memorizedPercentage)}%',
-                color: Theme.of(context).colorScheme.secondary,
+                color: AppColors.getSecondary(context),
               ),
             ),
           ],
@@ -731,11 +733,11 @@ class _HomePageState extends State<HomePage> {
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           AppMargin.gap(context),
-          Text(label, style: AppTypography.caption(context)),
+          Text(label, style: AppTypography.caption(context, color: AppColors.getTextSecondary(context))),
           AppMargin.gapSmall(context),
           Text(
             value,
-            style: AppTypography.h2(context, weight: AppTypography.bold),
+            style: AppTypography.h2(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
           ),
         ],
       ),
@@ -767,7 +769,7 @@ class _HomePageState extends State<HomePage> {
       children: [
         Text(
           _t('home.todays_goal_text'),
-          style: AppTypography.titleLarge(context, weight: AppTypography.bold),
+          style: AppTypography.titleLarge(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
         ),
         AppMargin.gap(context),
         Material(
@@ -825,6 +827,7 @@ class _HomePageState extends State<HomePage> {
                                     style: AppTypography.title(
                                       context,
                                       weight: AppTypography.semiBold,
+                                      color: AppColors.getTextPrimary(context),
                                     ),
                                   ),
                                   AppMargin.gapSmall(context),
@@ -899,12 +902,13 @@ class _HomePageState extends State<HomePage> {
                                 style: AppTypography.title(
                                   context,
                                   weight: AppTypography.semiBold,
+                                  color: AppColors.getTextPrimary(context),
                                 ),
                               ),
                               AppMargin.gapSmall(context),
                               Text(
                                 _t('home.tap_to_create_goal_text'),
-                                style: AppTypography.caption(context),
+                                style: AppTypography.caption(context, color: AppColors.getTextSecondary(context)),
                               ),
                             ],
                           ),
@@ -938,6 +942,7 @@ class _HomePageState extends State<HomePage> {
                   style: AppTypography.titleLarge(
                     context,
                     weight: AppTypography.bold,
+                    color: AppColors.getTextPrimary(context),
                   ),
                 ),
                 if (_earnedBadgesCount > 0) ...[
@@ -1131,6 +1136,7 @@ class _HomePageState extends State<HomePage> {
             style: AppTypography.captionSmall(
               context,
               weight: AppTypography.medium,
+              color: AppColors.getTextPrimary(context),
             ),
           ),
         ],
