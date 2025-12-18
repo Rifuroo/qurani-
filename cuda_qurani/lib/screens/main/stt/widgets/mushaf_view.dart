@@ -1,5 +1,7 @@
 // lib\screens\main\stt\widgets\mushaf_view.dart
 
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/main.dart';
