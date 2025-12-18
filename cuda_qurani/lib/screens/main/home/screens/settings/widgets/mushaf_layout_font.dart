@@ -165,15 +165,15 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
           print('   Deleted: qudratullah-indopak-15-lines.db');
         }
       } catch (e) {
-        // print('⚠️ Error deleting databases: <span class="hljs-subst">$e');
+        print('⚠️ Error deleting databases: <span class="hljs-subst">$e');
         // Continue anyway
       }
 
       // ✅ STEP 6: Save to SharedPreferences (HARUS sebelum restart)
       await _settingsService.setMushafLayout(newLayout);
-      // print(
-      //   '✅ Layout preference saved: <span class="hljs-subst">${newLayout.displayName}',
-      // );
+      print(
+        '✅ Layout preference saved: <span class="hljs-subst">${newLayout.displayName}',
+      );
 
       // ✅ STEP 7: Wait a bit to ensure SharedPreferences is written to disk
       await Future.delayed(const Duration(milliseconds: 500));
@@ -182,7 +182,7 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
       print('🔄 Restarting app to clear all caches...');
       Restart.restartApp();
     } catch (e) {
-      // print('❌ Failed to save layout: <span class="hljs-subst">$e');
+      print('❌ Failed to save layout: <span class="hljs-subst">$e');
 
       // Close loading dialog if open
       if (mounted) {
@@ -197,16 +197,6 @@ class _MushafLayoutFontPageState extends State<MushafLayoutFontPage> {
         setState(() {
           _isSaving = false;
         });
-
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   SnackBar(
-        //     content: Text(
-        //       'Failed to change layout: <span class="hljs-subst">$e',
-        //     ),
-        //     backgroundColor: AppColors.error,
-        //     duration: const Duration(seconds: 3),
-        //   ),
-        // );
       }
     }
   }

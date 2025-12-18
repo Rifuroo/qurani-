@@ -335,16 +335,6 @@ class _QuranAppBarState extends State<QuranAppBar> {
               ),
               splashRadius: iconSize * 1.1,
             ),
-            SizedBox(width: screenWidth * 0.01),
-            IconButton(
-              icon: Icon(
-                Icons.book_outlined, 
-                size: 20,
-                color: _getAppBarTextColor(context),
-              ),
-              onPressed: () => _showLayoutPicker(context),
-              tooltip: 'Mushaf Layout',
-            ),
           ],
         ),
       ),

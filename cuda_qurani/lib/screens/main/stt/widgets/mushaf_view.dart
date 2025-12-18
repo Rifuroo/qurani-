@@ -315,37 +315,78 @@ class MushafPageContent extends StatelessWidget {
     final appBarHeight = kToolbarHeight * 0.95;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        top: appBarHeight,
-        left: screenWidth * 0, // 1.5% (dari 0.010)
-        right: screenWidth * 0, // 1.5% (dari 0.010)
-      ),
-      child: Column(
-        children: [
-          const MushafPageHeader(),
-          const SizedBox(height: 0),
-          ..._buildPageLines(),
-        ],
-      ),
+    return Column(
+      children: [
+        // Header tanpa padding horizontal
+        Padding(
+          padding: EdgeInsets.only(top: appBarHeight),
+          child: const MushafPageHeader(),
+        ),
+
+        const SizedBox(height: 0),
+
+        // Page lines dengan padding horizontal yang bisa diatur terpisah
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal:
+                screenWidth *
+                0.00, // ✅ UBAH nilai ini untuk adjust padding pageLines
+          ),
+          child: Column(
+            children: pageLines
+                .map((line) => _buildMushafLine(line, context))
+                .toList(),
+          ),
+        ),
+      ],
     );
   }
 
-  List<Widget> _buildPageLines() {
-    return pageLines.map((line) => _buildMushafLine(line)).toList();
-  }
+  Widget _buildMushafLine(MushafPageLine line, BuildContext context) {
+    final controller = context.watch<SttController>();
+    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-  Widget _buildMushafLine(MushafPageLine line) {
+    Widget lineWidget;
+
     switch (line.lineType) {
       case 'surah_name':
-        return _SurahNameLine(line: line);
+        lineWidget = _SurahNameLine(line: line);
+        break;
+
       case 'basmallah':
-        return _BasmallahLine();
-      case 'ayah':
-        return _JustifiedAyahLine(line: line, pageNumber: pageNumber);
+        lineWidget = _BasmallahLine();
+        break;
+
+case 'ayah':
+  lineWidget = _JustifiedAyahLine(line: line, pageNumber: pageNumber);
+  
+  // ✅ Wrap dengan Transform jika Indopak
+  if (isIndopak) {
+    lineWidget = Transform.scale(
+      scaleX: 0.98,
+      scaleY: 1.150,
+      alignment: Alignment.center,
+      child: lineWidget,
+    );
+  }
+  
+  // ✅ TAMBAH: Padding khusus untuk Indopak halaman 1 & 2
+  if (isIndopak && (pageNumber == 1 || pageNumber == 2)) {
+    lineWidget = Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * 0.120, // ✅ Padding hanya untuk Indopak page 1-2
+      ),
+      child: lineWidget,
+    );
+  }
+  break;
+
       default:
-        return const SizedBox.shrink();
+        lineWidget = const SizedBox.shrink();
     }
+
+    return lineWidget;
   }
 }
 
@@ -439,13 +480,13 @@ class _JustifiedAyahLine extends StatelessWidget {
 
     // Font size berbeda untuk QPC vs IndoPak
     final fontSizeMultiplier = isIndopak
-        ? 0.0610 // IndoPak: ukuran konsisten
+        ? ((pageNumber == 1 || pageNumber == 2) ? 0.0690 : 0.0650)
         : ((pageNumber == 1 || pageNumber == 2)
               ? 0.080
               : 0.0690); // QPC: page 1-2 lebih besar
 
     final baseFontSize = screenWidth * fontSizeMultiplier;
-    final lastWordFontMultiplier = 0.9;
+    final lastWordFontMultiplier = 0.850;
 
     if (line.ayahSegments == null || line.ayahSegments!.isEmpty) {
       return SizedBox(height: MushafRenderer.lineHeight(context));
@@ -548,7 +589,7 @@ class _JustifiedAyahLine extends StatelessWidget {
                 height: isIndopak ? 1.9 : 1.8,
                 // ✅ SOLUSI: Letterspace yang lebih negatif untuk "gepengin" text
                 letterSpacing: isIndopak
-                    ? -0.3 // ✅ Lebih negatif = lebih gepeng (coba -1.5 sampai -3.0)
+                    ? -0.420 // ✅ Lebih negatif = lebih gepeng (coba -1.5 sampai -3.0)
                     : -5,
                 decoration: (controller.hideUnreadAyat && !isLastWord)
                     ? TextDecoration.underline
@@ -572,15 +613,6 @@ class _JustifiedAyahLine extends StatelessWidget {
       context: context,
       allowOverflow: false,
     );
-
-    // ✅ Wrap dengan Transform untuk IndoPak
-    if (isIndopak) {
-      return Transform.scale(
-        scaleX: 0.93, // Gepengin 10%
-        alignment: Alignment.center,
-        child: lineWidget,
-      );
-    }
 
     return lineWidget;
   }
@@ -654,55 +686,6 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             ),
             textDirection: TextDirection.rtl,
           ),
-          // const SizedBox(width: 3),
-          // Container(
-          //   width: 1,
-          //   height: screenHeight * 0.016,
-          //   color: const Color.fromARGB(255, 0, 0, 0).withValues(alpha: 0.3),
-          // ),
-          // Text(
-          //   'Al-Ikhlas',
-          //   style: TextStyle(
-          //     fontSize: headerFontSize * 90 / 100,
-          //     color: Colors.grey.shade700,
-          //     fontWeight: FontWeight.w500,
-          //   ),
-          //   textDirection: TextDirection.rtl,
-          // ),
-          // Container(
-          //   width: 1,
-          //   height: screenHeight * 0.016,
-          //   color: const Color.fromARGB(255, 0, 0, 0).withValues(alpha: 0.3),
-          // ),
-          // Text(
-          //   'Al-Falaq',
-          //   style: TextStyle(
-          //     fontSize: headerFontSize * 90 / 100,
-          //     color: Colors.grey.shade700,
-          //     fontWeight: FontWeight.w500,
-          //   ),
-          //   textDirection: TextDirection.rtl,
-          // ),
-          // Container(
-          //   width: 1,
-          //   height: screenHeight * 0.016,
-          //   color: const Color.fromARGB(255, 0, 0, 0).withValues(alpha: 0.3),
-          // ),
-          // Text(
-          //   'An-Nas',
-          //   style: TextStyle(
-          //     fontSize: headerFontSize * 90 / 100,
-          //     color: Colors.grey.shade700,
-          //     fontWeight: FontWeight.w500,
-          //   ),
-          //   textDirection: TextDirection.rtl,
-          // ),
-          // Container(
-          //   width: 1,
-          //   height: screenHeight * 0.016,
-          //   color: const Color.fromARGB(255, 0, 0, 0).withOpaque(0.3),
-          // ),
-          // const SizedBox(width: 3),
           Text(
             '${context.formatNumber(controller.currentPage)}',
             style: TextStyle(

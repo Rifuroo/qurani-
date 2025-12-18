@@ -112,7 +112,9 @@ class _SttPageState extends State<SttPage> {
                           horizontal: MediaQuery.of(context).size.width * 0.04,
                           vertical: MediaQuery.of(context).size.height * 0.015,
                         ),
-                        color: AppColors.getError(context).withValues(alpha: 0.9),
+                        color: AppColors.getError(
+                          context,
+                        ).withValues(alpha: 0.9),
                         child: Row(
                           children: [
                             Icon(
@@ -275,7 +277,7 @@ class _SttPageState extends State<SttPage> {
 
   Widget _buildQuranText(BuildContext context, SttController controller) {
     final controller = context.watch<SttController>();
-final isIndopak = controller.mushafLayout == MushafLayout.indopak;
+    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
     final screenWidth = MediaQuery.of(context).size.width;
     final padding = isIndopak ? screenWidth * 0.00 : screenWidth * 0.03;
 
