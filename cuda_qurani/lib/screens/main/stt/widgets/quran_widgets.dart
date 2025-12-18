@@ -257,7 +257,6 @@ class _QuranAppBarState extends State<QuranAppBar> {
           titleSpacing: 0,
           actions: [
             // Mode Toggle
-            // Mode Toggle
             IconButton(
               icon: Icon(
                 controller.isQuranMode
@@ -335,16 +334,6 @@ class _QuranAppBarState extends State<QuranAppBar> {
               ),
               splashRadius: iconSize * 1.1,
             ),
-            SizedBox(width: screenWidth * 0.01),
-            IconButton(
-              icon: Icon(
-                Icons.book_outlined, 
-                size: 20,
-                color: _getAppBarTextColor(context),
-              ),
-              onPressed: () => _showLayoutPicker(context),
-              tooltip: 'Mushaf Layout',
-            ),
           ],
         ),
       ),
@@ -367,18 +356,19 @@ class _QuranBottomBarState extends State<QuranBottomBar>
   late AnimationController _slideController;
   late Animation<double> _slideAnimation;
 
-  double _dragPosition = 0.0; // -1 (left/listen) to 1 (right/recite)
-  String? _activeMode; // 'listen', 'recite', or null
+  double _dragPosition = 0.0;
+  String? _activeMode;
   bool _isDragging = false;
 
   Map<String, dynamic> _translations = {};
 
   Future<void> _loadTranslations() async {
-    // Ganti path sesuai file JSON yang dibutuhkan
     final trans = await context.loadTranslations('stt');
-    setState(() {
-      _translations = trans;
-    });
+    if (mounted) {
+      setState(() {
+        _translations = trans;
+      });
+    }
   }
 
   @override
@@ -401,44 +391,87 @@ class _QuranBottomBarState extends State<QuranBottomBar>
     super.dispose();
   }
 
-  void _handleDragUpdate(double delta, double maxWidth) {
-    setState(() {
-      _isDragging = true;
-      _dragPosition = (_dragPosition + delta / maxWidth).clamp(-1.0, 1.0);
-    });
+  void _handleDragUpdate(double delta, double maxWidth, SttController controller) {
+    final isListening = controller.isListeningMode;
+    final isRecording = controller.isRecording;
+    final isPaused = controller.listeningAudioService?.isPaused ?? false;
+    
+    // ✅ Calculate new position first
+    double newPosition = _dragPosition + (delta / maxWidth);
+    
+    // ✅ Apply constraints based on mode
+    if (isListening && !isPaused) {
+      // Playing: only allow left drag (listen settings)
+      newPosition = newPosition.clamp(-1.0, 0.0);
+    } else if (isRecording) {
+      // Recording: only allow right drag (but will reset anyway)
+      newPosition = newPosition.clamp(0.0, 1.0);
+    } else {
+      // Idle/Paused: free drag
+      newPosition = newPosition.clamp(-1.0, 1.0);
+    }
+    
+    // ✅ Single setState for smooth drag
+    if (mounted) {
+      setState(() {
+        _isDragging = true;
+        _dragPosition = newPosition;
+      });
+    }
   }
 
   Future<void> _handleDragEnd(SttController controller) async {
-    const threshold = 0.90; // 70% slide required to activate
+    const threshold = 0.90;
+    
+    // ✅ Store values before any async operations
+    final dragPos = _dragPosition;
+    final isListening = controller.isListeningMode;
+    final isRecording = controller.isRecording;
+    final isPaused = controller.listeningAudioService?.isPaused ?? false;
 
-    if (_dragPosition < -threshold) {
-      // Activated LISTEN mode
-      await _activateMode('listen', controller);
-    } else if (_dragPosition > threshold) {
-      // Activated RECITE mode
-      await _activateMode('recite', controller);
-    } else {
-      // Return to center
-      _resetToCenter();
+    // ✅ Reset drag state immediately
+    if (mounted) {
+      setState(() {
+        _isDragging = false;
+      });
     }
 
-    setState(() {
-      _isDragging = false;
-    });
+    // ✅ Handle drag actions
+    if (isListening && !isPaused) {
+      // Playing: can only re-open settings (left drag)
+      if (dragPos < -threshold) {
+        await _activateMode('listen', controller);
+      } else {
+        _resetToCenter();
+      }
+    } else if (isRecording) {
+      // Recording: any drag just resets
+      _resetToCenter();
+    } else {
+      // Idle/Paused: full functionality
+      if (dragPos < -threshold) {
+        await _activateMode('listen', controller);
+      } else if (dragPos > threshold) {
+        await _activateMode('recite', controller);
+      } else {
+        _resetToCenter();
+      }
+    }
   }
 
   Future<void> _activateMode(String mode, SttController controller) async {
     AppHaptics.medium();
 
-    setState(() {
-      _activeMode = mode;
-    });
+    if (mounted) {
+      setState(() {
+        _activeMode = mode;
+      });
+    }
 
     if (mode == 'listen') {
-      // ✅ PENTING: Reset posisi button ke tengah SEBELUM membuka settings
+      // Reset position before opening settings
       _resetToCenter(keepActiveMode: true);
 
-      // Open playback settings
       final settings = await Navigator.push<PlaybackSettings>(
         context,
         PageRouteBuilder(
@@ -448,10 +481,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
             const begin = Offset(0.0, 0.3);
             const end = Offset.zero;
             const curve = Curves.easeInOut;
-            var tween = Tween(
-              begin: begin,
-              end: end,
-            ).chain(CurveTween(curve: curve));
+            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
             var offsetAnimation = animation.drive(tween);
             var fadeAnimation = animation.drive(
               Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: curve)),
@@ -468,7 +498,6 @@ class _QuranBottomBarState extends State<QuranBottomBar>
       if (settings != null) {
         try {
           await controller.startListening(settings);
-          // ✅ Button tetap di tengah setelah listening dimulai
         } catch (e) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -479,31 +508,44 @@ class _QuranBottomBarState extends State<QuranBottomBar>
               ),
             );
           }
-          // ✅ Jika gagal, reset button
           _resetToCenter(keepActiveMode: false);
         }
       } else {
-        // ✅ User cancel settings, reset button
         _resetToCenter(keepActiveMode: false);
       }
     } else if (mode == 'recite') {
+      // Stop listening first if active
+      if (controller.isListeningMode) {
+        await controller.stopListening();
+      }
+      
       await controller.startRecording();
-      _resetToCenter(keepActiveMode: false); // Recite mode tetap reset penuh
+      _resetToCenter(keepActiveMode: false);
     }
   }
 
   void _resetToCenter({bool keepActiveMode = false}) {
+    if (mounted) {
+      setState(() {
+        _dragPosition = 0.0;
+        _isDragging = false;
+        if (!keepActiveMode) {
+          _activeMode = null;
+        }
+      });
+    }
     _slideController.reverse(from: 1.0);
-    setState(() {
-      _dragPosition = 0.0;
-      if (!keepActiveMode) {
-        _activeMode = null;
-      }
-    });
   }
 
   Future<void> _handleCenterButtonTap(SttController controller) async {
     AppHaptics.light();
+    
+    // Ensure center position
+    if (_dragPosition != 0.0 && mounted) {
+      setState(() {
+        _dragPosition = 0.0;
+      });
+    }
 
     if (controller.isListeningMode) {
       final audioService = controller.listeningAudioService;
@@ -513,25 +555,77 @@ class _QuranBottomBarState extends State<QuranBottomBar>
         } else {
           await controller.pauseListening();
         }
-        // ✅ Widget akan auto-rebuild via context.watch<SttController>()
-        // Tidak perlu setState karena controller sudah memanggil notifyListeners()
       }
     } else if (controller.isRecording) {
       await controller.stopRecording();
     }
   }
 
+  Widget _buildThumbIcon(
+    SttController controller,
+    bool isListening,
+    bool isRecording,
+    double iconSize,
+  ) {
+    IconData icon;
+    String keyState;
+
+    if (isListening) {
+      final audioService = controller.listeningAudioService;
+      final isPaused = audioService?.isPaused ?? false;
+      icon = isPaused ? Icons.play_arrow : Icons.pause;
+      keyState = 'listen_${isPaused ? 'paused' : 'playing'}';
+    } else if (isRecording) {
+      icon = Icons.stop;
+      keyState = 'recording';
+    } else if (_isDragging) {
+      if (_dragPosition < -0.5) {
+        icon = Icons.play_arrow;
+        keyState = 'drag_listen';
+      } else if (_dragPosition > 0.5) {
+        icon = Icons.mic;
+        keyState = 'drag_recite';
+      } else {
+        icon = Icons.code;
+        keyState = 'drag_center';
+      }
+    } else {
+      icon = Icons.code;
+      keyState = 'idle';
+    }
+
+    return Icon(
+      icon,
+      key: ValueKey(keyState),
+      color: AppColors.getTextInverse(context),
+      size: iconSize,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<SttController>();
-    if (_activeMode == 'listen' && !controller.isListeningMode) {
-      // Listening mode telah selesai, reset button
+    
+    // ✅ Auto-reset when modes end (using addPostFrameCallback to avoid setState during build)
+    final isListening = controller.isListeningMode;
+    final isRecording = controller.isRecording;
+    
+    if (_activeMode == 'listen' && !isListening) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _resetToCenter(keepActiveMode: false);
         }
       });
     }
+    
+    if (_activeMode == 'recite' && !isRecording) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _resetToCenter(keepActiveMode: false);
+        }
+      });
+    }
+    
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -542,9 +636,6 @@ class _QuranBottomBarState extends State<QuranBottomBar>
     final iconSize = screenWidth * 0.065;
     final labelSize = screenWidth * 0.032;
     final bottomOffset = screenHeight * 0.057;
-
-    final isListeningActive = controller.isListeningMode;
-    final isRecordingActive = controller.isRecording;
 
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
@@ -560,12 +651,15 @@ class _QuranBottomBarState extends State<QuranBottomBar>
               Positioned(
                 bottom: bottomOffset,
                 child: GestureDetector(
-                  onHorizontalDragUpdate: (details) {
-                    _handleDragUpdate(details.delta.dx, trackWidth / 2);
+                  // ✅ Use onPanUpdate instead of onHorizontalDragUpdate for better control
+                  onPanUpdate: (details) {
+                    _handleDragUpdate(details.delta.dx, trackWidth / 2, controller);
                   },
-                  onHorizontalDragEnd: (details) {
+                  onPanEnd: (details) {
                     _handleDragEnd(controller);
                   },
+                  // ✅ Prevent gesture conflicts
+                  behavior: HitTestBehavior.opaque,
                   child: Container(
                     width: trackWidth,
                     height: trackHeight,
@@ -586,35 +680,34 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                         // Left Label (Listen)
                         Positioned(
                           left: trackWidth * 0.08,
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 200),
-                            opacity: _dragPosition < -0.3 ? 1.0 : 0.4,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.play_arrow_rounded,
-                                  size: iconSize * 0.9,
-                                  color: isListeningActive
-                                      ? AppColors.getPrimary(context)
-                                      : AppColors.getTextPrimary(context),
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  _translations.isNotEmpty
-                                      ? LanguageHelper.tr(
-                                          _translations,
-                                          'bottom_bar.listen_text',
-                                        )
-                                      : 'Listen',
-                                  style: TextStyle(
-                                    fontSize: labelSize,
-                                    fontWeight: FontWeight.w600,
-                                    color: isListeningActive
+                          child: IgnorePointer(
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 200),
+                              opacity: _dragPosition < -0.3 ? 1.0 : 0.4,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.play_arrow_rounded,
+                                    size: iconSize * 0.9,
+                                    color: isListening
                                         ? AppColors.getPrimary(context)
                                         : AppColors.getTextPrimary(context),
                                   ),
-                                ),
-                              ],
+                                  SizedBox(width: 6),
+                                  Text(
+                                    _translations.isNotEmpty
+                                        ? LanguageHelper.tr(_translations, 'bottom_bar.listen_text')
+                                        : 'Listen',
+                                    style: TextStyle(
+                                      fontSize: labelSize,
+                                      fontWeight: FontWeight.w600,
+                                      color: isListening
+                                          ? AppColors.getPrimary(context)
+                                          : AppColors.getTextPrimary(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -622,35 +715,34 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                         // Right Label (Recite)
                         Positioned(
                           right: trackWidth * 0.08,
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 200),
-                            opacity: _dragPosition > 0.3 ? 1.0 : 0.4,
-                            child: Row(
-                              children: [
-                                Text(
-                                  _translations.isNotEmpty
-                                      ? LanguageHelper.tr(
-                                          _translations,
-                                          'bottom_bar.recite_text',
-                                        )
-                                      : 'Recite',
-                                  style: TextStyle(
-                                    fontSize: labelSize,
-                                    fontWeight: FontWeight.w600,
-                                    color: isRecordingActive
+                          child: IgnorePointer(
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 200),
+                              opacity: _dragPosition > 0.3 ? 1.0 : 0.4,
+                              child: Row(
+                                children: [
+                                  Text(
+                                    _translations.isNotEmpty
+                                        ? LanguageHelper.tr(_translations, 'bottom_bar.recite_text')
+                                        : 'Recite',
+                                    style: TextStyle(
+                                      fontSize: labelSize,
+                                      fontWeight: FontWeight.w600,
+                                      color: isRecording
+                                          ? AppColors.getError(context)
+                                          : AppColors.getTextPrimary(context),
+                                    ),
+                                  ),
+                                  SizedBox(width: 6),
+                                  Icon(
+                                    Icons.mic_rounded,
+                                    size: iconSize * 0.9,
+                                    color: isRecording
                                         ? AppColors.getError(context)
                                         : AppColors.getTextPrimary(context),
                                   ),
-                                ),
-                                SizedBox(width: 6),
-                                Icon(
-                                  Icons.mic_rounded,
-                                  size: iconSize * 0.9,
-                                  color: isRecordingActive
-                                      ? AppColors.getError(context)
-                                      : AppColors.getTextPrimary(context),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -661,27 +753,20 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                               ? Duration.zero
                               : const Duration(milliseconds: 400),
                           curve: Curves.easeOutCubic,
-                          left:
-                              ((trackWidth / 2) - (thumbSize / 2)) +
-                              (_dragPosition *
-                                  (trackWidth / 2 - thumbSize / 2)),
+                          left: ((trackWidth / 2) - (thumbSize / 2)) +
+                              (_dragPosition * (trackWidth / 2 - thumbSize / 2)),
                           child: GestureDetector(
                             onTap: () => _handleCenterButtonTap(controller),
                             child: Container(
                               width: thumbSize,
                               height: thumbSize,
                               decoration: BoxDecoration(
-                                color: _getThumbColor(
-                                  isListeningActive,
-                                  isRecordingActive,
-                                ),
+                                color: _getThumbColor(isListening, isRecording),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: _getThumbColor(
-                                      isListeningActive,
-                                      isRecordingActive,
-                                    ).withOpacity(0.4),
+                                    color: _getThumbColor(isListening, isRecording)
+                                        .withOpacity(0.4),
                                     blurRadius: 12,
                                     offset: const Offset(0, 2),
                                   ),
@@ -689,38 +774,23 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                               ),
                               child: Center(
                                 child: AnimatedSwitcher(
-                                  duration: const Duration(
-                                    milliseconds: 150,
-                                  ), // ✅ Kurangi delay
+                                  duration: const Duration(milliseconds: 200),
+                                  switchInCurve: Curves.easeOut,
+                                  switchOutCurve: Curves.easeIn,
                                   transitionBuilder: (child, animation) {
                                     return ScaleTransition(
                                       scale: animation,
-                                      child: child,
+                                      child: FadeTransition(
+                                        opacity: animation,
+                                        child: child,
+                                      ),
                                     );
                                   },
-                                  child: Builder(
-                                    builder: (context) {
-                                      // ✅ CRITICAL: Baca state terbaru setiap rebuild
-                                      final audioService =
-                                          controller.listeningAudioService;
-                                      final isPaused =
-                                          audioService?.isPaused ?? false;
-                                      final icon = _getThumbIcon(
-                                        controller,
-                                        isListeningActive,
-                                        isRecordingActive,
-                                      );
-
-                                      // ✅ CRITICAL: Gunakan icon codePoint sebagai bagian dari key untuk memastikan AnimatedSwitcher detect perubahan
-                                      return Icon(
-                                        icon,
-                                        key: ValueKey(
-                                          'icon_${icon.codePoint}_${isListeningActive}_${isRecordingActive}_${isPaused}_${_dragPosition.toStringAsFixed(1)}',
-                                        ), // ✅ Key yang unik termasuk icon codePoint untuk memastikan perubahan terdeteksi
-                                        color: AppColors.getTextInverse(context),
-                                        size: iconSize,
-                                      );
-                                    },
+                                  child: _buildThumbIcon(
+                                    controller,
+                                    isListening,
+                                    isRecording,
+                                    iconSize,
                                   ),
                                 ),
                               ),
@@ -733,8 +803,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                 ),
               ),
 
-              // Active Mode Indicator (Small Settings Button for Listen Mode)
-              if (isListeningActive && !_isDragging)
+              // Active Mode Indicator (Settings Button for Listen Mode)
+              if (isListening && !_isDragging)
                 Positioned(
                   bottom: bottomOffset + trackHeight + 8,
                   child: Material(
@@ -746,77 +816,30 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                         Navigator.push(
                           context,
                           PageRouteBuilder(
-                            pageBuilder:
-                                (context, animation, secondaryAnimation) =>
-                                    PlaybackSettingsPage(
-                                      currentPage: controller.currentPage,
-                                    ),
-                            transitionsBuilder:
-                                (
-                                  context,
-                                  animation,
-                                  secondaryAnimation,
-                                  child,
-                                ) {
-                                  const begin = Offset(0.0, 0.3);
-                                  const end = Offset.zero;
-                                  const curve = Curves.easeInOut;
-                                  var tween = Tween(
-                                    begin: begin,
-                                    end: end,
-                                  ).chain(CurveTween(curve: curve));
-                                  var offsetAnimation = animation.drive(tween);
-                                  var fadeAnimation = animation.drive(
-                                    Tween(
-                                      begin: 0.0,
-                                      end: 1.0,
-                                    ).chain(CurveTween(curve: curve)),
-                                  );
-                                  return FadeTransition(
-                                    opacity: fadeAnimation,
-                                    child: SlideTransition(
-                                      position: offsetAnimation,
-                                      child: child,
-                                    ),
-                                  );
-                                },
+                            pageBuilder: (context, animation, secondaryAnimation) =>
+                                PlaybackSettingsPage(currentPage: controller.currentPage),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              const begin = Offset(0.0, 0.3);
+                              const end = Offset.zero;
+                              const curve = Curves.easeInOut;
+                              var tween = Tween(begin: begin, end: end)
+                                  .chain(CurveTween(curve: curve));
+                              var offsetAnimation = animation.drive(tween);
+                              var fadeAnimation = animation.drive(
+                                Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: curve)),
+                              );
+                              return FadeTransition(
+                                opacity: fadeAnimation,
+                                child: SlideTransition(
+                                  position: offsetAnimation,
+                                  child: child,
+                                ),
+                              );
+                            },
                             transitionDuration: AppDesignSystem.durationNormal,
                           ),
                         );
                       },
-                      // child: Container(
-                      //   padding: const EdgeInsets.symmetric(
-                      //     horizontal: 12,
-                      //     vertical: 6,
-                      //   ),
-                      //   decoration: BoxDecoration(
-                      //     color: primaryColor.withOpacity(0.1),
-                      //     borderRadius: BorderRadius.circular(20),
-                      //     border: Border.all(
-                      //       color: primaryColor.withOpacity(0.3),
-                      //       width: 1,
-                      //     ),
-                      //   ),
-                      //   child: Row(
-                      //     mainAxisSize: MainAxisSize.min,
-                      //     children: [
-                      //       Icon(
-                      //         Icons.tune,
-                      //         size: iconSize * 0.7,
-                      //         color: primaryColor,
-                      //       ),
-                      //       SizedBox(width: 4),
-                      //       Text(
-                      //         'Playback Settings',
-                      //         style: TextStyle(
-                      //           fontSize: labelSize * 0.85,
-                      //           color: primaryColor,
-                      //           fontWeight: FontWeight.w500,
-                      //         ),
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
                     ),
                   ),
                 ),
@@ -833,40 +856,16 @@ class _QuranBottomBarState extends State<QuranBottomBar>
 
     // During drag, show preview color
     if (_isDragging) {
-      if (_dragPosition < -0.3) return AppColors.getPrimary(context).withOpacity(0.7);
-      if (_dragPosition > 0.3) return AppColors.getError(context).withOpacity(0.7);
+      if (_dragPosition < -0.3) {
+        return AppColors.getPrimary(context).withOpacity(0.7);
+      }
+      if (_dragPosition > 0.3) {
+        return AppColors.getError(context).withOpacity(0.7);
+      }
     }
 
     return AppColors.getTextTertiary(context);
   }
-
-  IconData _getThumbIcon(
-    SttController controller,
-    bool isListening,
-    bool isRecording,
-  ) {
-    if (isListening) {
-      final audioService = controller.listeningAudioService;
-      if (audioService != null && audioService.isPaused) {
-        return Icons.play_arrow;
-      }
-      return Icons.pause;
-    }
-
-    if (isRecording) {
-      return Icons.stop;
-    }
-
-    // Show preview icons during drag
-    if (_isDragging) {
-      if (_dragPosition < -0.5) return Icons.play_arrow;
-      if (_dragPosition > 0.5) return Icons.mic;
-    }
-
-    return Icons.code;
-  }
-
-
 }
 
 class QuranLoadingWidget extends StatelessWidget {
@@ -1042,12 +1041,12 @@ class QuranLogsPanel extends StatelessWidget {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final panelHeight = screenHeight * 0.1875; // âœ… ~150px pada 800px
-    final iconSize = screenWidth * 0.04; // âœ… ~16px
+    final panelHeight = screenHeight * 0.1875; // ✅ ~150px pada 800px
+    final iconSize = screenWidth * 0.04; // ✅ ~16px
     final titleSize = screenWidth * 0.03;
-    final logFontSize = screenWidth * 0.02; // âœ… ~8px
-    final paddingH = screenWidth * 0.02; // âœ… ~8px
-    final paddingV = screenHeight * 0.0075; // âœ… ~6px
+    final logFontSize = screenWidth * 0.02; // ✅ ~8px
+    final paddingH = screenWidth * 0.02; // ✅ ~8px
+    final paddingV = screenHeight * 0.0075; // ✅ ~6px
 
     return Container(
       height: panelHeight,
@@ -1186,7 +1185,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
               child: Column(
                 children: [
                   Text(
-                    'ðŸŽ‰ Congratulations! ðŸŽ‰',
+                    '🎉 Congratulations! 🎉',
                     style: TextStyle(
                       fontSize: congratsSize,
                       fontWeight: FontWeight.bold,
