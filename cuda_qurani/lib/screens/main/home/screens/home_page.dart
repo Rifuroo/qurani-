@@ -13,6 +13,9 @@ import 'package:cuda_qurani/screens/main/stt/stt_page.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cuda_qurani/providers/premium_provider.dart'; // ✅ NEW: Premium gating
+import 'package:cuda_qurani/models/premium_features.dart'; // ✅ NEW: Premium features
+import 'package:cuda_qurani/screens/main/home/screens/premium_offer_page.dart'; // ✅ NEW
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -73,9 +76,17 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadLatestSession();
     _loadTranslations();
     _loadHomePageData();
+    // ✅ OPTIMIZATION: Only load session for PREMIUM users
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final premium = context.read<PremiumProvider>();
+      if (premium.canAccess(PremiumFeature.sessionResume)) {
+        _loadLatestSession();
+      } else {
+        setState(() => _isLoadingSession = false); // Skip for FREE
+      }
+    });
   }
 
   /// OPTIMIZED: Load ALL home page data in ONE call
@@ -243,12 +254,22 @@ class _HomePageState extends State<HomePage> {
       children: [
         Text(
           displayName,
-          style: AppTypography.h1(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
+          style: AppTypography.h1(
+            context,
+            weight: AppTypography.bold,
+            color: AppColors.getTextPrimary(context),
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
         AppMargin.gapSmall(context),
-        Text(_getGreeting(), style: AppTypography.caption(context, color: AppColors.getTextSecondary(context))),
+        Text(
+          _getGreeting(),
+          style: AppTypography.caption(
+            context,
+            color: AppColors.getTextSecondary(context),
+          ),
+        ),
       ],
     );
   }
@@ -268,7 +289,17 @@ class _HomePageState extends State<HomePage> {
 
   // ==================== LATEST SESSION CARD ====================
   Widget _buildLatestSession(BuildContext context) {
-    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    final premium = context.watch<PremiumProvider>();
+
+    // ✅ FREE USER: Show locked placeholder (no session data loaded)
+    if (!premium.canAccess(PremiumFeature.sessionResume)) {
+      return _buildLockedSessionCard(context);
+    }
+
+    final languageProvider = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    );
     final isArabic = languageProvider.currentLanguageCode == 'ar';
 
     if (_isLoadingSession) {
@@ -305,12 +336,18 @@ class _HomePageState extends State<HomePage> {
             AppMargin.gapSmall(context),
             Text(
               _t('home.no_recent_session_text'),
-              style: AppTypography.body(context, color: AppColors.getTextTertiary(context)),
+              style: AppTypography.body(
+                context,
+                color: AppColors.getTextTertiary(context),
+              ),
             ),
             AppMargin.gapSmall(context),
             Text(
               _t('home.start_first_recitation_text'),
-              style: AppTypography.caption(context, color: AppColors.getTextSecondary(context)),
+              style: AppTypography.caption(
+                context,
+                color: AppColors.getTextSecondary(context),
+              ),
             ),
           ],
         ),
@@ -319,9 +356,12 @@ class _HomePageState extends State<HomePage> {
 
     final surahId = _latestSession!['surah_id'] ?? 0;
     // ✅ Logic: If Arabic, use name_arabic, else use name_simple
-    final surahName = isArabic 
-        ? (_latestSession!['name_arabic'] ?? _latestSession!['surah_name'] ?? '${_t('home.surah_text')} ${context.formatNumber(surahId)}')
-        : (_latestSession!['surah_name'] ?? '${_t('home.surah_text')} ${context.formatNumber(surahId)}');
+    final surahName = isArabic
+        ? (_latestSession!['name_arabic'] ??
+              _latestSession!['surah_name'] ??
+              '${_t('home.surah_text')} ${context.formatNumber(surahId)}')
+        : (_latestSession!['surah_name'] ??
+              '${_t('home.surah_text')} ${context.formatNumber(surahId)}');
     final totalAyahs = _latestSession!['total_ayahs'] ?? 0;
     final ayah = _latestSession!['ayah'] ?? 0;
     final position = _latestSession!['position'] ?? 0;
@@ -393,7 +433,10 @@ class _HomePageState extends State<HomePage> {
                         status == 'paused'
                             ? _t('home.paused_Session_text').toUpperCase()
                             : _t('home.latest_Session_text').toUpperCase(),
-                        style: AppTypography.overline(context, color: AppColors.getTextSecondary(context)),
+                        style: AppTypography.overline(
+                          context,
+                          color: AppColors.getTextSecondary(context),
+                        ),
                       ),
                     ],
                   ),
@@ -447,12 +490,19 @@ class _HomePageState extends State<HomePage> {
               // Surah Title
               Text(
                 surahName,
-                style: AppTypography.h2(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
+                style: AppTypography.h2(
+                  context,
+                  weight: AppTypography.bold,
+                  color: AppColors.getTextPrimary(context),
+                ),
               ),
               AppMargin.gapSmall(context),
               Text(
                 '${_t('home.ayah_text')} ${context.formatNumber(ayah)}${totalAyahs > 0 ? '/${context.formatNumber(totalAyahs)}' : ''}, ${_t('home.word_text')} ${context.formatNumber(position + 1)} · $timeAgo',
-                style: AppTypography.caption(context, color: AppColors.getTextSecondary(context)),
+                style: AppTypography.caption(
+                  context,
+                  color: AppColors.getTextSecondary(context),
+                ),
               ),
               AppMargin.gap(context),
               // Continue Button
@@ -483,6 +533,75 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // ✅ Locked session card for FREE users - no data fetch
+  Widget _buildLockedSessionCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const PremiumOfferPage())),
+      child: Container(
+        padding: AppPadding.card(context),
+        decoration: AppComponentStyles.card(
+          color: AppColors.getTextPrimary(context).withValues(alpha: 0.6),
+          borderRadius: AppDesignSystem.radiusLarge,
+          borderColor: AppColors.getBorderLight(context),
+          borderWidth: AppDesignSystem.borderNormal,
+          shadow: true,
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.getWarning(context).withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.lock_rounded,
+                color: AppColors.getWarning(context),
+                size: 28,
+              ),
+            ),
+            AppMargin.gap(context),
+            Text(
+              _t('home.resume_session_text'),
+              style: AppTypography.h3(
+                context,
+                weight: AppTypography.bold,
+                color: AppColors.getTextInverse(context),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            AppMargin.gapSmall(context),
+            Text(
+              'Premium Feature',
+              style: AppTypography.body(
+                context,
+                color: AppColors.getWarning(context),
+              ),
+            ),
+            AppMargin.gap(context),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.getWarning(context)),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Upgrade to Premium',
+                style: AppTypography.label(
+                  context,
+                  color: AppColors.getWarning(context),
+                  weight: AppTypography.semiBold,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -555,7 +674,11 @@ class _HomePageState extends State<HomePage> {
       children: [
         Text(
           _t('home.streak_text'),
-          style: AppTypography.titleLarge(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
+          style: AppTypography.titleLarge(
+            context,
+            weight: AppTypography.bold,
+            color: AppColors.getTextPrimary(context),
+          ),
         ),
         AppMargin.gap(context),
         Row(
@@ -605,7 +728,13 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: AppTypography.caption(context, color: AppColors.getTextSecondary(context))),
+          Text(
+            label,
+            style: AppTypography.caption(
+              context,
+              color: AppColors.getTextSecondary(context),
+            ),
+          ),
           AppMargin.gapSmall(context),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -620,7 +749,13 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               AppMargin.gapHSmall(context),
-              Text(unit, style: AppTypography.caption(context, color: AppColors.getTextSecondary(context))),
+              Text(
+                unit,
+                style: AppTypography.caption(
+                  context,
+                  color: AppColors.getTextSecondary(context),
+                ),
+              ),
             ],
           ),
         ],
@@ -630,7 +765,10 @@ class _HomePageState extends State<HomePage> {
 
   // ==================== PROGRESS SECTION ====================
   Widget _buildProgressSection(BuildContext context) {
-    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    final languageProvider = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    );
     final isArabic = languageProvider.currentLanguageCode == 'ar';
 
     return Column(
@@ -638,7 +776,11 @@ class _HomePageState extends State<HomePage> {
       children: [
         Text(
           _t('home.progress_text'),
-          style: AppTypography.titleLarge(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
+          style: AppTypography.titleLarge(
+            context,
+            weight: AppTypography.bold,
+            color: AppColors.getTextPrimary(context),
+          ),
         ),
         AppMargin.gap(context),
         Row(
@@ -669,7 +811,11 @@ class _HomePageState extends State<HomePage> {
               child: _buildProgressCard(
                 context: context,
                 label: _t('home.time_text'),
-                value: _formatEngagementTime(context, _engagementTime, isArabic),
+                value: _formatEngagementTime(
+                  context,
+                  _engagementTime,
+                  isArabic,
+                ),
                 color: AppColors.getInfo(context),
               ),
             ),
@@ -691,12 +837,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// ✅ Format engagement time with RTL support for Arabic
-  String _formatEngagementTime(BuildContext context, String time, bool isArabic) {
+  String _formatEngagementTime(
+    BuildContext context,
+    String time,
+    bool isArabic,
+  ) {
     if (!isArabic) {
       // LTR: hours:minutes:seconds
       return context.formatNumber(time);
     }
-    
+
     // RTL: seconds:minutes:hours for Arabic
     final parts = time.split(':');
     if (parts.length == 3) {
@@ -705,7 +855,7 @@ class _HomePageState extends State<HomePage> {
       final seconds = context.formatNumber(parts[2]);
       return '$seconds:$minutes:$hours'; // Reversed for RTL
     }
-    
+
     return context.formatNumber(time);
   }
 
@@ -733,11 +883,21 @@ class _HomePageState extends State<HomePage> {
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           AppMargin.gap(context),
-          Text(label, style: AppTypography.caption(context, color: AppColors.getTextSecondary(context))),
+          Text(
+            label,
+            style: AppTypography.caption(
+              context,
+              color: AppColors.getTextSecondary(context),
+            ),
+          ),
           AppMargin.gapSmall(context),
           Text(
             value,
-            style: AppTypography.h2(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
+            style: AppTypography.h2(
+              context,
+              weight: AppTypography.bold,
+              color: AppColors.getTextPrimary(context),
+            ),
           ),
         ],
       ),
@@ -769,7 +929,11 @@ class _HomePageState extends State<HomePage> {
       children: [
         Text(
           _t('home.todays_goal_text'),
-          style: AppTypography.titleLarge(context, weight: AppTypography.bold, color: AppColors.getTextPrimary(context)),
+          style: AppTypography.titleLarge(
+            context,
+            weight: AppTypography.bold,
+            color: AppColors.getTextPrimary(context),
+          ),
         ),
         AppMargin.gap(context),
         Material(
@@ -865,7 +1029,9 @@ class _HomePageState extends State<HomePage> {
                             ),
                             child: LinearProgressIndicator(
                               value: progressPercent,
-                              backgroundColor: AppColors.getBorderLight(context),
+                              backgroundColor: AppColors.getBorderLight(
+                                context,
+                              ),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 AppColors.getPrimary(context),
                               ),
@@ -908,7 +1074,10 @@ class _HomePageState extends State<HomePage> {
                               AppMargin.gapSmall(context),
                               Text(
                                 _t('home.tap_to_create_goal_text'),
-                                style: AppTypography.caption(context, color: AppColors.getTextSecondary(context)),
+                                style: AppTypography.caption(
+                                  context,
+                                  color: AppColors.getTextSecondary(context),
+                                ),
                               ),
                             ],
                           ),

@@ -25,6 +25,8 @@ import 'package:cuda_qurani/services/auth_service.dart'; // ? NEW: For user UUID
 import 'package:cuda_qurani/config/app_config.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
 import 'package:cuda_qurani/core/widgets/achievement_popup.dart'; // ? NEW: Achievement popup
+import 'package:cuda_qurani/providers/premium_provider.dart'; // ✅ NEW: Premium gating
+import 'package:cuda_qurani/models/premium_features.dart'; // ✅ NEW: Premium features
 
 class SttController with ChangeNotifier {
   final int? suratId;
@@ -2803,29 +2805,56 @@ class SttController with ChangeNotifier {
     notifyListeners();
   }
 
+  // ✅ NEW: Premium provider reference for feature gating
+  PremiumProvider? _premiumProvider;
+
+  /// ✅ NEW: Set premium provider from context (call from widget)
+  void setPremiumProvider(PremiumProvider provider) {
+    _premiumProvider = provider;
+  }
+
   WordStatus _mapWordStatus(String status) {
+    // ✅ FREE USER: Only current word shows processing (blue)
+    // Previous words reset to pending (white) - NO permanent colors
+    final isPremium =
+        _premiumProvider?.canAccess(PremiumFeature.permanentWordColors) ?? true;
+
     switch (status.toLowerCase()) {
       case 'matched':
       case 'correct':
       case 'close': // ✅ Close = hampir benar = HIJAU
       case 'benar': // ? Backend sends "benar" for correct words
-        return WordStatus.matched;
+        // ✅ FREE: Return pending (white) so color disappears after processing
+        return isPremium ? WordStatus.matched : WordStatus.pending;
       case 'processing':
-        return WordStatus.processing;
+        return WordStatus.processing; // Always show current word as blue
       case 'mismatched':
       case 'incorrect':
       case 'salah': // ? Backend sends "salah" for incorrect words
-        return WordStatus.mismatched;
+        // ✅ FREE: Return pending (white) so color disappears after processing
+        return isPremium ? WordStatus.mismatched : WordStatus.pending;
       case 'skipped':
-        return WordStatus.skipped;
+        // ✅ FREE: Return pending (white) so color disappears after processing
+        return isPremium ? WordStatus.skipped : WordStatus.pending;
       default:
         return WordStatus.pending;
     }
   }
 
   /// ? NEW: Resume from existing session
+  /// ✅ PREMIUM ONLY: FREE users cannot resume session
   Future<void> resumeFromSession(Map<String, dynamic> session) async {
-    print('?? Resuming session: ${session['session_id']}');
+    // ✅ PREMIUM GATE: Check if user can resume session
+    final canResume =
+        _premiumProvider?.canAccess(PremiumFeature.sessionResume) ?? false;
+    if (!canResume) {
+      print('❌ Resume Session: Feature not available for FREE users');
+      _errorMessage = 'Resume session is a premium feature';
+      notifyListeners();
+      return;
+    }
+
+    print('🔄 Resuming session: ${session['session_id']}');
     print(
       '   Location: Surah ${session['surah_id']}, Ayah ${session['ayah']}, Word ${(session['position'] ?? 0) + 1}',
     );

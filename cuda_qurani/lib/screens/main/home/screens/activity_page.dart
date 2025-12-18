@@ -11,6 +11,10 @@ import 'package:cuda_qurani/core/widgets/app_components.dart';
 import 'package:cuda_qurani/services/supabase_service.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
+import 'package:cuda_qurani/core/widgets/premium_gate.dart'; // ✅ Premium gating
+import 'package:cuda_qurani/models/premium_features.dart'; // ✅ Premium features
+import 'package:cuda_qurani/providers/premium_provider.dart'; // ✅ For optimization
+import 'package:cuda_qurani/screens/main/home/screens/premium_offer_page.dart'; // ✅ NEW
 
 class ActivityPage extends StatefulWidget {
   const ActivityPage({super.key});
@@ -25,7 +29,10 @@ class _ActivityPageState extends State<ActivityPage> {
 
   Future<void> _loadTranslations() async {
     final trans = await context.loadTranslations('home/activity');
-    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    final languageProvider = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    );
     setState(() {
       _translations = trans;
       _isRTL = languageProvider.currentLanguageCode == 'ar';
@@ -61,8 +68,17 @@ class _ActivityPageState extends State<ActivityPage> {
   @override
   void initState() {
     super.initState();
-    _loadActivityData();
     _loadTranslations();
+    // ✅ OPTIMIZATION: Only load activity data for PREMIUM users
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final premium = context.read<PremiumProvider>();
+      if (premium.canAccess(PremiumFeature.advancedAnalytics)) {
+        _loadActivityData();
+      } else {
+        // FREE user - skip data loading, just show locked state
+        setState(() => _isLoading = false);
+      }
+    });
   }
 
   Future<void> _loadActivityData() async {
@@ -262,7 +278,8 @@ class _ActivityPageState extends State<ActivityPage> {
 
     return {
       'engagement': _formatDuration(durationSeconds),
-      'completion': '${completion.toStringAsFixed(completion < 1 ? 2 : 1)}${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'activity.percent_suffix') : '%'}',
+      'completion':
+          '${completion.toStringAsFixed(completion < 1 ? 2 : 1)}${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'activity.percent_suffix') : '%'}',
       'verses': verses,
       'recitation': _formatDuration(reciteTimeSeconds),
       'accuracy': accuracy,
@@ -276,7 +293,8 @@ class _ActivityPageState extends State<ActivityPage> {
   Map<String, dynamic> _defaultStats() {
     return {
       'engagement': '00:00',
-      'completion': '0${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'activity.percent_suffix') : '%'}',
+      'completion':
+          '0${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'activity.percent_suffix') : '%'}',
       'verses': 0,
       'recitation': '00:00',
       'accuracy': 0.0,
@@ -288,12 +306,13 @@ class _ActivityPageState extends State<ActivityPage> {
   }
 
   String _formatDuration(int seconds) {
-    if (seconds <= 0) return '${context.formatNumber('00')}:${context.formatNumber('00')}';
-    
+    if (seconds <= 0)
+      return '${context.formatNumber('00')}:${context.formatNumber('00')}';
+
     final hours = seconds ~/ 3600;
     final minutes = (seconds % 3600) ~/ 60;
     final secs = seconds % 60;
-    
+
     // Format untuk RTL (Arabic) = detik:menit:jam
     // Format untuk LTR = jam:menit:detik
     if (_isRTL) {
@@ -322,27 +341,30 @@ class _ActivityPageState extends State<ActivityPage> {
   String _formatEngagementWithSuffix(String timeStr) {
     // Parse time string untuk extract hours dan minutes
     final parts = timeStr.split(':');
-    
-    final hourSuffix = _translations.isNotEmpty 
-        ? LanguageHelper.tr(_translations, 'activity.hour_suffix') 
+
+    final hourSuffix = _translations.isNotEmpty
+        ? LanguageHelper.tr(_translations, 'activity.hour_suffix')
         : 'h';
-    final minuteSuffix = _translations.isNotEmpty 
-        ? LanguageHelper.tr(_translations, 'activity.minute_suffix') 
+    final minuteSuffix = _translations.isNotEmpty
+        ? LanguageHelper.tr(_translations, 'activity.minute_suffix')
         : 'm';
-    
+
     if (_isRTL) {
       // RTL format: detik:menit atau detik:menit:jam
       if (parts.length == 2) {
         // Format: detik:menit
-        final minutes = int.tryParse(parts[1].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        final minutes =
+            int.tryParse(parts[1].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
         if (minutes > 0) {
           return '$timeStr (${context.formatNumber(minutes)}$minuteSuffix)';
         }
         return timeStr;
       } else if (parts.length == 3) {
         // Format: detik:menit:jam
-        final hours = int.tryParse(parts[2].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
-        final minutes = int.tryParse(parts[1].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        final hours =
+            int.tryParse(parts[2].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        final minutes =
+            int.tryParse(parts[1].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
         if (hours > 0) {
           return '$timeStr (${context.formatNumber(hours)}$hourSuffix ${context.formatNumber(minutes)}$minuteSuffix)';
         }
@@ -354,15 +376,18 @@ class _ActivityPageState extends State<ActivityPage> {
       // LTR format: menit:detik atau jam:menit:detik
       if (parts.length == 2) {
         // Format: menit:detik
-        final minutes = int.tryParse(parts[0].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        final minutes =
+            int.tryParse(parts[0].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
         if (minutes > 0) {
           return '$timeStr (${context.formatNumber(minutes)}$minuteSuffix)';
         }
         return timeStr;
       } else if (parts.length == 3) {
         // Format: jam:menit:detik
-        final hours = int.tryParse(parts[0].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
-        final minutes = int.tryParse(parts[1].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        final hours =
+            int.tryParse(parts[0].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+        final minutes =
+            int.tryParse(parts[1].replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
         if (hours > 0) {
           return '$timeStr (${context.formatNumber(hours)}$hourSuffix ${context.formatNumber(minutes)}$minuteSuffix)';
         }
@@ -371,7 +396,7 @@ class _ActivityPageState extends State<ActivityPage> {
         }
       }
     }
-    
+
     return timeStr;
   }
 
@@ -465,14 +490,113 @@ class _ActivityPageState extends State<ActivityPage> {
                   delegate: SliverChildListDelegate([
                     _buildGlobalFilterDropdown(context),
                     AppMargin.gapLarge(context),
-                    _buildPagesChart(context),
-                    AppMargin.gapLarge(context),
-                    _buildEngagementChart(context),
-                    AppMargin.gapLarge(context),
-                    _buildAccuracyChart(context),
+                    // ✅ OPTIMIZATION: Don't render charts at all for FREE users
+                    // This saves data/network by not fetching chart data
+                    ..._buildChartSection(context),
                     AppMargin.gapLarge(context),
                     _buildStatistics(context),
                   ]),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ✅ OPTIMIZATION: Only render charts for PREMIUM users
+  // FREE users see a locked placeholder - saves data/network
+  List<Widget> _buildChartSection(BuildContext context) {
+    final premium = context.watch<PremiumProvider>();
+
+    if (premium.canAccess(PremiumFeature.advancedAnalytics)) {
+      // PREMIUM: Show actual charts
+      return [
+        _buildPagesChart(context),
+        AppMargin.gapLarge(context),
+        _buildEngagementChart(context),
+        AppMargin.gapLarge(context),
+        _buildAccuracyChart(context),
+      ];
+    } else {
+      // FREE: Show locked placeholder (no data fetch!)
+      return [
+        _buildLockedChartPlaceholder(context, 'Pages'),
+        AppMargin.gapLarge(context),
+        _buildLockedChartPlaceholder(context, 'Engagement'),
+        AppMargin.gapLarge(context),
+        _buildLockedChartPlaceholder(context, 'Accuracy'),
+      ];
+    }
+  }
+
+  // ✅ Locked placeholder for FREE users - no data fetch
+  Widget _buildLockedChartPlaceholder(BuildContext context, String title) {
+    final s = AppDesignSystem.getScaleFactor(context);
+
+    return GestureDetector(
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const PremiumOfferPage())),
+      child: AppCard(
+        child: Container(
+          height: 200 * s,
+          decoration: BoxDecoration(
+            color: AppColors.getTextPrimary(context).withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(
+              AppDesignSystem.radiusMedium * s,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(12 * s),
+                decoration: BoxDecoration(
+                  color: AppColors.getWarning(context).withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.lock_rounded,
+                  color: AppColors.getWarning(context),
+                  size: 28 * s,
+                ),
+              ),
+              SizedBox(height: 12 * s),
+              Text(
+                '$title Chart',
+                style: AppTypography.titleLarge(
+                  context,
+                  color: AppColors.getTextInverse(context),
+                  weight: AppTypography.semiBold,
+                ),
+              ),
+              SizedBox(height: 4 * s),
+              Text(
+                'Premium Feature',
+                style: AppTypography.body(
+                  context,
+                  color: AppColors.getWarning(context),
+                ),
+              ),
+              SizedBox(height: 8 * s),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16 * s,
+                  vertical: 8 * s,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.getWarning(context)),
+                  borderRadius: BorderRadius.circular(20 * s),
+                ),
+                child: Text(
+                  'Upgrade to Premium',
+                  style: AppTypography.label(
+                    context,
+                    color: AppColors.getWarning(context),
+                    weight: AppTypography.semiBold,
+                  ),
                 ),
               ),
             ],
@@ -498,7 +622,10 @@ class _ActivityPageState extends State<ActivityPage> {
           SizedBox(width: 6 * s),
           Text(
             _translations.isNotEmpty
-                ? LanguageHelper.tr(_translations, 'activity.filter_period_text')
+                ? LanguageHelper.tr(
+                    _translations,
+                    'activity.filter_period_text',
+                  )
                 : 'Filter Period:',
             style: TextStyle(
               fontSize: 12 * s,
@@ -604,10 +731,13 @@ class _ActivityPageState extends State<ActivityPage> {
                 ? _buildChartSkeleton(context)
                 : (spots.length <= 1 && spots.first.y == 0)
                 ? _buildEmptyChart(
-                    context, 
+                    context,
                     _translations.isNotEmpty
-                        ? LanguageHelper.tr(_translations, 'activity.no_pages_data')
-                        : 'No pages data yet'
+                        ? LanguageHelper.tr(
+                            _translations,
+                            'activity.no_pages_data',
+                          )
+                        : 'No pages data yet',
                   )
                 : _buildLineChart(spots, maxY, labels, context),
           ),
@@ -622,7 +752,7 @@ class _ActivityPageState extends State<ActivityPage> {
     final labels = _getEngagementXLabels();
     final maxY = _getEngagementMaxY();
 
-    final minutesSuffix = _translations.isNotEmpty 
+    final minutesSuffix = _translations.isNotEmpty
         ? LanguageHelper.tr(_translations, 'activity.minutes_suffix')
         : 'minutes';
 
@@ -659,10 +789,13 @@ class _ActivityPageState extends State<ActivityPage> {
                 ? _buildChartSkeleton(context)
                 : (spots.length <= 1 && spots.first.y == 0)
                 ? _buildEmptyChart(
-                    context, 
+                    context,
                     _translations.isNotEmpty
-                        ? LanguageHelper.tr(_translations, 'activity.no_engagement_data')
-                        : 'No engagement data yet'
+                        ? LanguageHelper.tr(
+                            _translations,
+                            'activity.no_engagement_data',
+                          )
+                        : 'No engagement data yet',
                   )
                 : _buildLineChart(spots, maxY, labels, context),
           ),
@@ -677,7 +810,7 @@ class _ActivityPageState extends State<ActivityPage> {
     final labels = _getAccuracyXLabels();
     final maxY = _getAccuracyMaxY();
 
-    final percentSuffix = _translations.isNotEmpty 
+    final percentSuffix = _translations.isNotEmpty
         ? LanguageHelper.tr(_translations, 'activity.percent_suffix')
         : '%';
 
@@ -714,10 +847,13 @@ class _ActivityPageState extends State<ActivityPage> {
                 ? _buildChartSkeleton(context)
                 : (spots.length <= 1 && spots.first.y == 0)
                 ? _buildEmptyChart(
-                    context, 
+                    context,
                     _translations.isNotEmpty
-                        ? LanguageHelper.tr(_translations, 'activity.no_accuracy_data')
-                        : 'No accuracy data yet'
+                        ? LanguageHelper.tr(
+                            _translations,
+                            'activity.no_accuracy_data',
+                          )
+                        : 'No accuracy data yet',
                   )
                 : _buildAccuracyLineChart(spots, maxY, labels, context),
           ),
@@ -809,8 +945,10 @@ class _ActivityPageState extends State<ActivityPage> {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: 25,
-          getDrawingHorizontalLine: (value) =>
-              FlLine(color: AppColors.getBorderLight(context), strokeWidth: 1 * s),
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: AppColors.getBorderLight(context),
+            strokeWidth: 1 * s,
+          ),
         ),
         borderData: FlBorderData(show: false),
         lineTouchData: const LineTouchData(enabled: false),
@@ -823,7 +961,7 @@ class _ActivityPageState extends State<ActivityPage> {
     final loadingText = _translations.isNotEmpty
         ? LanguageHelper.tr(_translations, 'activity.loading_text')
         : 'Loading...';
-    
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -839,7 +977,10 @@ class _ActivityPageState extends State<ActivityPage> {
           SizedBox(height: 8 * s),
           Text(
             loadingText,
-            style: TextStyle(fontSize: 11 * s, color: AppColors.getTextTertiary(context)),
+            style: TextStyle(
+              fontSize: 11 * s,
+              color: AppColors.getTextTertiary(context),
+            ),
           ),
         ],
       ),
@@ -851,7 +992,10 @@ class _ActivityPageState extends State<ActivityPage> {
     return Center(
       child: Text(
         message,
-        style: TextStyle(fontSize: 12 * s, color: AppColors.getTextTertiary(context)),
+        style: TextStyle(
+          fontSize: 12 * s,
+          color: AppColors.getTextTertiary(context),
+        ),
       ),
     );
   }
@@ -907,7 +1051,11 @@ class _ActivityPageState extends State<ActivityPage> {
           color: AppColors.getSurfaceContainerLowest(context),
           borderRadius: BorderRadius.circular(6 * s),
         ),
-        child: Icon(icon, size: 16 * s, color: AppColors.getTextSecondary(context)),
+        child: Icon(
+          icon,
+          size: 16 * s,
+          color: AppColors.getTextSecondary(context),
+        ),
       ),
     );
   }
@@ -995,8 +1143,10 @@ class _ActivityPageState extends State<ActivityPage> {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: maxY / 3,
-          getDrawingHorizontalLine: (value) =>
-              FlLine(color: AppColors.getBorderLight(context), strokeWidth: 1 * s),
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: AppColors.getBorderLight(context),
+            strokeWidth: 1 * s,
+          ),
         ),
         borderData: FlBorderData(show: false),
         lineTouchData: const LineTouchData(enabled: false),
@@ -1087,7 +1237,9 @@ class _ActivityPageState extends State<ActivityPage> {
                     vertical: 6 * s,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : Colors.transparent, // Primary is constant
+                    color: isSelected
+                        ? AppColors.primary
+                        : Colors.transparent, // Primary is constant
                     borderRadius: BorderRadius.circular(6 * s),
                     border: Border.all(
                       color: isSelected
@@ -1122,11 +1274,11 @@ class _ActivityPageState extends State<ActivityPage> {
     final data = _getStatsForPeriod(periodKey);
 
     final accuracy = (data['accuracy'] as num?)?.toDouble() ?? 0.0;
-    final percentSuffix = _translations.isNotEmpty 
+    final percentSuffix = _translations.isNotEmpty
         ? LanguageHelper.tr(_translations, 'activity.percent_suffix')
         : '%';
-    final accuracyStr = accuracy > 0 
-        ? '${context.formatNumber(accuracy.toStringAsFixed(1))}$percentSuffix' 
+    final accuracyStr = accuracy > 0
+        ? '${context.formatNumber(accuracy.toStringAsFixed(1))}$percentSuffix'
         : '${context.formatNumber(0)}$percentSuffix';
 
     return Column(
@@ -1137,7 +1289,10 @@ class _ActivityPageState extends State<ActivityPage> {
               child: _buildStatCard(
                 _formatEngagementWithSuffix(data['engagement'].toString()),
                 _translations.isNotEmpty
-                    ? LanguageHelper.tr(_translations, 'activity.engangement_text')
+                    ? LanguageHelper.tr(
+                        _translations,
+                        'activity.engangement_text',
+                      )
                     : 'Engagement',
                 Icons.access_time_rounded,
                 AppColors.primary,
@@ -1149,7 +1304,10 @@ class _ActivityPageState extends State<ActivityPage> {
               child: _buildStatCard(
                 data['completion'].toString(),
                 _translations.isNotEmpty
-                    ? LanguageHelper.tr(_translations, 'activity.completion_text')
+                    ? LanguageHelper.tr(
+                        _translations,
+                        'activity.completion_text',
+                      )
                     : 'Completion',
                 Icons.check_circle_outline_rounded,
                 AppColors.success,
@@ -1165,7 +1323,10 @@ class _ActivityPageState extends State<ActivityPage> {
               child: _buildStatCard(
                 context.formatNumber(data['verses']),
                 _translations.isNotEmpty
-                    ? LanguageHelper.tr(_translations, 'activity.verses_recited')
+                    ? LanguageHelper.tr(
+                        _translations,
+                        'activity.verses_recited',
+                      )
                     : 'Verses Recited',
                 Icons.menu_book_rounded,
                 AppColors.info,
@@ -1177,7 +1338,10 @@ class _ActivityPageState extends State<ActivityPage> {
               child: _buildStatCard(
                 data['recitation'].toString(),
                 _translations.isNotEmpty
-                    ? LanguageHelper.tr(_translations, 'activity.recitatiom_time_text')
+                    ? LanguageHelper.tr(
+                        _translations,
+                        'activity.recitatiom_time_text',
+                      )
                     : 'Recitation Time',
                 Icons.timer_outlined,
                 AppColors.accent,
@@ -1205,7 +1369,10 @@ class _ActivityPageState extends State<ActivityPage> {
               child: _buildStatCard(
                 context.formatNumber(data['badges']),
                 _translations.isNotEmpty
-                    ? LanguageHelper.tr(_translations, 'activity.earned_badges_text')
+                    ? LanguageHelper.tr(
+                        _translations,
+                        'activity.earned_badges_text',
+                      )
                     : 'Earned Badges',
                 Icons.emoji_events_outlined,
                 AppColors.warning,
@@ -1221,7 +1388,10 @@ class _ActivityPageState extends State<ActivityPage> {
               child: _buildStatCard(
                 data['deeds'].toString(),
                 _translations.isNotEmpty
-                    ? LanguageHelper.tr(_translations, 'activity.deeds_estimated_text')
+                    ? LanguageHelper.tr(
+                        _translations,
+                        'activity.deeds_estimated_text',
+                      )
                     : 'Deeds Estimated',
                 Icons.favorite_border_rounded,
                 AppColors.error,
@@ -1250,7 +1420,10 @@ class _ActivityPageState extends State<ActivityPage> {
       decoration: BoxDecoration(
         color: AppColors.getSurfaceVariant(context),
         borderRadius: BorderRadius.circular(10 * s),
-        border: Border.all(color: AppColors.getBorderLight(context), width: 1 * s),
+        border: Border.all(
+          color: AppColors.getBorderLight(context),
+          width: 1 * s,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1281,7 +1454,7 @@ class _ActivityPageState extends State<ActivityPage> {
             label,
             style: TextStyle(
               fontSize: 10 * s,
-                  color: AppColors.getTextTertiary(context),
+              color: AppColors.getTextTertiary(context),
               fontWeight: FontWeight.w500,
             ),
             maxLines: 1,
@@ -1293,7 +1466,9 @@ class _ActivityPageState extends State<ActivityPage> {
               subtitle,
               style: TextStyle(
                 fontSize: 8 * s,
-                color: AppColors.getTextTertiary(context).withValues(alpha: 0.7),
+                color: AppColors.getTextTertiary(
+                  context,
+                ).withValues(alpha: 0.7),
                 fontStyle: FontStyle.italic,
               ),
             ),
