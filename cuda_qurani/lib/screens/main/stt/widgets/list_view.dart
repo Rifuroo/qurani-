@@ -180,31 +180,37 @@ class _QuranListViewState extends State<QuranListView> {
   }
 
   void _onScroll() {
-    if (!mounted || !_scrollController.hasClients) return;
+  if (!mounted || !_scrollController.hasClients) return;
 
-    final offset = _scrollController.offset;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final estimatedPageHeight = screenHeight * 0.75;
-    final pageNumber = (offset / estimatedPageHeight).floor() + 1;
-    // ✅ TAMBAHKAN: Get total pages from controller
-    final totalPages = context.read<SttController>().totalPages;
-    final clampedPage = pageNumber.clamp(1, totalPages);
+  final offset = _scrollController.offset;
+  final screenHeight = MediaQuery.of(context).size.height;
+  final estimatedPageHeight = screenHeight * 0.75;
+  final pageNumber = (offset / estimatedPageHeight).floor() + 1;
+  final controller = context.read<SttController>();
+  final totalPages = controller.totalPages;
+  final clampedPage = pageNumber.clamp(1, totalPages);
 
-    if (clampedPage != _currentVisiblePage) {
-      _currentVisiblePage = clampedPage;
+  if (clampedPage != _currentVisiblePage) {
+    _currentVisiblePage = clampedPage;
 
-      _scrollEndTimer?.cancel();
-      _scrollEndTimer = Timer(const Duration(milliseconds: 300), () {
-        if (!mounted) return;
-        print(
-          '📍 SCROLL: Settled at page $_currentVisiblePage (cache: ${context.read<SttController>().pageCache.length}/604)',
-        );
+    _scrollEndTimer?.cancel();
+    _scrollEndTimer = Timer(const Duration(milliseconds: 150), () {
+      if (!mounted) return;
 
-        // Load nearby pages if not cached yet
-        _loadImmediateRange(_currentVisiblePage);
+      // ✅ FIX: Update appbar info ONLY (no preloading during scroll)
+      controller.updateVisiblePageQuiet(_currentVisiblePage);
+
+      // ✅ Preload in background AFTER scroll settled
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted || !_scrollController.hasClients) return;
+        // Only preload if still on same page (user hasn't scrolled again)
+        if (_currentVisiblePage == clampedPage) {
+          _loadImmediateRange(_currentVisiblePage);
+        }
       });
-    }
+    });
   }
+}
 
   @override
   void dispose() {
@@ -566,8 +572,8 @@ class _CompleteAyahWidget extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: AppColors.getBorderLight(context), 
-                width: 0.5
+                color: AppColors.getBorderLight(context),
+                width: 0.5,
               ),
             ),
           ),
@@ -738,7 +744,9 @@ class _CompleteAyahWidget extends StatelessWidget {
                   0.0625 // IndoPak lebih besar
             : screenWidth * 0.0625, // QPC
         fontFamily: fontFamily,
-        color: isCurrentAyat ? AppColors.getInfo(context) : AppColors.getTextPrimary(context),
+        color: isCurrentAyat
+            ? AppColors.getInfo(context)
+            : AppColors.getTextPrimary(context),
         fontWeight: FontWeight.w400,
         height: isIndopak ? 1.8 : 1.7,
         letterSpacing: isIndopak ? 0 : -5,

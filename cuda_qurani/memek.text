@@ -1,0 +1,47 @@
+1. qpc-v1-glyph-codes-wbw.db
+-- QPC Word Count  
+SELECT ayah, COUNT(*) as indopak_word_count
+FROM words
+WHERE surah = 2 AND ayah BETWEEN 1 AND 10
+GROUP BY ayah
+ORDER BY ayah;
+RESULTS:
+1	2
+2	8
+3	9
+4	13
+5	9
+6	12
+7	13
+8	12
+9	11
+10	13
+
+2. qpc-v1-glyph-codes-wbw.db
+-- IndoPak Word Count  
+SELECT ayah, COUNT(*) as indopak_word_count
+FROM words
+WHERE surah = 2 AND ayah BETWEEN 1 AND 10
+GROUP BY ayah
+ORDER BY ayah;
+RESULTS:
+1	2
+2	8
+3	9
+4	13
+5	9
+6	12
+7	13
+8	12
+9	11
+10	13
+
+3. ayah-recitation-abdul-basit-abdul-samad-murattal-hafs-950.db
+SELECT segments 
+FROM verses 
+WHERE surah_number = 2 AND ayah_number BETWEEN 8 AND 11;
+RESULTS:
+[[0,1,0,4840]]
+[[0,1,0,1080],[1,2,1280,2040],[2,3,2170,2270],[3,4,2480,2960],[4,5,3050,3150],[5,6,4720,5360],[6,7,8170,8230]]
+[[0,1,0,1280],[1,2,2290,2390],[2,3,2680,3040],[3,4,3560,4480],[4,5,4920,5560],[5,6,5760,6640],[6,7,7680,8200],[7,8,11690,11760]]
+[[0,1,0,2200],[1,2,3210,3310],[2,3,3850,3950],[3,4,6330,6430],[4,5,7040,7400],[5,6,7570,7670],[6,7,10290,10390],[7,8,10810,10910],[8,9,11640,12520],[9,10,12680,13960],[10,11,14040,14160],[11,12,14440,17280]]

@@ -86,7 +86,7 @@ class MushafRenderer {
           textAlign: TextAlign.justify,
           text: TextSpan(
             children: [wordSpans.first],
-          ), // ✅ UBAH: wrap dalam children
+          ), // âœ… UBAH: wrap dalam children
         ),
       );
     }
@@ -99,7 +99,7 @@ class MushafRenderer {
       final textPainter = TextPainter(
         text: span is TextSpan
             ? span
-            : TextSpan(children: [span]), // ✅ UBAH: handle InlineSpan
+            : TextSpan(children: [span]), // âœ… UBAH: handle InlineSpan
         textDirection: TextDirection.rtl,
       );
       textPainter.layout();
@@ -124,7 +124,7 @@ class MushafRenderer {
               maxLines: 1,
               text: TextSpan(
                 children: [wordSpans[i]],
-              ), // ✅ UBAH: wrap dalam children, hapus casting
+              ), // âœ… UBAH: wrap dalam children, hapus casting
             ),
             if (i < wordSpans.length - 1) const SizedBox(width: 0.0),
           ],
@@ -135,7 +135,7 @@ class MushafRenderer {
 }
 
 class MushafDisplay extends StatefulWidget {
-  const MushafDisplay({Key? key}) : super(key: key); // ✅ Already OK
+  const MushafDisplay({Key? key}) : super(key: key); // âœ… Already OK
 
   @override
   State<MushafDisplay> createState() => _MushafDisplayState();
@@ -144,7 +144,7 @@ class MushafDisplay extends StatefulWidget {
 class _MushafDisplayState extends State<MushafDisplay> {
   bool _isSwipeInProgress = false;
   double _dragStartPosition = 0;
-  bool _isUpdating = false; // ✅ FIX: Prevent concurrent updates
+  bool _isUpdating = false; // âœ… FIX: Prevent concurrent updates
 
   @override
   Widget build(BuildContext context) {
@@ -152,14 +152,14 @@ class _MushafDisplayState extends State<MushafDisplay> {
 
     return GestureDetector(
       behavior: HitTestBehavior
-          .translucent, // ✅ FIX: Ganti dari opaque ke translucent
+          .translucent, // âœ… FIX: Ganti dari opaque ke translucent
       onHorizontalDragStart: (details) {
-        if (!mounted) return; // ✅ FIX: Check mounted state
+        if (!mounted) return; // âœ… FIX: Check mounted state
         _dragStartPosition = details.globalPosition.dx;
         _isSwipeInProgress = false;
       },
       onHorizontalDragUpdate: (details) {
-        if (!mounted) return; // ✅ FIX: Check mounted state
+        if (!mounted) return; // âœ… FIX: Check mounted state
         // Detect significant horizontal movement
         final dragDistance = (details.globalPosition.dx - _dragStartPosition)
             .abs();
@@ -169,7 +169,7 @@ class _MushafDisplayState extends State<MushafDisplay> {
       },
       onHorizontalDragEnd: (details) {
         if (!mounted || !_isSwipeInProgress)
-          return; // ✅ FIX: Check mounted state
+          return; // âœ… FIX: Check mounted state
 
         final velocity = details.primaryVelocity ?? 0;
 
@@ -196,13 +196,13 @@ class _MushafDisplayState extends State<MushafDisplay> {
         }
       },
       child: SizedBox.expand(
-        // ✅ Fill entire screen for gesture detection
+        // âœ… Fill entire screen for gesture detection
         child: SingleChildScrollView(
-          // ✅ Allow scrolling if content exceeds screen
+          // âœ… Allow scrolling if content exceeds screen
           physics:
-              const NeverScrollableScrollPhysics(), // ✅ Disable scroll (only swipe)
+              const NeverScrollableScrollPhysics(), // âœ… Disable scroll (only swipe)
           child: RepaintBoundary(
-            // ✅ FIX: Isolate repaints to prevent MouseTracker conflicts
+            // âœ… FIX: Isolate repaints to prevent MouseTracker conflicts
             child: _buildMushafPageOptimized(context),
           ),
         ),
@@ -210,7 +210,7 @@ class _MushafDisplayState extends State<MushafDisplay> {
     );
   }
 
-  // ✅ CRITICAL: Track emergency loads to prevent duplicates
+  // âœ… CRITICAL: Track emergency loads to prevent duplicates
   static final Set<int> _emergencyLoadingPages = {};
 
   Widget _buildMushafPageOptimized(BuildContext context) {
@@ -218,20 +218,20 @@ class _MushafDisplayState extends State<MushafDisplay> {
     final pageNumber = controller.currentPage;
     var cachedLines = controller.pageCache[pageNumber];
 
-    // ✅ CRITICAL: Also check QuranService cache (shared singleton)
+    // âœ… CRITICAL: Also check QuranService cache (shared singleton)
     if (cachedLines == null || cachedLines.isEmpty) {
       final service = context.read<QuranService>();
       final serviceCache = service.getCachedPage(pageNumber);
       if (serviceCache != null && serviceCache.isNotEmpty) {
-        // ✅ Sync cache immediately
+        // âœ… Sync cache immediately
         controller.updatePageCache(pageNumber, serviceCache);
         cachedLines = serviceCache;
       }
     }
 
-    // ✅ FAST PATH: If page is cached, render immediately (NO LOADING)
+    // âœ… FAST PATH: If page is cached, render immediately (NO LOADING)
     if (cachedLines != null && cachedLines.isNotEmpty) {
-      // ✅ OPTIMIZED: Use RepaintBoundary to prevent unnecessary repaints
+      // âœ… OPTIMIZED: Use RepaintBoundary to prevent unnecessary repaints
       return RepaintBoundary(
         key: ValueKey('mushaf_page_$pageNumber'),
         child: MushafPageContent(
@@ -241,11 +241,11 @@ class _MushafDisplayState extends State<MushafDisplay> {
       );
     }
 
-    // ⚠️ FALLBACK: Emergency load only if not already loading
+    // âš ï¸ FALLBACK: Emergency load only if not already loading
     if (!_emergencyLoadingPages.contains(pageNumber)) {
       final service = context.read<QuranService>();
 
-      // ✅ CRITICAL: Check if page is already being loaded in QuranService
+      // âœ… CRITICAL: Check if page is already being loaded in QuranService
       if (service.isPageLoading(pageNumber)) {
         // Wait for existing load instead of creating duplicate
         final loadingFuture = service.getLoadingFuture(pageNumber);
@@ -255,7 +255,7 @@ class _MushafDisplayState extends State<MushafDisplay> {
                 controller.updatePageCache(pageNumber, lines);
               })
               .catchError((e) {
-                print('❌ Waiting for page $pageNumber load failed: $e');
+                print('âŒ Waiting for page $pageNumber load failed: $e');
               });
           // Show loading indicator while waiting
         }
@@ -263,18 +263,18 @@ class _MushafDisplayState extends State<MushafDisplay> {
         // Only trigger new emergency load if not already loading
         _emergencyLoadingPages.add(pageNumber);
         print(
-          '⚠️ CACHE MISS: Page $pageNumber not cached, emergency loading...',
+          'âš ï¸ CACHE MISS: Page $pageNumber not cached, emergency loading...',
         );
 
-        // ✅ CRITICAL: Trigger emergency load and sync cache
+        // âœ… CRITICAL: Trigger emergency load and sync cache
         Future.microtask(() async {
           try {
             final lines = await service.getMushafPageLines(pageNumber);
 
-            // ✅ CRITICAL: Sync cache to controller immediately
+            // âœ… CRITICAL: Sync cache to controller immediately
             controller.updatePageCache(pageNumber, lines);
           } catch (e) {
-            print('❌ Emergency load failed: $e');
+            print('âŒ Emergency load failed: $e');
           } finally {
             _emergencyLoadingPages.remove(pageNumber);
           }
@@ -330,7 +330,7 @@ class MushafPageContent extends StatelessWidget {
           padding: EdgeInsets.symmetric(
             horizontal:
                 screenWidth *
-                0.00, // ✅ UBAH nilai ini untuk adjust padding pageLines
+                0.00, // âœ… UBAH nilai ini untuk adjust padding pageLines
           ),
           child: Column(
             children: pageLines
@@ -358,29 +358,31 @@ class MushafPageContent extends StatelessWidget {
         lineWidget = _BasmallahLine();
         break;
 
-case 'ayah':
-  lineWidget = _JustifiedAyahLine(line: line, pageNumber: pageNumber);
-  
-  // ✅ Wrap dengan Transform jika Indopak
-  if (isIndopak) {
-    lineWidget = Transform.scale(
-      scaleX: 0.98,
-      scaleY: 1.150,
-      alignment: Alignment.center,
-      child: lineWidget,
-    );
-  }
-  
-  // ✅ TAMBAH: Padding khusus untuk Indopak halaman 1 & 2
-  if (isIndopak && (pageNumber == 1 || pageNumber == 2)) {
-    lineWidget = Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: screenWidth * 0.120, // ✅ Padding hanya untuk Indopak page 1-2
-      ),
-      child: lineWidget,
-    );
-  }
-  break;
+      case 'ayah':
+        lineWidget = _JustifiedAyahLine(line: line, pageNumber: pageNumber);
+
+        // âœ… Wrap dengan Transform jika Indopak
+        if (isIndopak) {
+          lineWidget = Transform.scale(
+            scaleX: 0.98,
+            scaleY: 1.150,
+            alignment: Alignment.center,
+            child: lineWidget,
+          );
+        }
+
+        // âœ… TAMBAH: Padding khusus untuk Indopak halaman 1 & 2
+        if (isIndopak && (pageNumber == 1 || pageNumber == 2)) {
+          lineWidget = Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal:
+                  screenWidth *
+                  0.120, // âœ… Padding hanya untuk Indopak page 1-2
+            ),
+            child: lineWidget,
+          );
+        }
+        break;
 
       default:
         lineWidget = const SizedBox.shrink();
@@ -509,15 +511,19 @@ class _JustifiedAyahLine extends StatelessWidget {
         final word = segment.words[i];
         final wordIndex = word.wordNumber - 1;
 
-        // ✅ CRITICAL FIX: Use ACTUAL surah:ayah from segment, not hardcoded
+        // âœ… CRITICAL FIX: Use ACTUAL surah:ayah from segment, not hardcoded
         final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
         final wordStatus = controller.wordStatusMap[wordStatusKey]?[wordIndex];
 
-        // 🎥 DEBUG: Only log if listening mode is active
+        // ðŸŽ¥ DEBUG: Only log if listening mode is active
         if (controller.isListeningMode && isCurrentAyat) {
           print(
-            '🎨 UI RENDER: Ayah ${segment.surahId}:${segment.ayahNumber}, Word[$wordIndex] (loop $i) = $wordStatus',
+            '🎨 UI RENDER: Ayah ${segment.surahId}:${segment.ayahNumber}, Word[$wordIndex] (loop $i) = $wordStatus (Layout: ${controller.mushafLayout.displayName})',
           );
+          print(
+            '   Full wordStatusMap[$wordStatusKey] = ${controller.wordStatusMap[wordStatusKey]}',
+          );
+          print('   Total words in segment: ${segment.words.length}');
           print(
             '   Full wordStatusMap[$wordStatusKey] = ${controller.wordStatusMap[wordStatusKey]}',
           );
@@ -587,9 +593,9 @@ class _JustifiedAyahLine extends StatelessWidget {
                 backgroundColor: wordBg,
                 fontWeight: FontWeight.w400,
                 height: isIndopak ? 1.9 : 1.8,
-                // ✅ SOLUSI: Letterspace yang lebih negatif untuk "gepengin" text
+                // âœ… SOLUSI: Letterspace yang lebih negatif untuk "gepengin" text
                 letterSpacing: isIndopak
-                    ? -0.420 // ✅ Lebih negatif = lebih gepeng (coba -1.5 sampai -3.0)
+                    ? -0.420 // âœ… Lebih negatif = lebih gepeng (coba -1.5 sampai -3.0)
                     : -5,
                 decoration: (controller.hideUnreadAyat && !isLastWord)
                     ? TextDecoration.underline
@@ -605,7 +611,7 @@ class _JustifiedAyahLine extends StatelessWidget {
       }
     }
 
-    // ✅ Build line widget
+    // âœ… Build line widget
     final lineWidget = MushafRenderer.renderJustifiedLine(
       wordSpans: spans,
       isCentered: line.isCentered,
@@ -669,10 +675,10 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
 
     return Container(
       height: headerHeight,
-      // ✅ FIX: Hapus background color sama sekali
+      // âœ… FIX: Hapus background color sama sekali
       padding: EdgeInsets.symmetric(
         horizontal: screenWidth * 0.030,
-      ), // ✅ CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
+      ), // âœ… CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
       alignment: Alignment.center,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

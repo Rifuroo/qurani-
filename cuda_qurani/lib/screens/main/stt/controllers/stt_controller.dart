@@ -73,60 +73,60 @@ class SttController with ChangeNotifier {
     }
   }
 
-Future<void> switchMushafLayout(MushafLayout newLayout) async {
-  if (_mushafLayout == newLayout) return;
+  Future<void> switchMushafLayout(MushafLayout newLayout) async {
+    if (_mushafLayout == newLayout) return;
 
-  appLogger.log(
-    'LAYOUT_SWITCH',
-    'Switching: ${_mushafLayout.displayName} → ${newLayout.displayName}',
-  );
+    appLogger.log(
+      'LAYOUT_SWITCH',
+      'Switching: ${_mushafLayout.displayName} → ${newLayout.displayName}',
+    );
 
-  // ✅ CRITICAL: Stop ALL background tasks FIRST
-  print('[LAYOUT_SWITCH] 🛑 Stopping background tasks...');
-  _isPreloadingPages = false; // Stop preloading immediately
-  await Future.delayed(const Duration(milliseconds: 200)); // Let tasks finish
+    // ✅ CRITICAL: Stop ALL background tasks FIRST
+    print('[LAYOUT_SWITCH] 🛑 Stopping background tasks...');
+    _isPreloadingPages = false; // Stop preloading immediately
+    await Future.delayed(const Duration(milliseconds: 200)); // Let tasks finish
 
-  // ✅ STEP 1: Close ALL databases
-  print('[LAYOUT_SWITCH] 🔒 Closing all databases...');
-  await DBHelper.closeAllDatabases();
-  await LocalDatabaseService.closePageDatabase();
-  print('[LAYOUT_SWITCH] ✅ All databases closed');
+    // ✅ STEP 1: Close ALL databases
+    print('[LAYOUT_SWITCH] 🔒 Closing all databases...');
+    await DBHelper.closeAllDatabases();
+    await LocalDatabaseService.closePageDatabase();
+    print('[LAYOUT_SWITCH] ✅ All databases closed');
 
-  // ✅ STEP 2: Wait for file system
-  await Future.delayed(const Duration(milliseconds: 200));
+    // ✅ STEP 2: Wait for file system
+    await Future.delayed(const Duration(milliseconds: 200));
 
-  // ✅ STEP 3: Update service first
-  await _sqliteService.setMushafLayout(newLayout);
+    // ✅ STEP 3: Update service first
+    await _sqliteService.setMushafLayout(newLayout);
 
-  // ✅ STEP 4: Update local state
-  _mushafLayout = newLayout;
+    // ✅ STEP 4: Update local state
+    _mushafLayout = newLayout;
 
-  // ✅ STEP 5: Clear ALL caches
-  pageCache.clear();
-  _sqliteService.clearPageCache();
-  _lastLoadedAyatsPage = null;
-  _lastPreloadedPage = null;
+    // ✅ STEP 5: Clear ALL caches
+    pageCache.clear();
+    _sqliteService.clearPageCache();
+    _lastLoadedAyatsPage = null;
+    _lastPreloadedPage = null;
 
-  // ✅ STEP 6: Adjust current page if exceeds new layout's max
-  if (_currentPage > newLayout.totalPages) {
-    _currentPage = newLayout.totalPages;
+    // ✅ STEP 6: Adjust current page if exceeds new layout's max
+    if (_currentPage > newLayout.totalPages) {
+      _currentPage = newLayout.totalPages;
+    }
+    if (_listViewCurrentPage > newLayout.totalPages) {
+      _listViewCurrentPage = newLayout.totalPages;
+    }
+
+    // ✅ STEP 7: Reload current page data
+    _isDataLoaded = false;
+    await _loadSinglePageData(_currentPage);
+
+    // ✅ STEP 8: Notify listeners to update UI
+    notifyListeners();
+
+    appLogger.log(
+      'LAYOUT_SWITCH',
+      '✅ Layout switched to ${newLayout.displayName} (${newLayout.totalPages} pages)',
+    );
   }
-  if (_listViewCurrentPage > newLayout.totalPages) {
-    _listViewCurrentPage = newLayout.totalPages;
-  }
-
-  // ✅ STEP 7: Reload current page data
-  _isDataLoaded = false;
-  await _loadSinglePageData(_currentPage);
-
-  // ✅ STEP 8: Notify listeners to update UI
-  notifyListeners();
-
-  appLogger.log(
-    'LAYOUT_SWITCH',
-    '✅ Layout switched to ${newLayout.displayName} (${newLayout.totalPages} pages)',
-  );
-}
 
   // ✅ NEW: Apply word status map from Supabase data
   void _applyInitialWordStatusMap(int surahId, Map<String, dynamic> wordMap) {
@@ -269,6 +269,68 @@ Future<void> switchMushafLayout(MushafLayout newLayout) async {
   // ? Helper: Generate word status key
   String _wordKey(int surahId, int ayahNumber) => '$surahId:$ayahNumber';
 
+  /// 🆕 NEW: Map audio segment word_index (QPC-based) to actual layout word_index
+  /// 🆕 NEW: Map audio segment word_index (QPC-based) to actual layout word_index
+  int _mapAudioIndexToLayoutIndex(
+    int audioWordIndex,
+    int surahId,
+    int ayahNumber,
+  ) {
+    // For QPC layout, no mapping needed (1:1)
+    if (_mushafLayout == MushafLayout.qpc) {
+      return audioWordIndex;
+    }
+
+    // ✅ CRITICAL FIX: For IndoPak, use _currentPageAyats (most reliable source)
+    // _ayatList might be filtered or incomplete, but _currentPageAyats has full page data
+    final ayat = _currentPageAyats.firstWhere(
+      (a) => a.surah_id == surahId && a.ayah == ayahNumber,
+      orElse: () {
+        print(
+          '⚠️ MAPPING FALLBACK: Ayah $surahId:$ayahNumber not in _currentPageAyats, trying _ayatList',
+        );
+        return _ayatList.firstWhere(
+          (a) => a.surah_id == surahId && a.ayah == ayahNumber,
+          orElse: () {
+            print(
+              '❌ MAPPING ERROR: Ayah $surahId:$ayahNumber not found anywhere!',
+            );
+            return _ayatList.isNotEmpty
+                ? _ayatList.first
+                : _currentPageAyats.first;
+          },
+        );
+      },
+    );
+
+    final indopakWordCount = ayat.words.length;
+
+    // ✅ STRATEGY: Proportional mapping based on word count ratio
+    // Since we don't have QPC word count in memory, we'll use a heuristic:
+    // If audio index exceeds IndoPak count, it means QPC has more words
+
+    if (audioWordIndex < indopakWordCount) {
+      // Direct mapping possible (same or audio has fewer words)
+      print(
+        '🗺️ MAPPING: Direct map $audioWordIndex → $audioWordIndex (within bounds)',
+      );
+      return audioWordIndex;
+    }
+
+    // Audio index exceeds IndoPak count - need proportional mapping
+    // Estimate QPC word count from audio index + safety margin
+    final estimatedQpcCount = audioWordIndex + 1;
+    final ratio = indopakWordCount / estimatedQpcCount.toDouble();
+    final mappedIndex = (audioWordIndex * ratio).floor();
+    final clampedIndex = mappedIndex.clamp(0, indopakWordCount - 1);
+
+    print(
+      '🗺️ MAPPING: Proportional $audioWordIndex → $clampedIndex (IndoPak: $indopakWordCount words, estimated QPC: $estimatedQpcCount)',
+    );
+
+    return clampedIndex;
+  }
+
   // ? Helper: Get word status for specific surah:ayah:word
   WordStatus? getWordStatus(int surahId, int ayahNumber, int wordIndex) {
     final key = _wordKey(surahId, ayahNumber);
@@ -299,7 +361,7 @@ Future<void> switchMushafLayout(MushafLayout newLayout) async {
 
   bool _isPreloadingPages = false;
   // Tambahkan property ini setelah deklarasi _isPreloadingPages
-bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
+  bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
 
   // Getters for UI
   bool get isLoading => _isLoading;
@@ -532,83 +594,15 @@ bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
 
       // ?? Subscribe to word highlights
       _wordHighlightSubscription = _listeningAudioService!.wordHighlightStream?.listen((
-        wordIndex,
+        audioWordIndex, // 🔴 RENAMED: ini dari audio segments (QPC-based)
       ) {
-        print('?? [WORD HIGHLIGHT] Received: $wordIndex');
+        print(
+          '🎧 Word highlight event received (audio index): $audioWordIndex',
+        );
 
         // ? Handle reset signal (-1)
-        if (wordIndex == -1) {
-          print('?? [RESET] Clearing highlights');
-          final allKeys = _wordStatusMap.keys.toList();
-          for (final key in allKeys) {
-            _wordStatusMap[key]?.clear();
-          }
-          notifyListeners();
-          return;
-        }
-
-        // ? CRITICAL: Validate _currentAyatIndex FIRST
-        if (_currentAyatIndex < 0 ||
-            _currentAyatIndex >= _currentPageAyats.length) {
-          print(
-            '?? [WORD HIGHLIGHT] Invalid index: $_currentAyatIndex (max: ${_currentPageAyats.length - 1})',
-          );
-          return;
-        }
-
-        // ? Get current ayat
-        final currentAyat = _currentPageAyats[_currentAyatIndex];
-        final currentKey = _wordKey(currentAyat.surah_id, currentAyat.ayah);
-        final wordCount = currentAyat.words.length;
-
-        print(
-          '   ?? Target: ${currentAyat.surah_id}:${currentAyat.ayah} (has $wordCount words)',
-        );
-
-        // ? CRITICAL: Validate wordIndex against CURRENT ayat
-        if (wordIndex < 0 || wordIndex >= wordCount) {
-          print(
-            '?? [WORD HIGHLIGHT] Invalid wordIndex: $wordIndex for ayat ${currentAyat.surah_id}:${currentAyat.ayah} (max: ${wordCount - 1})',
-          );
-          print('   ?? SKIPPING - likely from previous ayat');
-          return; // ? CRITICAL: Skip invalid word index
-        }
-
-        // ? Initialize map if not exists
-        if (!_wordStatusMap.containsKey(currentKey)) {
-          _wordStatusMap[currentKey] = {};
-        }
-
-        // ? Clear OTHER ayahs (prevent stuck highlights)
-        final otherKeys = _wordStatusMap.keys
-            .where((k) => k != currentKey)
-            .toList();
-        for (final key in otherKeys) {
-          _wordStatusMap[key]?.clear();
-        }
-
-        // ? Update word statuses
-        for (int i = 0; i < wordCount; i++) {
-          _wordStatusMap[currentKey]![i] = (i == wordIndex)
-              ? WordStatus.processing
-              : WordStatus.pending;
-        }
-
-        print(
-          '   ? [WORD HIGHLIGHT] Applied: word $wordIndex in ${currentAyat.surah_id}:${currentAyat.ayah}',
-        );
-        notifyListeners();
-      });
-
-      // ?? Subscribe to word highlights
-      _wordHighlightSubscription = _listeningAudioService!.wordHighlightStream?.listen((
-        wordIndex,
-      ) {
-        print('?? Word highlight event received: $wordIndex');
-
-        // ? FIX: Handle reset signal (-1)
-        if (wordIndex == -1) {
-          print('?? Reset signal received, clearing highlights');
+        if (audioWordIndex == -1) {
+          print('🔄 Reset signal received, clearing highlights');
 
           // Clear ALL word status maps to prevent stuck highlights
           final allKeys = _wordStatusMap.keys.toList();
@@ -632,19 +626,41 @@ bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
           );
         } else {
           print(
-            '?? Invalid _currentAyatIndex: $_currentAyatIndex (pageAyats: ${_currentPageAyats.length})',
+            '❌ Invalid _currentAyatIndex: $_currentAyatIndex (pageAyats: ${_currentPageAyats.length})',
           );
           return; // ? EXIT early if invalid index
         }
 
         if (currentAyat != null) {
+          // 🆕 MAP audio word index to layout-specific word index
+          final layoutWordIndex = _mapAudioIndexToLayoutIndex(
+            audioWordIndex,
+            currentAyat.surah_id,
+            currentAyat.ayah,
+          );
+
           final currentKey = _wordKey(currentAyat.surah_id, currentAyat.ayah);
+
+          // ✅ ADD: Enhanced debugging untuk tracking mapping
+          print(
+            '🗺️ WORD INDEX MAPPING: audio=$audioWordIndex → layout=$layoutWordIndex (${_mushafLayout.displayName})',
+          );
+          print(
+            '   Ayat: ${currentAyat.surah_id}:${currentAyat.ayah}, Words in layout: ${currentAyat.words.length}',
+          );
+          print(
+            '   Current _wordStatusMap[$currentKey] before update: ${_wordStatusMap[currentKey]}',
+          );
+
+          print(
+            '🗺️ WORD INDEX MAPPING: audio=$audioWordIndex → layout=$layoutWordIndex (${_mushafLayout.displayName})',
+          );
           final words = currentAyat.words;
 
-          // ? CRITICAL: Validate wordIndex before accessing array
-          if (wordIndex < 0 || wordIndex >= words.length) {
+          // ? CRITICAL: Validate layoutWordIndex before accessing array
+          if (layoutWordIndex < 0 || layoutWordIndex >= words.length) {
             print(
-              '?? Invalid wordIndex: $wordIndex for ayat ${currentAyat.surah_id}:${currentAyat.ayah} (has ${words.length} words)',
+              '❌ Invalid layoutWordIndex: $layoutWordIndex for ayat ${currentAyat.surah_id}:${currentAyat.ayah} (has ${words.length} words)',
             );
             return; // ? EXIT early if invalid word index
           }
@@ -662,15 +678,23 @@ bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
           }
 
           // Update word status for UI - highlight ONLY current word
+          // ✅ CRITICAL FIX: Update word status using layoutWordIndex (not loop variable i)
+          // Initialize all words as pending first
           for (int i = 0; i < words.length; i++) {
-            if (i == wordIndex) {
-              _wordStatusMap[currentKey]![i] = WordStatus.processing;
-              print(
-                '   ? Highlighted word $i in ${currentAyat.surah_id}:${currentAyat.ayah}',
-              );
-            } else {
-              _wordStatusMap[currentKey]![i] = WordStatus.pending;
-            }
+            _wordStatusMap[currentKey]![i] = WordStatus.pending;
+          }
+
+          // Then set ONLY the mapped word as processing
+          if (layoutWordIndex >= 0 && layoutWordIndex < words.length) {
+            _wordStatusMap[currentKey]![layoutWordIndex] =
+                WordStatus.processing;
+            print(
+              '   ✨ Highlighted word $layoutWordIndex in ${currentAyat.surah_id}:${currentAyat.ayah}',
+            );
+          } else {
+            print(
+              '   ⚠️ Cannot highlight: layoutWordIndex $layoutWordIndex out of bounds (0-${words.length - 1})',
+            );
           }
 
           notifyListeners();
@@ -1232,163 +1256,175 @@ bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
   DateTime? _lastPreloadTime;
 
   Future<void> _preloadAdjacentPagesAggressively() async {
-  // ✅ CRITICAL: Check disposal state AND stop flag BEFORE any async operation
-  if (_isDisposed || _stopPreloading) {
-    print('[PRELOAD] Controller disposed or stopped, skipping preload');
-    return;
-  }
-
-  // ✅ CRITICAL: Prevent duplicate preload calls for same page
-  if (_isPreloadingPages) {
-    return; // Already preloading
-  }
-
-  // ✅ Debounce: Don't preload if same page was preloaded recently (< 500ms)
-  if (_lastPreloadedPage == _currentPage &&
-      _lastPreloadTime != null &&
-      DateTime.now().difference(_lastPreloadTime!).inMilliseconds < 500) {
-    return; // Too soon, skip
-  }
-
-  _isPreloadingPages = true;
-  _lastPreloadedPage = _currentPage;
-  _lastPreloadTime = DateTime.now();
-
-  try {
-    final pagesToPreload = <int>[];
-
-    // ✅ Check stop flag before building list
-    if (_stopPreloading) {
-      _isPreloadingPages = false;
+    // ✅ CRITICAL: Check disposal state AND stop flag BEFORE any async operation
+    if (_isDisposed || _stopPreloading) {
+      print('[PRELOAD] Controller disposed or stopped, skipping preload');
       return;
     }
 
-    // ✅ OPTIMIZED: Prioritize immediate adjacent pages first
-    if (_currentPage > 1) pagesToPreload.add(_currentPage - 1);
-    if (_currentPage < totalPages) pagesToPreload.add(_currentPage + 1);
-
-    // Then load expanding radius pages
-    for (int i = 2; i <= cacheRadius; i++) {
-      if (_stopPreloading) break; // ✅ Check on each iteration
-      if (_currentPage - i >= 1) pagesToPreload.add(_currentPage - i);
-      if (_currentPage + i <= totalPages) pagesToPreload.add(_currentPage + i);
+    // ✅ CRITICAL: Prevent duplicate preload calls for same page
+    if (_isPreloadingPages) {
+      return; // Already preloading
     }
 
-    // Rest of the method remains the same...
-    // (keep existing code for loading pages)
-    
-    final immediatePages = <int>[];
-    final backgroundPages = <int>[];
+    // ✅ Debounce: Don't preload if same page was preloaded recently (< 500ms)
+    if (_lastPreloadedPage == _currentPage &&
+        _lastPreloadTime != null &&
+        DateTime.now().difference(_lastPreloadTime!).inMilliseconds < 500) {
+      return; // Too soon, skip
+    }
 
-    for (final page in pagesToPreload) {
-      if (_isDisposed || _stopPreloading) {
-        print('[PRELOAD] Stopped during page filtering, aborting');
+    _isPreloadingPages = true;
+    _lastPreloadedPage = _currentPage;
+    _lastPreloadTime = DateTime.now();
+
+    try {
+      final pagesToPreload = <int>[];
+
+      // ✅ Check stop flag before building list
+      if (_stopPreloading) {
+        _isPreloadingPages = false;
         return;
       }
 
-      if (pageCache.containsKey(page)) continue;
+      // ✅ OPTIMIZED: Prioritize immediate adjacent pages first
+      if (_currentPage > 1) pagesToPreload.add(_currentPage - 1);
+      if (_currentPage < totalPages) pagesToPreload.add(_currentPage + 1);
 
-      final serviceCache = _sqliteService.getCachedPage(page);
-      if (serviceCache != null) {
-        pageCache[page] = serviceCache;
-        continue;
+      // Then load expanding radius pages
+      for (int i = 2; i <= cacheRadius; i++) {
+        if (_stopPreloading) break; // ✅ Check on each iteration
+        if (_currentPage - i >= 1) pagesToPreload.add(_currentPage - i);
+        if (_currentPage + i <= totalPages)
+          pagesToPreload.add(_currentPage + i);
       }
 
-      final distance = (page - _currentPage).abs();
-      if (distance <= 20) {
-        immediatePages.add(page);
-      } else {
-        backgroundPages.add(page);
+      // Rest of the method remains the same...
+      // (keep existing code for loading pages)
+
+      final immediatePages = <int>[];
+      final backgroundPages = <int>[];
+
+      for (final page in pagesToPreload) {
+        if (_isDisposed || _stopPreloading) {
+          print('[PRELOAD] Stopped during page filtering, aborting');
+          return;
+        }
+
+        if (pageCache.containsKey(page)) continue;
+
+        final serviceCache = _sqliteService.getCachedPage(page);
+        if (serviceCache != null) {
+          pageCache[page] = serviceCache;
+          continue;
+        }
+
+        final distance = (page - _currentPage).abs();
+        if (distance <= 20) {
+          immediatePages.add(page);
+        } else {
+          backgroundPages.add(page);
+        }
       }
-    }
 
-    // Load immediate pages first (high priority)
-    if (immediatePages.isNotEmpty && !_stopPreloading) {
-      await Future.wait(
-        immediatePages.map((page) async {
-          if (_isDisposed || _stopPreloading) return;
-
-          final serviceCache = _sqliteService.getCachedPage(page);
-          if (serviceCache != null) {
-            pageCache[page] = serviceCache;
-            return;
-          }
-
-          try {
-            final lines = await _sqliteService.getMushafPageLines(page);
-
+      // Load immediate pages first (high priority)
+      if (immediatePages.isNotEmpty && !_stopPreloading) {
+        await Future.wait(
+          immediatePages.map((page) async {
             if (_isDisposed || _stopPreloading) return;
 
-            pageCache[page] = lines;
-            if (!_isDisposed && !_stopPreloading) {
-              print('[CACHE] ⚡ Immediate preloaded page $page (${lines.length} lines)');
+            final serviceCache = _sqliteService.getCachedPage(page);
+            if (serviceCache != null) {
+              pageCache[page] = serviceCache;
+              return;
             }
-          } catch (e) {
-            if (!_isDisposed && !_stopPreloading) {
-              print('[CACHE_ERROR] Failed to preload page $page: $e');
+
+            try {
+              final lines = await _sqliteService.getMushafPageLines(page);
+
+              if (_isDisposed || _stopPreloading) return;
+
+              pageCache[page] = lines;
+              if (!_isDisposed && !_stopPreloading) {
+                print(
+                  '[CACHE] ⚡ Immediate preloaded page $page (${lines.length} lines)',
+                );
+              }
+            } catch (e) {
+              if (!_isDisposed && !_stopPreloading) {
+                print('[CACHE_ERROR] Failed to preload page $page: $e');
+              }
             }
-          }
-        }),
-        eagerError: false,
-      );
-    }
+          }),
+          eagerError: false,
+        );
+      }
 
-    // ✅ Background loading with stop checks
-    if (backgroundPages.isNotEmpty && !_isDisposed && !_stopPreloading) {
-      Future.microtask(() async {
-        const batchSize = 100;
-        int loadedCount = 0;
+      // ✅ Background loading with stop checks
+      if (backgroundPages.isNotEmpty && !_isDisposed && !_stopPreloading) {
+        Future.microtask(() async {
+          const batchSize = 100;
+          int loadedCount = 0;
 
-        for (int i = 0; i < backgroundPages.length; i += batchSize) {
-          if (_isDisposed || _stopPreloading) {
-            print('[PRELOAD] Stopped during background load, stopping');
-            break;
-          }
+          for (int i = 0; i < backgroundPages.length; i += batchSize) {
+            if (_isDisposed || _stopPreloading) {
+              print('[PRELOAD] Stopped during background load, stopping');
+              break;
+            }
 
-          final batch = backgroundPages.skip(i).take(batchSize).toList();
-          await Future.wait(
-            batch.map((page) async {
-              if (_isDisposed || _stopPreloading || pageCache.containsKey(page)) return;
+            final batch = backgroundPages.skip(i).take(batchSize).toList();
+            await Future.wait(
+              batch.map((page) async {
+                if (_isDisposed ||
+                    _stopPreloading ||
+                    pageCache.containsKey(page))
+                  return;
 
-              final serviceCache = _sqliteService.getCachedPage(page);
-              if (serviceCache != null) {
-                pageCache[page] = serviceCache;
-                loadedCount++;
-                return;
-              }
-
-              try {
-                final lines = await _sqliteService.getMushafPageLines(page);
-                if (_isDisposed || _stopPreloading) return;
-
-                pageCache[page] = lines;
-                loadedCount++;
-
-                if (!_isDisposed && !_stopPreloading && loadedCount % 30 == 0) {
-                  print('[CACHE] Background preloaded $loadedCount/${backgroundPages.length} pages...');
+                final serviceCache = _sqliteService.getCachedPage(page);
+                if (serviceCache != null) {
+                  pageCache[page] = serviceCache;
+                  loadedCount++;
+                  return;
                 }
-              } catch (e) {
-                if (!_isDisposed && !_stopPreloading) {
-                  print('[CACHE_ERROR] Failed to preload page $page: $e');
-                }
-              }
-            }),
-            eagerError: false,
-          );
-        }
 
-        if (!_isDisposed && !_stopPreloading) {
-          print('[CACHE] ✅ Background preload complete: $loadedCount pages cached');
-          _cleanupDistantCache();
-        }
-      });
-    } else if (!_isDisposed && !_stopPreloading) {
-      _cleanupDistantCache();
+                try {
+                  final lines = await _sqliteService.getMushafPageLines(page);
+                  if (_isDisposed || _stopPreloading) return;
+
+                  pageCache[page] = lines;
+                  loadedCount++;
+
+                  if (!_isDisposed &&
+                      !_stopPreloading &&
+                      loadedCount % 30 == 0) {
+                    print(
+                      '[CACHE] Background preloaded $loadedCount/${backgroundPages.length} pages...',
+                    );
+                  }
+                } catch (e) {
+                  if (!_isDisposed && !_stopPreloading) {
+                    print('[CACHE_ERROR] Failed to preload page $page: $e');
+                  }
+                }
+              }),
+              eagerError: false,
+            );
+          }
+
+          if (!_isDisposed && !_stopPreloading) {
+            print(
+              '[CACHE] ✅ Background preload complete: $loadedCount pages cached',
+            );
+            _cleanupDistantCache();
+          }
+        });
+      } else if (!_isDisposed && !_stopPreloading) {
+        _cleanupDistantCache();
+      }
+    } finally {
+      _isPreloadingPages = false;
     }
-  } finally {
-    _isPreloadingPages = false;
   }
-}
 
   void _cleanupDistantCache() {
     // ✅ OPTIMIZED: Only evict when cache is VERY large and pages are VERY far
@@ -1761,9 +1797,14 @@ bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
   }
 
   void updatePageCache(int page, List<MushafPageLine> lines) {
-    // ✅ CRITICAL: Update cache and notify listeners immediately
+    // ✅ OPTIMIZED: Update cache WITHOUT notifyListeners
+    // UI will update on next natural rebuild cycle
     pageCache[page] = lines;
-    notifyListeners(); // ✅ Force UI update when cache is populated
+
+    // ✅ Only notify if this is current visible page
+    if (page == _currentPage || page == _listViewCurrentPage) {
+      notifyListeners();
+    }
   }
 
   // ===== UI TOGGLES & ACTIONS =====
@@ -3089,6 +3130,100 @@ bool _stopPreloading = false; // ✅ NEW: Flag to stop background tasks
       }
 
       notifyListeners();
+    }
+  }
+
+  /// ✅ NEW: Update visible page WITHOUT triggering background tasks
+  /// Used for smooth scrolling in list view
+  void updateVisiblePageQuiet(int pageNumber) {
+    if (_currentPage == pageNumber) return;
+
+    appLogger.log(
+      'VISIBLE_PAGE_QUIET',
+      'Updating page info: $_currentPage → $pageNumber',
+    );
+
+    _currentPage = pageNumber;
+
+    if (!_isQuranMode) {
+      _listViewCurrentPage = pageNumber;
+    }
+
+    // ✅ CRITICAL: Only update metadata, NO preloading
+    _updateSurahNameForPageSync(pageNumber);
+
+    // ✅ Update ayat index if data available
+    if (_currentPageAyats.isNotEmpty) {
+      final firstAyatOnPage = _currentPageAyats.firstWhere(
+        (a) => a.page == pageNumber,
+        orElse: () => _currentPageAyats.first,
+      );
+      final newIndex = _ayatList.indexWhere(
+        (a) =>
+            a.surah_id == firstAyatOnPage.surah_id &&
+            a.ayah == firstAyatOnPage.ayah,
+      );
+      if (newIndex >= 0) {
+        _currentAyatIndex = newIndex;
+      }
+    }
+
+    // ✅ Single notifyListeners at the end
+    notifyListeners();
+  }
+
+  /// ✅ NEW: Synchronous version of _updateSurahNameForPage
+  /// Only updates metadata without async operations
+  void _updateSurahNameForPageSync(int pageNumber) {
+    try {
+      // Priority 1: Use metadata cache (INSTANT)
+      final surahIds = _metadataCache.getSurahIdsForPage(pageNumber);
+      if (surahIds != null && surahIds.isNotEmpty) {
+        final surahId = surahIds.first;
+        final surahMeta = _metadataCache.getSurah(surahId);
+
+        if (surahMeta != null && _determinedSurahId != surahId) {
+          _determinedSurahId = surahId;
+          _suratNameSimple = surahMeta['name_simple'] as String;
+          _suratVersesCount = surahMeta['verses_count'].toString();
+          return;
+        }
+      }
+
+      // Priority 2: Use cached page data
+      if (pageCache.containsKey(pageNumber)) {
+        final pageLines = pageCache[pageNumber]!;
+        for (final line in pageLines) {
+          if (line.ayahSegments != null && line.ayahSegments!.isNotEmpty) {
+            final surahId = line.ayahSegments!.first.surahId;
+            if (_determinedSurahId != surahId) {
+              _determinedSurahId = surahId;
+              // Async load chapter info in background (won't block UI)
+              _sqliteService.getChapterInfo(surahId).then((chapter) {
+                _suratNameSimple = chapter.nameSimple;
+                _suratVersesCount = chapter.versesCount.toString();
+                notifyListeners();
+              });
+            }
+            return;
+          }
+        }
+      }
+
+      // Priority 3: Use current page ayats
+      if (_currentPageAyats.isNotEmpty) {
+        final surahId = _currentPageAyats.first.surah_id;
+        if (_determinedSurahId != surahId) {
+          _determinedSurahId = surahId;
+          _sqliteService.getChapterInfo(surahId).then((chapter) {
+            _suratNameSimple = chapter.nameSimple;
+            _suratVersesCount = chapter.versesCount.toString();
+            notifyListeners();
+          });
+        }
+      }
+    } catch (e) {
+      appLogger.log('SURAH_UPDATE_SYNC_ERROR', 'Failed: $e');
     }
   }
 
