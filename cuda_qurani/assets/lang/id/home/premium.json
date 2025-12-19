@@ -10,7 +10,22 @@
       "subscribe_button": "BERLANGGANAN",
       "dialog_title": "Langganan Segera Hadir",
       "dialog_message": "Fitur langganan premium sedang dikembangkan. Nantikan fitur-fitur luar biasa!",
-      "dialog_close": "Mengerti"
+      "dialog_close": "Mengerti",
+      "select_plan": "Pilih Paket Premium",
+      "subscribe_now": "Berlangganan Sekarang",
+      "restore_purchases": "Pulihkan Pembelian",
+      "terms_agreement": "Dengan berlangganan, kamu menyetujui Syarat & Ketentuan",
+      "products_unavailable": "Produk tidak tersedia saat ini",
+      "save_percent": "HEMAT 40%",
+      "restoring": "Memulihkan pembelian...",
+      "restore_success": "Pembelian berhasil dipulihkan!",
+      "purchase_processing": "Pembelian sedang diproses...",
+      "success_title": "Selamat! 🎉",
+      "success_message": "Kamu sekarang Premium! Nikmati semua fitur tanpa batas.",
+      "success_button": "Mulai Sekarang",
+      "already_premium_title": "Kamu sudah Premium!",
+      "already_premium_message": "Kamu sudah memiliki akses ke semua fitur premium. Nikmati!",
+      "ok": "Oke"
     },
 
     "sections": {

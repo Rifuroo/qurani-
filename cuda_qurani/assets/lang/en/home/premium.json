@@ -9,7 +9,22 @@
       "subscribe_button": "SUBSCRIBE",
       "dialog_title": "Subscription Coming Soon",
       "dialog_message": "Premium subscription feature is currently under development. Stay tuned for amazing features!",
-      "dialog_close": "Got it"
+      "dialog_close": "Got it",
+      "select_plan": "Select Premium Plan",
+      "subscribe_now": "Subscribe Now",
+      "restore_purchases": "Restore Purchases",
+      "terms_agreement": "By subscribing, you agree to the Terms & Conditions",
+      "products_unavailable": "Products are currently unavailable",
+      "save_percent": "SAVE 40%",
+      "restoring": "Restoring purchases...",
+      "restore_success": "Purchases restored successfully!",
+      "purchase_processing": "Purchase is being processed...",
+      "success_title": "Congratulations! 🎉",
+      "success_message": "You are now Premium! Enjoy all features without limits.",
+      "success_button": "Get Started",
+      "already_premium_title": "You're already Premium!",
+      "already_premium_message": "You already have access to all premium features. Enjoy!",
+      "ok": "OK"
     },
     "sections": {
       "memorization": "Memorization",

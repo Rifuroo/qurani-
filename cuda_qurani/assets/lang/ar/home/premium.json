@@ -10,7 +10,22 @@
       "subscribe_button": "اشترك",
       "dialog_title": "الاشتراك قريبًا",
       "dialog_message": "ميزة الاشتراك البريميوم قيد التطوير حاليًا. ترقبوا الميزات الرائعة!",
-      "dialog_close": "حسنًا"
+      "dialog_close": "حسنًا",
+      "select_plan": "اختر باقة بريميوم",
+      "subscribe_now": "اشترك الآن",
+      "restore_purchases": "استعادة المشتريات",
+      "terms_agreement": "بالاشتراك، أنت توافق على الشروط والأحكام",
+      "products_unavailable": "المنتجات غير متوفرة حاليًا",
+      "save_percent": "وفر ٤٠٪",
+      "restoring": "جارٍ استعادة المشتريات...",
+      "restore_success": "تم استعادة المشتريات بنجاح!",
+      "purchase_processing": "جارٍ معالجة الشراء...",
+      "success_title": "مبروك! 🎉",
+      "success_message": "أنت الآن بريميوم! استمتع بجميع الميزات بلا حدود.",
+      "success_button": "ابدأ الآن",
+      "already_premium_title": "أنت بريميوم بالفعل!",
+      "already_premium_message": "لديك بالفعل إمكانية الوصول إلى جميع ميزات بريميوم. استمتع!",
+      "ok": "حسنًا"
     },
 
     "sections": {
