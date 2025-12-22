@@ -414,6 +414,23 @@ class _QuranListViewState extends State<QuranListView> {
     final controller = context.read<SttController>();
     final totalPages = controller.totalPages;
 
+    // ✅ FIX: Handle navigasi eksternal (Menu/Juz Jump)
+    // Karena kita sudah tidak me-reset widget via Key, kita perlu mendeteksi
+    // jika controller meminta pindah halaman secara eksplisit.
+    final targetPage = controller.listViewCurrentPage;
+
+    // Cek jika target page beda dengan posisi sekarang DAN user sedang tidak scroll
+    if (targetPage != _currentVisiblePage && !_userScrolling) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Double check mounted & state untuk mencegah loop
+        if (mounted && _currentVisiblePage != targetPage) {
+          print('📍 ListView Auto-Jump: $_currentVisiblePage -> $targetPage');
+          _jumpToPage(targetPage);
+          _currentVisiblePage = targetPage; // Sync segera
+        }
+      });
+    }
+
     return ListView.builder(
       controller: _scrollController,
       itemCount: totalPages,

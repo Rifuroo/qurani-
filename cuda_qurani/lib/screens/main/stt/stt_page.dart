@@ -325,9 +325,7 @@ class _SttPageState extends State<SttPage> {
   }
 
   Widget _buildListView(SttController controller) {
-    // ✅ Key UNIK per layout untuk force rebuild saat switch
-    final uniqueKey =
-        '${controller.mushafLayout.toStringValue()}_${controller.listViewCurrentPage}';
+    final uniqueKey = controller.mushafLayout.toStringValue();
 
     return QuranListView(key: ValueKey('list_$uniqueKey'));
   }
