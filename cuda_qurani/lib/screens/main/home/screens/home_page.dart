@@ -1195,7 +1195,7 @@ class _HomePageState extends State<HomePage> {
         ),
         AppMargin.gap(context),
         SizedBox(
-          height: AppDesignSystem.scale(context, 100),
+          height: AppDesignSystem.scale(context, 130), // ✅ Increased from 100
           child: _recentBadges.isEmpty
               ? _buildEmptyBadges(context)
               : ListView.builder(
@@ -1250,7 +1250,7 @@ class _HomePageState extends State<HomePage> {
     required int? count,
   }) {
     return Container(
-      width: AppDesignSystem.scale(context, 100),
+      width: AppDesignSystem.scale(context, 110), // ✅ Increased from 100
       margin: EdgeInsets.only(
         right: AppDesignSystem.scale(context, AppDesignSystem.space12),
       ),
@@ -1301,6 +1301,7 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           AppMargin.gapSmall(context),
+          // ✅ Removed Flexible/maxLines to show full text
           Text(
             label,
             style: AppTypography.captionSmall(
@@ -1308,6 +1309,7 @@ class _HomePageState extends State<HomePage> {
               weight: AppTypography.medium,
               color: AppColors.getTextPrimary(context),
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

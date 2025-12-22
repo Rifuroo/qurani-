@@ -412,8 +412,8 @@ class _SurahNameLine extends StatelessWidget {
         : '';
 
     final ornamentOffset = isIndopak 
-        ? -screenWidth * 0.005
-        : -screenWidth * 0.005;
+        ? -screenWidth * 0.005 // indopak
+        : -screenWidth * 0.005; // qpc
 
     print('🎨 SurahNameLine - Layout: ${isIndopak ? "IndoPak" : "QPC"}, Offset: $ornamentOffset');
 
