@@ -984,6 +984,16 @@ class SttController with ChangeNotifier {
           );
           _suratNameSimple = chapter.nameSimple;
           _suratVersesCount = chapter.versesCount.toString();
+          // ✅ FIX: Update AppBar notifier immediately after metadata loaded
+          final juzNum = _sqliteService.calculateJuzAccurate(
+            _determinedSurahId!,
+            1,
+          );
+          appBarNotifier.value = PageDisplayData(
+            pageNumber: pageNumber,
+            surahName: _suratNameSimple,
+            juzNumber: juzNum,
+          );
 
           // Build minimal ayat list for THIS PAGE ONLY
           final Set<String> uniqueAyahs = {};

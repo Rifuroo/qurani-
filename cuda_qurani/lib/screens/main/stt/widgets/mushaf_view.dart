@@ -503,7 +503,7 @@ class _JustifiedAyahLine extends StatelessWidget {
 
     // Font size berbeda untuk QPC vs IndoPak
     final fontSizeMultiplier = isIndopak
-        ? ((pageNumber == 1 || pageNumber == 2) ? 0.0690 : 0.0650)
+        ? ((pageNumber == 1 || pageNumber == 2) ? 0.0690 : 0.0630)
         : ((pageNumber == 1 || pageNumber == 2)
               ? 0.080
               : 0.0690); // QPC: page 1-2 lebih besar
