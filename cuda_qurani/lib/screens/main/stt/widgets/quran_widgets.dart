@@ -36,14 +36,14 @@ class _QuranAppBarState extends State<QuranAppBar> {
   // Helper function untuk AppBar colors
   Color _getAppBarBackgroundColor(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    return brightness == Brightness.dark 
+    return brightness == Brightness.dark
         ? AppColors.getSurfaceVariant(context)
         : AppColors.getPrimary(context);
   }
 
   Color _getAppBarTextColor(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    return brightness == Brightness.dark 
+    return brightness == Brightness.dark
         ? AppColors.getTextPrimary(context)
         : AppColors.getTextInverse(context);
   }
@@ -76,7 +76,10 @@ class _QuranAppBarState extends State<QuranAppBar> {
               ),
               subtitle: Text(
                 layout.isGlyphBased ? 'Glyph-based fonts' : 'Single font',
-                style: TextStyle(fontSize: 12, color: AppColors.getTextSecondary(context)),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.getTextSecondary(context),
+                ),
               ),
               value: layout,
               groupValue: controller.mushafLayout,
@@ -111,188 +114,156 @@ class _QuranAppBarState extends State<QuranAppBar> {
     });
   }
 
+  Widget _buildSeparator(BuildContext context, double screenHeight) {
+    return Container(
+      width: 1,
+      height: screenHeight * 0.016,
+      color: _getAppBarTextColor(context).withOpacity(0.3),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<SttController>();
-    final languageProvider = context.watch<LanguageProvider>();
-    final isArabic = languageProvider.currentLanguageCode == 'ar';
+    // ✅ GUNAKAN READ: Agar build tidak terpanggil berulang kali saat scroll
+    final controller = context.read<SttController>();
+
+    final isUIVisible = context.select<SttController, bool>(
+      (c) => c.isUIVisible,
+    );
 
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // Responsive sizing
     final iconSize = screenWidth * 0.060;
     final titleSize = screenWidth * 0.028;
     final subtitleSize = screenWidth * 0.028;
     final badgeSize = screenWidth * 0.028;
 
-    // ✅ NEW: Determine display name with Arabic support
-    String displaySurahName;
-    if (controller.suratNameSimple.isNotEmpty) {
-      if (isArabic) {
-        // ✅ Use Arabic name if language is Arabic
-        final metadataCache = MetadataCacheService();
-
-        // Try to get Arabic name from cache or current page
-        if (controller.currentPageAyats.isNotEmpty) {
-          final surahId = controller.currentPageAyats.first.surah_id;
-          displaySurahName = metadataCache.getPrimarySurahForPage(
-            controller.currentPage,
-            useArabic: true,
-          );
-
-          // Fallback if cache doesn't have it
-          if (displaySurahName.isEmpty || displaySurahName == 'Unknown Surah') {
-            displaySurahName = controller.suratNameSimple;
-          }
-        } else {
-          displaySurahName = controller.suratNameSimple;
-        }
-      } else {
-        // Use simple name for non-Arabic languages
-        displaySurahName = controller.suratNameSimple;
-      }
-    } else if (controller.ayatList.isNotEmpty) {
-      displaySurahName = 'Surah ${controller.ayatList.first.surah_id}';
-    } else {
-      displaySurahName = 'Loading...';
-    }
-
-    final int currentJuz = controller.currentPageAyats.isNotEmpty
-        ? controller.calculateJuz(
-            controller.currentPageAyats.first.surah_id,
-            controller.currentPageAyats.first.ayah,
-          )
-        : 1;
-
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
-      opacity: controller.isUIVisible ? 1.0 : 0.0,
+      opacity: isUIVisible ? 1.0 : 0.0,
       child: IgnorePointer(
-        ignoring: !controller.isUIVisible,
+        ignoring: !isUIVisible,
         child: AppBar(
           backgroundColor: _getAppBarBackgroundColor(context),
           foregroundColor: _getAppBarTextColor(context),
           toolbarHeight: kToolbarHeight * 0.80,
           leading: IconButton(
             icon: Icon(
-              Icons.menu, 
-              size: iconSize * 120 / 100,
+              Icons.menu,
+              size: iconSize * 1.2,
               color: _getAppBarTextColor(context),
             ),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
           ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Logo
-              Image.asset(
-                'assets/images/qurani-white-text.png',
-                height: screenHeight * 0.016,
-                fit: BoxFit.contain,
-                alignment: Alignment.centerLeft,
-              ),
-              SizedBox(height: screenHeight * 0.006),
-              // Info Row with structured layout
-              Row(
-                children: [
-                  // Surah Name
-                  Flexible(
-                    child: Text(
-                      displaySurahName,
-                      style: TextStyle(
-                        fontSize: titleSize,
-                        fontWeight: FontWeight.w400,
-                        color: _getAppBarTextColor(context).withOpacity(0.9),
-                        height: 1.1,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                  SizedBox(width: screenWidth * 0.015),
-                  // Separator
-                  Container(
-                    width: 1,
-                    height: screenHeight * 0.016,
-                    color: _getAppBarTextColor(context).withOpacity(0.3),
-                  ),
-                  SizedBox(width: screenWidth * 0.015),
-                  // Juz Badge
-                  Text(
-                    '${LanguageHelper.tr(_translations, "app_bar.juz_text")} ${context.formatNumber(currentJuz)}',
-                    style: TextStyle(
-                      fontSize: badgeSize,
-                      fontWeight: FontWeight.w400,
-                      color: _getAppBarTextColor(context).withOpacity(0.9),
-                      height: 1.1,
-                    ),
-                  ),
 
-                  SizedBox(width: screenWidth * 0.015),
-                  // Separator
-                  Container(
-                    width: 1,
+          // ✅ FIX UTAMA: Gunakan ValueListenableBuilder agar JUDUL update instan tanpa rebuild seluruh AppBar
+          title: ValueListenableBuilder<PageDisplayData>(
+            valueListenable: controller.appBarNotifier,
+            builder: (context, data, _) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo
+                  Image.asset(
+                    'assets/images/qurani-white-text.png',
                     height: screenHeight * 0.016,
-                    color: _getAppBarTextColor(context).withOpacity(0.3),
+                    fit: BoxFit.contain,
+                    alignment: Alignment.centerLeft,
                   ),
-                  SizedBox(width: screenWidth * 0.015),
-                  // Page Number
-                  Text(
-                    '${LanguageHelper.tr(_translations, "app_bar.page_text")} ${context.formatNumber(controller.currentPage)}',
-                    style: TextStyle(
-                      fontSize: subtitleSize,
-                      fontWeight: FontWeight.w400,
-                      color: _getAppBarTextColor(context).withOpacity(0.9),
-                      height: 1.1,
-                    ),
+                  SizedBox(height: screenHeight * 0.006),
+
+                  // Info Row with structured layout
+                  Row(
+                    children: [
+                      // Surah Name (Dari Notifier)
+                      Flexible(
+                        child: Text(
+                          data.surahName,
+                          style: TextStyle(
+                            fontSize: titleSize,
+                            fontWeight: FontWeight.w400,
+                            color: _getAppBarTextColor(
+                              context,
+                            ).withOpacity(0.9),
+                            height: 1.1,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+
+                      SizedBox(width: screenWidth * 0.015),
+                      _buildSeparator(context, screenHeight),
+                      SizedBox(width: screenWidth * 0.015),
+
+                      // Juz Badge (Dari Notifier)
+                      Text(
+                        '${LanguageHelper.tr(_translations, "app_bar.juz_text")} ${context.formatNumber(data.juzNumber)}',
+                        style: TextStyle(
+                          fontSize: badgeSize,
+                          fontWeight: FontWeight.w400,
+                          color: _getAppBarTextColor(context).withOpacity(0.9),
+                          height: 1.1,
+                        ),
+                      ),
+
+                      SizedBox(width: screenWidth * 0.015),
+                      _buildSeparator(context, screenHeight),
+                      SizedBox(width: screenWidth * 0.015),
+
+                      // Page Number (Dari Notifier)
+                      Text(
+                        '${LanguageHelper.tr(_translations, "app_bar.page_text")} ${context.formatNumber(data.pageNumber)}',
+                        style: TextStyle(
+                          fontSize: subtitleSize,
+                          fontWeight: FontWeight.w400,
+                          color: _getAppBarTextColor(context).withOpacity(0.9),
+                          height: 1.1,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
           titleSpacing: 0,
-          actions: [
-            // Mode Toggle
-            IconButton(
-              icon: Icon(
-                controller.isQuranMode
-                    ? Icons.vertical_split
-                    : Icons.auto_stories,
-                size: iconSize * 0.9,
-                color: _getAppBarTextColor(context),
-              ),
-              onPressed: () async {
-                // ✅ FIX: Await toggle completion
-                await controller.toggleQuranMode();
 
-                // ✅ FORCE: Trigger rebuild immediately
-                if (context.mounted) {
-                  // Scroll to correct position after mode change
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    // Trigger any pending navigation
-                    controller.notifyListeners();
-                  });
-                }
-              },
-              splashRadius: iconSize * 1.1,
-            ),
-            // Visibility Toggle
-            IconButton(
-              icon: Icon(
-                controller.hideUnreadAyat
-                    ? Icons.visibility
-                    : Icons.visibility_off,
-                size: iconSize * 0.9,
-                color: _getAppBarTextColor(context),
+          // ✅ FIX ACTIONS: Gunakan Selector agar icon tetap berubah, tapi tidak rebuild Widget utama
+          actions: [
+            // Mode Toggle (Mushaf vs List)
+            Selector<SttController, bool>(
+              selector: (_, c) => c.isQuranMode,
+              builder: (ctx, isQuranMode, _) => IconButton(
+                icon: Icon(
+                  isQuranMode ? Icons.vertical_split : Icons.auto_stories,
+                  size: iconSize * 0.9,
+                  color: _getAppBarTextColor(context),
+                ),
+                onPressed: () async {
+                  await controller.toggleQuranMode();
+                  // Tidak perlu setState karena Selector akan rebuild tombol ini saja
+                },
+                splashRadius: iconSize * 1.1,
               ),
-              onPressed: controller.toggleHideUnread,
-              splashRadius: iconSize * 1.1,
             ),
-            // More Options Menu
+
+            // Visibility Toggle (Hide/Show Unread)
+            Selector<SttController, bool>(
+              selector: (_, c) => c.hideUnreadAyat,
+              builder: (ctx, hideUnread, _) => IconButton(
+                icon: Icon(
+                  hideUnread ? Icons.visibility : Icons.visibility_off,
+                  size: iconSize * 0.9,
+                  color: _getAppBarTextColor(context),
+                ),
+                onPressed: controller.toggleHideUnread,
+                splashRadius: iconSize * 1.1,
+              ),
+            ),
+
             IconButton(
               onPressed: () => Navigator.push(
                 context,
@@ -315,7 +286,6 @@ class _QuranAppBarState extends State<QuranAppBar> {
                             end: 1.0,
                           ).chain(CurveTween(curve: curve)),
                         );
-
                         return FadeTransition(
                           opacity: fadeAnimation,
                           child: SlideTransition(
@@ -326,9 +296,9 @@ class _QuranAppBarState extends State<QuranAppBar> {
                       },
                   transitionDuration: AppDesignSystem.durationNormal,
                 ),
-              ), // dikosongin
+              ),
               icon: Icon(
-                Icons.settings, 
+                Icons.settings,
                 size: iconSize * 0.9,
                 color: _getAppBarTextColor(context),
               ),
@@ -391,14 +361,18 @@ class _QuranBottomBarState extends State<QuranBottomBar>
     super.dispose();
   }
 
-  void _handleDragUpdate(double delta, double maxWidth, SttController controller) {
+  void _handleDragUpdate(
+    double delta,
+    double maxWidth,
+    SttController controller,
+  ) {
     final isListening = controller.isListeningMode;
     final isRecording = controller.isRecording;
     final isPaused = controller.listeningAudioService?.isPaused ?? false;
-    
+
     // ✅ Calculate new position first
     double newPosition = _dragPosition + (delta / maxWidth);
-    
+
     // ✅ Apply constraints based on mode
     if (isListening && !isPaused) {
       // Playing: only allow left drag (listen settings)
@@ -410,7 +384,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
       // Idle/Paused: free drag
       newPosition = newPosition.clamp(-1.0, 1.0);
     }
-    
+
     // ✅ Single setState for smooth drag
     if (mounted) {
       setState(() {
@@ -422,7 +396,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
 
   Future<void> _handleDragEnd(SttController controller) async {
     const threshold = 0.90;
-    
+
     // ✅ Store values before any async operations
     final dragPos = _dragPosition;
     final isListening = controller.isListeningMode;
@@ -481,7 +455,10 @@ class _QuranBottomBarState extends State<QuranBottomBar>
             const begin = Offset(0.0, 0.3);
             const end = Offset.zero;
             const curve = Curves.easeInOut;
-            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            var tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: curve));
             var offsetAnimation = animation.drive(tween);
             var fadeAnimation = animation.drive(
               Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: curve)),
@@ -518,7 +495,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
       if (controller.isListeningMode) {
         await controller.stopListening();
       }
-      
+
       await controller.startRecording();
       _resetToCenter(keepActiveMode: false);
     }
@@ -539,7 +516,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
 
   Future<void> _handleCenterButtonTap(SttController controller) async {
     AppHaptics.light();
-    
+
     // Ensure center position
     if (_dragPosition != 0.0 && mounted) {
       setState(() {
@@ -605,11 +582,11 @@ class _QuranBottomBarState extends State<QuranBottomBar>
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<SttController>();
-    
+
     // ✅ Auto-reset when modes end (using addPostFrameCallback to avoid setState during build)
     final isListening = controller.isListeningMode;
     final isRecording = controller.isRecording;
-    
+
     if (_activeMode == 'listen' && !isListening) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -617,7 +594,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
         }
       });
     }
-    
+
     if (_activeMode == 'recite' && !isRecording) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -625,7 +602,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
         }
       });
     }
-    
+
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -653,7 +630,11 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                 child: GestureDetector(
                   // ✅ Use onPanUpdate instead of onHorizontalDragUpdate for better control
                   onPanUpdate: (details) {
-                    _handleDragUpdate(details.delta.dx, trackWidth / 2, controller);
+                    _handleDragUpdate(
+                      details.delta.dx,
+                      trackWidth / 2,
+                      controller,
+                    );
                   },
                   onPanEnd: (details) {
                     _handleDragEnd(controller);
@@ -696,7 +677,10 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                   SizedBox(width: 6),
                                   Text(
                                     _translations.isNotEmpty
-                                        ? LanguageHelper.tr(_translations, 'bottom_bar.listen_text')
+                                        ? LanguageHelper.tr(
+                                            _translations,
+                                            'bottom_bar.listen_text',
+                                          )
                                         : 'Listen',
                                     style: TextStyle(
                                       fontSize: labelSize,
@@ -723,7 +707,10 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                 children: [
                                   Text(
                                     _translations.isNotEmpty
-                                        ? LanguageHelper.tr(_translations, 'bottom_bar.recite_text')
+                                        ? LanguageHelper.tr(
+                                            _translations,
+                                            'bottom_bar.recite_text',
+                                          )
                                         : 'Recite',
                                     style: TextStyle(
                                       fontSize: labelSize,
@@ -753,8 +740,10 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                               ? Duration.zero
                               : const Duration(milliseconds: 400),
                           curve: Curves.easeOutCubic,
-                          left: ((trackWidth / 2) - (thumbSize / 2)) +
-                              (_dragPosition * (trackWidth / 2 - thumbSize / 2)),
+                          left:
+                              ((trackWidth / 2) - (thumbSize / 2)) +
+                              (_dragPosition *
+                                  (trackWidth / 2 - thumbSize / 2)),
                           child: GestureDetector(
                             onTap: () => _handleCenterButtonTap(controller),
                             child: Container(
@@ -765,8 +754,10 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: _getThumbColor(isListening, isRecording)
-                                        .withOpacity(0.4),
+                                    color: _getThumbColor(
+                                      isListening,
+                                      isRecording,
+                                    ).withOpacity(0.4),
                                     blurRadius: 12,
                                     offset: const Offset(0, 2),
                                   ),
@@ -816,26 +807,40 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                         Navigator.push(
                           context,
                           PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) =>
-                                PlaybackSettingsPage(currentPage: controller.currentPage),
-                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                              const begin = Offset(0.0, 0.3);
-                              const end = Offset.zero;
-                              const curve = Curves.easeInOut;
-                              var tween = Tween(begin: begin, end: end)
-                                  .chain(CurveTween(curve: curve));
-                              var offsetAnimation = animation.drive(tween);
-                              var fadeAnimation = animation.drive(
-                                Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: curve)),
-                              );
-                              return FadeTransition(
-                                opacity: fadeAnimation,
-                                child: SlideTransition(
-                                  position: offsetAnimation,
-                                  child: child,
-                                ),
-                              );
-                            },
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    PlaybackSettingsPage(
+                                      currentPage: controller.currentPage,
+                                    ),
+                            transitionsBuilder:
+                                (
+                                  context,
+                                  animation,
+                                  secondaryAnimation,
+                                  child,
+                                ) {
+                                  const begin = Offset(0.0, 0.3);
+                                  const end = Offset.zero;
+                                  const curve = Curves.easeInOut;
+                                  var tween = Tween(
+                                    begin: begin,
+                                    end: end,
+                                  ).chain(CurveTween(curve: curve));
+                                  var offsetAnimation = animation.drive(tween);
+                                  var fadeAnimation = animation.drive(
+                                    Tween(
+                                      begin: 0.0,
+                                      end: 1.0,
+                                    ).chain(CurveTween(curve: curve)),
+                                  );
+                                  return FadeTransition(
+                                    opacity: fadeAnimation,
+                                    child: SlideTransition(
+                                      position: offsetAnimation,
+                                      child: child,
+                                    ),
+                                  );
+                                },
                             transitionDuration: AppDesignSystem.durationNormal,
                           ),
                         );
@@ -895,7 +900,9 @@ class QuranLoadingWidget extends StatelessWidget {
             ),
             child: Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.getTextInverse(context)),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColors.getTextInverse(context),
+                ),
                 strokeWidth: 2,
               ),
             ),
@@ -952,7 +959,9 @@ class QuranErrorWidget extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.getError(context).withOpacity(0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.getError(context).withOpacity(0.3)),
+                border: Border.all(
+                  color: AppColors.getError(context).withOpacity(0.3),
+                ),
               ),
               child: Icon(
                 Icons.error_outline,
@@ -1067,7 +1076,11 @@ class QuranLogsPanel extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.terminal, color: AppColors.getSuccess(context), size: iconSize),
+                Icon(
+                  Icons.terminal,
+                  color: AppColors.getSuccess(context),
+                  size: iconSize,
+                ),
                 SizedBox(width: screenWidth * 0.01),
                 Text(
                   'API Debug Console',
@@ -1079,7 +1092,11 @@ class QuranLogsPanel extends StatelessWidget {
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: Icon(Icons.clear, color: AppColors.getTextInverse(context), size: iconSize),
+                  icon: Icon(
+                    Icons.clear,
+                    color: AppColors.getTextInverse(context),
+                    size: iconSize,
+                  ),
                   onPressed: controller.clearLogs,
                 ),
                 IconButton(
@@ -1091,7 +1108,11 @@ class QuranLogsPanel extends StatelessWidget {
                   onPressed: () => controller.exportSession(context),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, color: AppColors.getTextInverse(context), size: iconSize),
+                  icon: Icon(
+                    Icons.close,
+                    color: AppColors.getTextInverse(context),
+                    size: iconSize,
+                  ),
                   onPressed: controller.toggleLogs,
                 ),
               ],
@@ -1162,7 +1183,11 @@ void showCompletionDialog(BuildContext context, SttController controller) {
         backgroundColor: AppColors.getSurface(context),
         title: Row(
           children: [
-            Icon(Icons.celebration, color: AppColors.getSuccess(context), size: iconSize),
+            Icon(
+              Icons.celebration,
+              color: AppColors.getSuccess(context),
+              size: iconSize,
+            ),
             SizedBox(width: screenWidth * 0.02),
             Text(
               'Surah Completed!',
@@ -1232,8 +1257,13 @@ void showCompletionDialog(BuildContext context, SttController controller) {
               Navigator.of(context).pop();
               Navigator.of(context).pop();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.getPrimary(context)),
-            child: Text('Finish', style: TextStyle(color: AppColors.getTextInverse(context))),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.getPrimary(context),
+            ),
+            child: Text(
+              'Finish',
+              style: TextStyle(color: AppColors.getTextInverse(context)),
+            ),
           ),
         ],
       );
@@ -1255,7 +1285,10 @@ Widget _buildStatItem(
       children: [
         Text(
           '$label: ',
-          style: TextStyle(fontSize: labelSize, color: AppColors.getTextSecondary(context)),
+          style: TextStyle(
+            fontSize: labelSize,
+            color: AppColors.getTextSecondary(context),
+          ),
         ),
         Text(
           value,
