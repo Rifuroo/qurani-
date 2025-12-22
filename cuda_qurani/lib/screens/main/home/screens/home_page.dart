@@ -78,15 +78,8 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadTranslations();
     _loadHomePageData();
-    // ✅ OPTIMIZATION: Only load session for PREMIUM users
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final premium = context.read<PremiumProvider>();
-      if (premium.canAccess(PremiumFeature.sessionResume)) {
-        _loadLatestSession();
-      } else {
-        setState(() => _isLoadingSession = false); // Skip for FREE
-      }
-    });
+    // ✅ FIX: Load session immediately - premium check is in UI layer
+    _loadLatestSession();
   }
 
   /// OPTIMIZED: Load ALL home page data in ONE call

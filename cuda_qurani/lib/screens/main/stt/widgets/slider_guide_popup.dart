@@ -26,7 +26,7 @@ class _SliderGuidePopupState extends State<SliderGuidePopup>
   int _showCount = 0;
   DateTime? _lastInteractionTime;
   Uint8List? _compressedImage;
-  
+
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -51,13 +51,10 @@ class _SliderGuidePopupState extends State<SliderGuidePopup>
       curve: Curves.easeInOut,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
   }
 
   Future<void> _loadShowCount() async {
@@ -71,57 +68,62 @@ class _SliderGuidePopupState extends State<SliderGuidePopup>
     await prefs.setInt(_popupCountKey, _showCount);
   }
 
-Future<void> _loadAndCompressImage() async {
-  try {
-    final ByteData data = await rootBundle.load('assets/images/sliderbutton_guide.jpeg');
-    final Uint8List bytes = data.buffer.asUint8List();
+  Future<void> _loadAndCompressImage() async {
+    try {
+      final ByteData data = await rootBundle.load(
+        'assets/images/sliderbutton_guide.jpeg',
+      );
+      final Uint8List bytes = data.buffer.asUint8List();
 
-    // ✅ FIX: quality harus 0-100, bukan 1000!
-    final Uint8List? compressedBytes = await FlutterImageCompress.compressWithList(
-      bytes,
-      minWidth: 240,
-      minHeight: 180,
-      quality: 85, // ✅ UBAH: dari 1000 jadi 85 (valid range: 0-100)
-      format: CompressFormat.jpeg,
-    );
+      // ✅ FIX: quality harus 0-100, bukan 1000!
+      final Uint8List? compressedBytes =
+          await FlutterImageCompress.compressWithList(
+            bytes,
+            minWidth: 240,
+            minHeight: 180,
+            quality: 85, // ✅ UBAH: dari 1000 jadi 85 (valid range: 0-100)
+            format: CompressFormat.jpeg,
+          );
 
-    // ✅ Handle null result
-    if (compressedBytes == null) {
-      print('⚠️ Image compression returned null - using original image');
-      // Fallback: use original bytes if compression fails
+      // ✅ Handle null result
+      if (compressedBytes == null) {
+        print('⚠️ Image compression returned null - using original image');
+        // Fallback: use original bytes if compression fails
+        if (mounted) {
+          setState(() {
+            _compressedImage = bytes; // Use original uncompressed
+          });
+        }
+        return;
+      }
+
       if (mounted) {
         setState(() {
-          _compressedImage = bytes; // Use original uncompressed
+          _compressedImage = compressedBytes;
         });
+        print(
+          '✅ Image compressed successfully: ${compressedBytes.length} bytes',
+        );
       }
-      return;
+    } catch (e, stackTrace) {
+      print('❌ Failed to load/compress guide image: $e');
+      print('Stack trace: $stackTrace');
+      // ✅ Don't set _compressedImage - popup will work without image
     }
-
-    if (mounted) {
-      setState(() {
-        _compressedImage = compressedBytes;
-      });
-      print('✅ Image compressed successfully: ${compressedBytes.length} bytes');
-    }
-  } catch (e, stackTrace) {
-    print('❌ Failed to load/compress guide image: $e');
-    print('Stack trace: $stackTrace');
-    // ✅ Don't set _compressedImage - popup will work without image
   }
-}
 
   void _startIdleDetection() {
     _lastInteractionTime = DateTime.now();
-    
+
     // Check idle state every second
     Future.doWhile(() async {
       await Future.delayed(const Duration(seconds: 1));
-      
+
       if (!mounted) return false;
-      
+
       final now = DateTime.now();
       final idleDuration = now.difference(_lastInteractionTime ?? now);
-      
+
       // Show popup if:
       // 1. User idle for 6 seconds
       // 2. Not currently visible
@@ -131,7 +133,7 @@ Future<void> _loadAndCompressImage() async {
           _showCount < _maxShowCount) {
         _showPopup();
       }
-      
+
       return mounted;
     });
   }
@@ -166,7 +168,7 @@ Future<void> _loadAndCompressImage() async {
 
   void _onUserInteraction() {
     _lastInteractionTime = DateTime.now();
-    
+
     // Hide popup if visible
     if (_isVisible) {
       _hidePopup();
@@ -185,22 +187,18 @@ Future<void> _loadAndCompressImage() async {
       behavior: HitTestBehavior.translucent,
       onPointerDown: (_) => _onUserInteraction(),
       onPointerMove: (_) => _onUserInteraction(),
-      child: Stack(
-        children: [
-          if (_isVisible) _buildPopup(context),
-        ],
-      ),
+      child: Stack(children: [if (_isVisible) _buildPopup(context)]),
     );
   }
 
   Widget _buildPopup(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     final bottomOffset = screenHeight * 0.16; // Di atas bottom bar
     final cardWidth = screenWidth * 0.70; // Lebih kecil (70% dari 85%)
     final imageHeight = screenHeight * 0.30; // Lebih kecil (8% dari 12%)
-    
+
     return Positioned(
       bottom: bottomOffset,
       left: (screenWidth - cardWidth) / 2,
@@ -214,7 +212,9 @@ Future<void> _loadAndCompressImage() async {
               width: cardWidth,
               decoration: BoxDecoration(
                 color: AppColors.getSurface(context),
-                borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium),
+                borderRadius: BorderRadius.circular(
+                  AppDesignSystem.radiusMedium,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.getTextPrimary(context).withOpacity(0.15),
@@ -240,7 +240,7 @@ Future<void> _loadAndCompressImage() async {
                   //       fit: BoxFit.cover,
                   //     ),
                   //   ),
-                  
+
                   // Text Content (lebih compact)
                   Padding(
                     padding: EdgeInsets.symmetric(
@@ -258,7 +258,10 @@ Future<void> _loadAndCompressImage() async {
                               AppDesignSystem.radiusSmall,
                             ),
                           ),
-                          child: FaIcon(FontAwesomeIcons.handPointer, size: 0.03 * screenHeight)
+                          child: FaIcon(
+                            FontAwesomeIcons.handPointer,
+                            size: 0.03 * screenHeight,
+                          ),
                         ),
                         AppMargin.gapHSmall(context),
                         // Text lebih compact
