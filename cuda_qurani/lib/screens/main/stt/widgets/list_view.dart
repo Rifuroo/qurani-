@@ -686,7 +686,7 @@ class _SurahHeader extends StatelessWidget {
           Text(
             'header',
             style: TextStyle(
-              fontSize: screenHeight * 0.056,
+              fontSize: screenHeight * 0.055,
               fontFamily: 'Quran-Common',
               color: AppColors.getTextPrimary(context),
             ),

@@ -35,7 +35,9 @@ class SttController with ChangeNotifier {
   final bool isFromHistory;
   final Map<String, dynamic>? initialWordStatusMap;
   final String? resumeSessionId; // ? NEW: Continue existing session
-  final ValueNotifier<PageDisplayData> appBarNotifier = ValueNotifier(PageDisplayData.initial());
+  final ValueNotifier<PageDisplayData> appBarNotifier = ValueNotifier(
+    PageDisplayData.initial(),
+  );
   int? _determinedSurahId;
 
   MushafLayout _mushafLayout = MushafLayout.qpc;
@@ -1477,7 +1479,9 @@ class SttController with ChangeNotifier {
     }
 
     appLogger.log('NAV', '📄 Navigating from page $_currentPage to $newPage');
-    appLogger.log('NAV', 'ðŸ"„ Navigating from page $_currentPage to $newPage');
+    // ✅ FIX: Update AppBar instantly BEFORE any async work
+    _updateSurahNameForPageSync(newPage); // Load from cache (instant)
+    updateVisiblePageQuiet(newPage); // Update AppBar notifier
 
     // ✅ CRITICAL FIX: Stop listening mode when user manually navigates
     if (_isListeningMode && _listeningAudioService != null) {
@@ -3162,7 +3166,7 @@ class SttController with ChangeNotifier {
     }
   }
 
-/// ✅ ULTIMATE: Update AppBar info instantly without triggering full UI rebuild
+  /// ✅ ULTIMATE: Update AppBar info instantly without triggering full UI rebuild
   void updateVisiblePageQuiet(int pageNumber) {
     // 1. Update internal state silent (tanpa notifyListeners)
     if (_currentPage != pageNumber) {
@@ -3185,13 +3189,13 @@ class SttController with ChangeNotifier {
         if (surahMeta != null) {
           surahName = surahMeta['name_simple'] ?? surahName;
         }
-        
+
         // Calculate Juz accurately without AyatData
         // (Menggunakan helper service atau logic estimasi juz yang ada)
-        // Disini kita gunakan existing method jika memungkinkan, atau fallback ke 
+        // Disini kita gunakan existing method jika memungkinkan, atau fallback ke
         // metadata mapping jika JuzService support getJuzByPage (ideal)
         // Untuk sekarang kita gunakan calculation dari SQLite service yang cached
-        juzNum = _sqliteService.calculateJuzAccurate(surahId, 1); 
+        juzNum = _sqliteService.calculateJuzAccurate(surahId, 1);
       }
     } catch (e) {
       // Silent fail, keep previous data
@@ -3204,7 +3208,7 @@ class SttController with ChangeNotifier {
       surahName: surahName,
       juzNumber: juzNum,
     );
-    
+
     // 4. Trigger Background Preload (tetap jalan tapi low priority)
     if (!_isQuranMode) {
       // Gunakan microtask agar tidak memblock UI frame saat ini
@@ -3212,67 +3216,10 @@ class SttController with ChangeNotifier {
     }
   }
 
-/// ✅ NEW: Instant metadata update (NO async, NO database)
-void _updateSurahNameForPageInstant(int pageNumber) {
-  try {
-    // Priority 1: Use metadata cache (INSTANT - no DB query)
-    final surahIds = _metadataCache.getSurahIdsForPage(pageNumber);
-    if (surahIds != null && surahIds.isNotEmpty) {
-      final surahId = surahIds.first;
-      final surahMeta = _metadataCache.getSurah(surahId);
-
-      if (surahMeta != null && _determinedSurahId != surahId) {
-        _determinedSurahId = surahId;
-        _suratNameSimple = surahMeta['name_simple'] as String;
-        _suratVersesCount = surahMeta['verses_count'].toString();
-        return; // ✅ EXIT - metadata updated instantly
-      }
-    }
-
-    // Priority 2: Use cached page data (no DB query)
-    if (pageCache.containsKey(pageNumber)) {
-      final pageLines = pageCache[pageNumber]!;
-      for (final line in pageLines) {
-        if (line.ayahSegments != null && line.ayahSegments!.isNotEmpty) {
-          final surahId = line.ayahSegments!.first.surahId;
-          if (_determinedSurahId != surahId) {
-            _determinedSurahId = surahId;
-            // ✅ Async load in background (won't block UI)
-            _sqliteService.getChapterInfo(surahId).then((chapter) {
-              _suratNameSimple = chapter.nameSimple;
-              _suratVersesCount = chapter.versesCount.toString();
-              // ✅ Notify ONLY after background load completes
-              notifyListeners();
-            });
-          }
-          return; // ✅ EXIT - will update in background
-        }
-      }
-    }
-
-    // Priority 3: Fallback - use current page ayats
-    if (_currentPageAyats.isNotEmpty) {
-      final surahId = _currentPageAyats.first.surah_id;
-      if (_determinedSurahId != surahId) {
-        _determinedSurahId = surahId;
-        _sqliteService.getChapterInfo(surahId).then((chapter) {
-          _suratNameSimple = chapter.nameSimple;
-          _suratVersesCount = chapter.versesCount.toString();
-          notifyListeners();
-        });
-      }
-    }
-  } catch (e) {
-    // ✅ Silent fail - don't spam console
-    appLogger.log('SURAH_UPDATE_INSTANT_ERROR', 'Page $pageNumber: $e');
-  }
-}
-
-  /// ✅ NEW: Synchronous version of _updateSurahNameForPage
-  /// Only updates metadata without async operations
-  void _updateSurahNameForPageSync(int pageNumber) {
+  /// ✅ NEW: Instant metadata update (NO async, NO database)
+  void _updateSurahNameForPageInstant(int pageNumber) {
     try {
-      // Priority 1: Use metadata cache (INSTANT)
+      // Priority 1: Use metadata cache (INSTANT - no DB query)
       final surahIds = _metadataCache.getSurahIdsForPage(pageNumber);
       if (surahIds != null && surahIds.isNotEmpty) {
         final surahId = surahIds.first;
@@ -3282,11 +3229,11 @@ void _updateSurahNameForPageInstant(int pageNumber) {
           _determinedSurahId = surahId;
           _suratNameSimple = surahMeta['name_simple'] as String;
           _suratVersesCount = surahMeta['verses_count'].toString();
-          return;
+          return; // ✅ EXIT - metadata updated instantly
         }
       }
 
-      // Priority 2: Use cached page data
+      // Priority 2: Use cached page data (no DB query)
       if (pageCache.containsKey(pageNumber)) {
         final pageLines = pageCache[pageNumber]!;
         for (final line in pageLines) {
@@ -3294,19 +3241,20 @@ void _updateSurahNameForPageInstant(int pageNumber) {
             final surahId = line.ayahSegments!.first.surahId;
             if (_determinedSurahId != surahId) {
               _determinedSurahId = surahId;
-              // Async load chapter info in background (won't block UI)
+              // ✅ Async load in background (won't block UI)
               _sqliteService.getChapterInfo(surahId).then((chapter) {
                 _suratNameSimple = chapter.nameSimple;
                 _suratVersesCount = chapter.versesCount.toString();
+                // ✅ Notify ONLY after background load completes
                 notifyListeners();
               });
             }
-            return;
+            return; // ✅ EXIT - will update in background
           }
         }
       }
 
-      // Priority 3: Use current page ayats
+      // Priority 3: Fallback - use current page ayats
       if (_currentPageAyats.isNotEmpty) {
         final surahId = _currentPageAyats.first.surah_id;
         if (_determinedSurahId != surahId) {
@@ -3319,7 +3267,61 @@ void _updateSurahNameForPageInstant(int pageNumber) {
         }
       }
     } catch (e) {
-      appLogger.log('SURAH_UPDATE_SYNC_ERROR', 'Failed: $e');
+      // ✅ Silent fail - don't spam console
+      appLogger.log('SURAH_UPDATE_INSTANT_ERROR', 'Page $pageNumber: $e');
+    }
+  }
+
+  /// ✅ NEW: Synchronous version for instant AppBar update during navigation
+  void _updateSurahNameForPageSync(int pageNumber) {
+    try {
+      // Priority 1: Use metadata cache (INSTANT)
+      final surahIds = _metadataCache.getSurahIdsForPage(pageNumber);
+      if (surahIds != null && surahIds.isNotEmpty) {
+        final surahId = surahIds.first;
+        final surahMeta = _metadataCache.getSurah(surahId);
+
+        if (surahMeta != null && _determinedSurahId != surahId) {
+          _determinedSurahId = surahId;
+          _suratNameSimple = surahMeta['name_simple'] as String;
+          _suratVersesCount = surahMeta['verses_count'].toString();
+          return; // ✅ EXIT - metadata updated instantly
+        }
+      }
+
+      // Priority 2: Use cached page data (no DB query)
+      if (pageCache.containsKey(pageNumber)) {
+        final pageLines = pageCache[pageNumber]!;
+        for (final line in pageLines) {
+          if (line.ayahSegments != null && line.ayahSegments!.isNotEmpty) {
+            final surahId = line.ayahSegments!.first.surahId;
+            if (_determinedSurahId != surahId) {
+              _determinedSurahId = surahId;
+              // Load chapter info in background (won't block UI)
+              _sqliteService.getChapterInfo(surahId).then((chapter) {
+                _suratNameSimple = chapter.nameSimple;
+                _suratVersesCount = chapter.versesCount.toString();
+                // Don't call notifyListeners here - appBarNotifier already updated
+              });
+            }
+            return; // ✅ EXIT - will update in background
+          }
+        }
+      }
+
+      // Priority 3: Fallback - use current page ayats
+      if (_currentPageAyats.isNotEmpty) {
+        final surahId = _currentPageAyats.first.surah_id;
+        if (_determinedSurahId != surahId) {
+          _determinedSurahId = surahId;
+          _sqliteService.getChapterInfo(surahId).then((chapter) {
+            _suratNameSimple = chapter.nameSimple;
+            _suratVersesCount = chapter.versesCount.toString();
+          });
+        }
+      }
+    } catch (e) {
+      appLogger.log('SURAH_UPDATE_SYNC_ERROR', 'Page $pageNumber: $e');
     }
   }
 
@@ -3352,7 +3354,6 @@ void _updateSurahNameForPageInstant(int pageNumber) {
     super.dispose();
   }
 }
-
 
 // ✅ NEW: Lightweight model for AppBar updates (No database dependency)
 class PageDisplayData {
