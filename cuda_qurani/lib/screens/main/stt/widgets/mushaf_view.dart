@@ -401,29 +401,48 @@ class _SurahNameLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
     final headerSize = screenHeight * 0.060;
     final surahNameSize = screenHeight * 0.050;
-    final controller = context.read<SttController>();
+    
+    final controller = context.watch<SttController>();
+    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
     final surahGlyphCode = line.surahNumber != null
         ? controller.formatSurahIdForGlyph(line.surahNumber!)
         : '';
+
+    final ornamentOffset = isIndopak 
+        ? -screenWidth * 0.005
+        : -screenWidth * 0.035;
+
+    print('🎨 SurahNameLine - Layout: ${isIndopak ? "IndoPak" : "QPC"}, Offset: $ornamentOffset');
+
     return Container(
+      // ✅ FIX: Tambahkan key unik per layout
+      key: ValueKey('surah_ornament_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}'),
       alignment: Alignment.center,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Text(
-            'header',
-            style: TextStyle(
-              fontSize: headerSize - 1.5,
-              fontFamily: 'Quran-Common',
-              color: AppColors.getTextPrimary(context),
-              height: MediaQuery.of(context).size.height * 0.0010,
+          Transform.translate(
+            // ✅ FIX: Tambahkan key pada Transform juga
+            key: ValueKey('ornament_transform_${isIndopak ? "indopak" : "qpc"}'),
+            offset: Offset(ornamentOffset, 0),
+            child: Text(
+              'header',
+              key: ValueKey('ornament_text_${isIndopak ? "indopak" : "qpc"}'), // ✅ Key pada Text
+              style: TextStyle(
+                fontSize: headerSize - 1.5,
+                fontFamily: 'Quran-Common',
+                color: AppColors.getTextPrimary(context),
+                height: screenHeight * 0.0010,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
           Text(
             surahGlyphCode,
+            key: ValueKey('surah_name_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}'), // ✅ Key pada nama surah
             style: TextStyle(
               fontSize: surahNameSize - 1,
               fontFamily: 'surah-name-v2',
