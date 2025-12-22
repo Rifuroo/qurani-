@@ -13,6 +13,17 @@ class QuranService {
   factory QuranService() => _instance;
   QuranService._internal();
 
+  // ✅ NEW: Track current visible page for smart eviction
+  int _currentVisiblePage = 1;
+
+  void updateCurrentPage(int page) {
+    _currentVisiblePage = page;
+  }
+
+  int _getCurrentVisiblePage() {
+    return _currentVisiblePage;
+  }
+
   // ❌ REMOVE: Jangan simpan database reference di sini
   // Database? _metadataDB;
   // Database? _qpcV1WBW;
@@ -614,16 +625,36 @@ class QuranService {
       }
     }
     // ✅ OPTIMIZED: LRU cache implementation
+    // ✅ ULTIMATE: Smart cache with distance-based eviction
     _updateCacheAccess(pageNumber);
     _pageCache[pageNumber] = pageLines;
 
-    // ✅ OPTIMIZED: Only evict when cache is VERY large (prevent re-loading)
-    // Use cacheEvictionThreshold instead of quranServiceCacheSize to keep more pages
+    // ✅ SMART EVICTION: Only evict when cache is VERY full
     if (_pageCache.length > cacheEvictionThreshold) {
-      // Remove least recently used page (only when cache is very full)
-      if (_cacheAccessOrder.isNotEmpty) {
+      // ✅ NEW: Evict pages FAR from current position (not just LRU)
+      final currentPage = _getCurrentVisiblePage();
+
+      // Find pages far from current (distance > 100)
+      final distantPages = _cacheAccessOrder
+          .where((p) => (p - currentPage).abs() > 100)
+          .toList();
+
+      if (distantPages.isNotEmpty) {
+        // Evict oldest distant page
+        final pageToEvict = distantPages.first;
+        _cacheAccessOrder.remove(pageToEvict);
+        _pageCache.remove(pageToEvict);
+
+        if (_pageCache.length % 50 == 0) {
+          print(
+            'MUSHAF_CACHE: Smart evicted page $pageToEvict (distance: ${(pageToEvict - currentPage).abs()})',
+          );
+        }
+      } else {
+        // Fallback to LRU if no distant pages
         final lruPage = _cacheAccessOrder.removeAt(0);
         _pageCache.remove(lruPage);
+
         // ✅ Reduce log spam
         if (_pageCache.length % 50 == 0) {
           print(
