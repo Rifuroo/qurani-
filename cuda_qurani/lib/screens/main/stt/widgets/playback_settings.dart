@@ -127,8 +127,13 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
     setState(() {
       _reciters = reciters;
       if (_reciters.isNotEmpty) {
-        _selectedReciter = _reciters.first.name;
-        _selectedReciterId = _reciters.first.identifier;
+        // ✅ Prioritize Mishari Rashid Al-Afasy
+        final defaultReciter = _reciters.firstWhere(
+          (r) => r.identifier == 'mishari-alafasy',
+          orElse: () => _reciters.first,
+        );
+        _selectedReciter = defaultReciter.name;
+        _selectedReciterId = defaultReciter.identifier;
         print('✅ Selected: $_selectedReciter'); // ✅ Debug
       } else {
         print('⚠️ Reciters list is empty!'); // ✅ Debug
