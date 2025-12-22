@@ -51,6 +51,9 @@
     "ayah_a_day_text": "آية في اليوم",
     "achievements_text": "الإنجازات",
     "badge_text": "شارة",
-    "complete_sessions_to_earn_badges_text": "أكمل الجلسات للحصول على الشارات"
+    "complete_sessions_to_earn_badges_text": "أكمل الجلسات للحصول على الشارات",
+    "resume_session_text": "استئناف الجلسة",
+    "premium_feature_text": "ميزة بريميوم",
+    "upgrade_to_premium_text": "الترقية إلى بريميوم"
   }
 }

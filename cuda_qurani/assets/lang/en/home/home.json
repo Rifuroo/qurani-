@@ -51,6 +51,9 @@
         "ayah_a_day_text": "Ayah a Day",
         "achievements_text": "Achievements",
         "badge_text": "Badge",
-        "complete_sessions_to_earn_badges_text": "Complete sessions to earn badges"
+        "complete_sessions_to_earn_badges_text": "Complete sessions to earn badges",
+        "resume_session_text": "Resume Session",
+        "premium_feature_text": "Premium Feature",
+        "upgrade_to_premium_text": "Upgrade to Premium"
     }
 }

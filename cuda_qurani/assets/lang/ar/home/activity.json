@@ -28,6 +28,8 @@
     "no_accuracy_data": "لا توجد بيانات دقة بعد",
     "hour_suffix": "س",
     "minute_suffix": "د",
-    "second_suffix": "ث"
+    "second_suffix": "ث",
+    "premium_feature_text": "ميزة بريميوم",
+    "upgrade_to_premium_text": "الترقية إلى بريميوم"
   }
 }

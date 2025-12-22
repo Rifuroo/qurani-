@@ -543,7 +543,7 @@ class _ActivityPageState extends State<ActivityPage> {
         child: Container(
           height: 200 * s,
           decoration: BoxDecoration(
-            color: AppColors.getTextPrimary(context).withValues(alpha: 0.6),
+            color: AppColors.getSurface(context),
             borderRadius: BorderRadius.circular(
               AppDesignSystem.radiusMedium * s,
             ),
@@ -554,7 +554,7 @@ class _ActivityPageState extends State<ActivityPage> {
               Container(
                 padding: EdgeInsets.all(12 * s),
                 decoration: BoxDecoration(
-                  color: AppColors.getWarning(context).withValues(alpha: 0.2),
+                  color: AppColors.getWarning(context).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -574,7 +574,12 @@ class _ActivityPageState extends State<ActivityPage> {
               ),
               SizedBox(height: 4 * s),
               Text(
-                'Premium Feature',
+                _translations.isNotEmpty
+                    ? LanguageHelper.tr(
+                        _translations,
+                        'activity.premium_feature_text',
+                      )
+                    : 'Premium Feature',
                 style: AppTypography.body(
                   context,
                   color: AppColors.getWarning(context),
@@ -591,7 +596,12 @@ class _ActivityPageState extends State<ActivityPage> {
                   borderRadius: BorderRadius.circular(20 * s),
                 ),
                 child: Text(
-                  'Upgrade to Premium',
+                  _translations.isNotEmpty
+                      ? LanguageHelper.tr(
+                          _translations,
+                          'activity.upgrade_to_premium_text',
+                        )
+                      : 'Upgrade to Premium',
                   style: AppTypography.label(
                     context,
                     color: AppColors.getWarning(context),

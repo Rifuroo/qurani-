@@ -28,6 +28,8 @@
     "no_accuracy_data": "Belum ada data akurasi",
     "hour_suffix": "j",
     "minute_suffix": "m",
-    "second_suffix": "d"
+    "second_suffix": "d",
+    "premium_feature_text": "Fitur Premium",
+    "upgrade_to_premium_text": "Upgrade ke Premium"
   }
 }

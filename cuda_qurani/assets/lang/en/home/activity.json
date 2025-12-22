@@ -28,6 +28,8 @@
         "no_accuracy_data": "No accuracy data yet",
         "hour_suffix": "h",
         "minute_suffix": "m",
-        "second_suffix": "s"
+        "second_suffix": "s",
+        "premium_feature_text": "Premium Feature",
+        "upgrade_to_premium_text": "Upgrade to Premium"
     }
 }

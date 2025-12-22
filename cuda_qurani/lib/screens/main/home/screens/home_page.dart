@@ -547,7 +547,8 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         padding: AppPadding.card(context),
         decoration: AppComponentStyles.card(
-          color: AppColors.getTextPrimary(context).withValues(alpha: 0.6),
+          // ✅ FIX: Use surface color instead of transparent text color for background
+          color: AppColors.getSurface(context),
           borderRadius: AppDesignSystem.radiusLarge,
           borderColor: AppColors.getBorderLight(context),
           borderWidth: AppDesignSystem.borderNormal,
@@ -558,7 +559,7 @@ class _HomePageState extends State<HomePage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.getWarning(context).withValues(alpha: 0.2),
+                color: AppColors.getWarning(context).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -573,13 +574,13 @@ class _HomePageState extends State<HomePage> {
               style: AppTypography.h3(
                 context,
                 weight: AppTypography.bold,
-                color: AppColors.getTextInverse(context),
+                color: AppColors.getTextPrimary(context),
               ),
               textAlign: TextAlign.center,
             ),
             AppMargin.gapSmall(context),
             Text(
-              'Premium Feature',
+              _t('home.premium_feature_text'),
               style: AppTypography.body(
                 context,
                 color: AppColors.getWarning(context),
@@ -593,7 +594,7 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                'Upgrade to Premium',
+                _t('home.upgrade_to_premium_text'),
                 style: AppTypography.label(
                   context,
                   color: AppColors.getWarning(context),
