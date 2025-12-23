@@ -3369,7 +3369,7 @@ class PageDisplayData {
   factory PageDisplayData.initial() {
     return const PageDisplayData(
       pageNumber: 1,
-      surahName: 'Al-Fatihah',
+      surahName: 'Surah',
       juzNumber: 1,
     );
   }

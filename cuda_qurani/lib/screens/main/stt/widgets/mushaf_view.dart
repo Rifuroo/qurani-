@@ -404,33 +404,42 @@ class _SurahNameLine extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final headerSize = screenHeight * 0.060;
     final surahNameSize = screenHeight * 0.050;
-    
+
     final controller = context.watch<SttController>();
     final isIndopak = controller.mushafLayout == MushafLayout.indopak;
     final surahGlyphCode = line.surahNumber != null
         ? controller.formatSurahIdForGlyph(line.surahNumber!)
         : '';
 
-    final ornamentOffset = isIndopak 
-        ? -screenWidth * 0.005 // indopak
+    final ornamentOffset = isIndopak
+        ? -screenWidth *
+              0.005 // indopak
         : -screenWidth * 0.005; // qpc
 
-    print('🎨 SurahNameLine - Layout: ${isIndopak ? "IndoPak" : "QPC"}, Offset: $ornamentOffset');
+    print(
+      '🎨 SurahNameLine - Layout: ${isIndopak ? "IndoPak" : "QPC"}, Offset: $ornamentOffset',
+    );
 
     return Container(
       // ✅ FIX: Tambahkan key unik per layout
-      key: ValueKey('surah_ornament_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}'),
+      key: ValueKey(
+        'surah_ornament_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}',
+      ),
       alignment: Alignment.center,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Transform.translate(
             // ✅ FIX: Tambahkan key pada Transform juga
-            key: ValueKey('ornament_transform_${isIndopak ? "indopak" : "qpc"}'),
+            key: ValueKey(
+              'ornament_transform_${isIndopak ? "indopak" : "qpc"}',
+            ),
             offset: Offset(ornamentOffset, 0),
             child: Text(
               'header',
-              key: ValueKey('ornament_text_${isIndopak ? "indopak" : "qpc"}'), // ✅ Key pada Text
+              key: ValueKey(
+                'ornament_text_${isIndopak ? "indopak" : "qpc"}',
+              ), // ✅ Key pada Text
               style: TextStyle(
                 fontSize: headerSize - 1.5,
                 fontFamily: 'Quran-Common',
@@ -442,7 +451,9 @@ class _SurahNameLine extends StatelessWidget {
           ),
           Text(
             surahGlyphCode,
-            key: ValueKey('surah_name_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}'), // ✅ Key pada nama surah
+            key: ValueKey(
+              'surah_name_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}',
+            ), // ✅ Key pada nama surah
             style: TextStyle(
               fontSize: surahNameSize - 1,
               fontFamily: 'surah-name-v2',
@@ -680,13 +691,14 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final controller = context.watch<SttController>();
+    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
     final headerFontSize = screenWidth * 0.035;
     final headerHeight = screenHeight * 0.035;
     final juzText = _translations.isNotEmpty
         ? LanguageHelper.tr(_translations, 'mushaf_view.juz_text')
         : 'Juz';
 
-    final controller = context.watch<SttController>();
     final juzNumber = controller.currentPageAyats.isNotEmpty
         ? controller.calculateJuz(
             controller.currentPageAyats.first.surah_id,
@@ -698,7 +710,10 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
       height: headerHeight,
       // âœ… FIX: Hapus background color sama sekali
       padding: EdgeInsets.symmetric(
-        horizontal: screenWidth * 0.030,
+        horizontal: isIndopak
+            ? screenWidth *
+                  0.035 // indopak
+            : screenWidth * 0.010, // qpc,
       ), // âœ… CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
       alignment: Alignment.center,
       child: Row(
