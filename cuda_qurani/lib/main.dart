@@ -10,6 +10,7 @@ import 'providers/recitation_provider.dart';
 import 'screens/main/home/services/juz_service.dart';
 import 'package:cuda_qurani/screens/auth_wrapper.dart';
 import 'package:cuda_qurani/providers/auth_provider.dart';
+import 'package:cuda_qurani/screens/main/stt/services/quran_service.dart'; // ✅ TARTEEL: For preload
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cuda_qurani/config/app_config.dart';
 import 'package:cuda_qurani/screens/splash_screen.dart';
@@ -45,7 +46,7 @@ void main() async {
 
   // ✅ Start app immediately, initialize heavy services in background
   runApp(const MainApp());
-  
+
   // ✅ Initialize heavy services asynchronously after app starts
   _initializeServicesInBackground();
 }
@@ -54,18 +55,18 @@ void main() async {
 Future<void> _initializeServicesInBackground() async {
   try {
     print('[STARTUP] 🚀 Starting background initialization...');
-    
+
     // Initialize in parallel for better performance
     await Future.wait([
       MushafSettingsService().initialize(),
       _initializeLanguageService(),
       _initializeListeningServices(),
     ]);
-    
+
     // Initialize databases (heaviest operation)
     await _initializeDatabases();
     await JuzService.initialize();
-    
+
     _isAppFullyInitialized = true;
     print('[STARTUP] ✅ Background initialization complete');
   } catch (e) {
@@ -98,20 +99,22 @@ Future<void> _initializeDatabases() async {
   try {
     print('[DB] 🔄 Starting database initialization...');
     final startTime = DateTime.now();
-    
+
     // ✅ Initialize databases in parallel
     await Future.wait([
       DBHelper.preInitializeAll(),
       LocalDatabaseService.preInitialize(),
     ]);
-    
+
     // ✅ Initialize metadata cache (this is the heavy operation)
     await MetadataCacheService().initialize();
 
     _isDatabaseInitialized = true;
-    
+
     final duration = DateTime.now().difference(startTime);
-    print('[DB] ✅ Database initialization complete in ${duration.inMilliseconds}ms');
+    print(
+      '[DB] ✅ Database initialization complete in ${duration.inMilliseconds}ms',
+    );
   } catch (e) {
     print('[DB] ❌ Database initialization failed: $e');
     // Don't crash the app, set flag to prevent retries
@@ -209,12 +212,14 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
   Future<void> _navigateToAuth() async {
     // ✅ Wait for splash animation to complete (2 seconds) AND AuthProvider ready
     final startTime = DateTime.now();
-    const minSplashDuration = Duration(milliseconds: 2000); // Match original splash timing
-    
+    const minSplashDuration = Duration(
+      milliseconds: 2000,
+    ); // Match original splash timing
+
     // Wait for AuthProvider to finish initialization
     int attempts = 0;
     const maxAttempts = 50; // 5 seconds max (50 * 100ms)
-    
+
     while (attempts < maxAttempts) {
       try {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -225,18 +230,24 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
       } catch (e) {
         // Provider not ready yet
       }
-      
+
       await Future.delayed(const Duration(milliseconds: 100));
       attempts++;
     }
-    
+
     // ✅ Ensure minimum splash duration for animation to complete
     final elapsed = DateTime.now().difference(startTime);
     if (elapsed < minSplashDuration) {
       final remaining = minSplashDuration - elapsed;
-      print('⏱️ Waiting ${remaining.inMilliseconds}ms more for splash animation...');
+      print(
+        '⏱️ Waiting ${remaining.inMilliseconds}ms more for splash animation...',
+      );
       await Future.delayed(remaining);
     }
+
+    // ✅ TARTEEL-STYLE: Start preloading ALL pages in background
+    // This runs in parallel with navigation, user won't wait
+    _startTarteelStylePreload();
 
     if (!mounted) return;
 
@@ -253,6 +264,46 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
         },
       ),
     );
+  }
+
+  /// ✅ TARTEEL-STYLE: Preload all 604 pages in background
+  void _startTarteelStylePreload() {
+    // Import QuranService and start preload
+    // This is fire-and-forget, runs in background
+    Future.microtask(() async {
+      try {
+        // Dynamic import to avoid circular dependency
+        final quranService = await _getQuranService();
+        if (quranService != null) {
+          quranService.preloadAllPagesInBackground();
+        }
+      } catch (e) {
+        print('[InitialSplash] ⚠️ Background preload failed: $e');
+      }
+    });
+  }
+
+  /// Helper to get QuranService dynamically
+  Future<QuranService?> _getQuranService() async {
+    try {
+      // Wait for databases to be ready
+      if (!_isDatabaseInitialized) {
+        print('[InitialSplash] ⏳ Waiting for database init before preload...');
+        int waitCount = 0;
+        while (!_isDatabaseInitialized && waitCount < 50) {
+          await Future.delayed(const Duration(milliseconds: 100));
+          waitCount++;
+        }
+      }
+
+      // Get QuranService singleton instance
+      final service = QuranService();
+      await service.initialize();
+      return service;
+    } catch (e) {
+      print('[InitialSplash] ⚠️ Failed to get QuranService: $e');
+      return null;
+    }
   }
 
   @override
@@ -311,7 +362,7 @@ extension NumberFormattingExtension on BuildContext {
 extension AppStatusExtension on BuildContext {
   /// Check if app is fully initialized for heavy operations
   bool get isAppReady => _isAppFullyInitialized;
-  
+
   /// Check if databases are initialized
   bool get isDatabaseReady => _isDatabaseInitialized;
 }

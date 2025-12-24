@@ -84,8 +84,12 @@ class _HomePageState extends State<HomePage> {
 
   /// OPTIMIZED: Load ALL home page data in ONE call
   Future<void> _loadHomePageData() async {
+    // ✅ FIX: Wait a tick to ensure auth state is fully propagated
+    await Future.delayed(const Duration(milliseconds: 100));
+
     final userUuid = _authService.userId;
     if (userUuid == null) {
+      print('[HOME] ⚠️ No user UUID, skipping data load');
       if (mounted) setState(() => _isLoadingStats = false);
       return;
     }

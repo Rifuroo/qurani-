@@ -13,6 +13,20 @@ class LocalDatabaseService {
   static Database? _wordsDb;
   static Database? _chaptersDb;
 
+  // ✅ OPTIMIZATION: Cache pagesDb as singleton to avoid open/close per query
+  static Database? _pagesDbQpc;
+  static Database? _pagesDbIndopak;
+
+  // ✅ OPTIMIZATION: LRU Cache for frequently accessed surah data
+  static final Map<int, Surah> _surahCache = {};
+  static const int _maxCacheSize = 5; // Keep last 5 surahs in memory
+
+  // ✅ OPTIMIZATION: Cache for surah metadata
+  static final Map<int, Map<String, dynamic>> _metadataCache = {};
+
+  // ✅ OPTIMIZATION: Cache for page-surah mapping
+  static Map<int, List<int>>? _pageSurahMappingCache;
+
   /// ✅ Helper to ensure databases are open
   static Future<void> _ensureInitialized() async {
     if (_wordsDb == null || _chaptersDb == null) {
@@ -29,6 +43,54 @@ class LocalDatabaseService {
         await initializeDatabases();
       }
     }
+  }
+
+  /// ✅ OPTIMIZATION: Get cached pagesDb connection
+  static Future<Database> _getPagesDb(MushafLayout layout) async {
+    // Check if already cached
+    if (layout == MushafLayout.qpc && _pagesDbQpc != null) {
+      return _pagesDbQpc!;
+    }
+    if (layout == MushafLayout.indopak && _pagesDbIndopak != null) {
+      return _pagesDbIndopak!;
+    }
+
+    final databasesPath = await getDatabasesPath();
+    final String dbFileName;
+    final String assetPath;
+
+    switch (layout) {
+      case MushafLayout.qpc:
+        dbFileName = 'qpc-v1-15-lines.db';
+        assetPath = 'assets/data/qpc-v1-15-lines.db';
+        break;
+      case MushafLayout.indopak:
+        dbFileName = 'qudratullah-indopak-15-lines.db';
+        assetPath = 'assets/indopak/qudratullah-indopak-15-lines.db';
+        break;
+    }
+
+    final pagesPath = join(databasesPath, dbFileName);
+
+    // Copy from assets if not exists
+    if (!await File(pagesPath).exists()) {
+      print('[LocalDB] Copying $dbFileName from assets...');
+      final data = await rootBundle.load(assetPath);
+      final bytes = data.buffer.asUint8List();
+      await File(pagesPath).writeAsBytes(bytes, flush: true);
+    }
+
+    // Open and cache
+    final db = await openDatabase(pagesPath, readOnly: true);
+
+    if (layout == MushafLayout.qpc) {
+      _pagesDbQpc = db;
+    } else {
+      _pagesDbIndopak = db;
+    }
+
+    print('[LocalDB] ✅ Cached pagesDb for $layout');
+    return db;
   }
 
   /// ✅ NEW: Get first and last ayah in a page using word_id mapping
@@ -184,8 +246,13 @@ class LocalDatabaseService {
     return result;
   }
 
-  /// Get surah metadata by ID
+  /// Get surah metadata by ID - ✅ OPTIMIZED with cache
   static Future<Map<String, dynamic>?> getSurahMetadata(int surahId) async {
+    // ✅ Check cache first
+    if (_metadataCache.containsKey(surahId)) {
+      return _metadataCache[surahId];
+    }
+
     await _ensureInitialized();
 
     final result = await _chaptersDb!.query(
@@ -195,14 +262,27 @@ class LocalDatabaseService {
       limit: 1,
     );
 
-    return result.isNotEmpty ? result.first : null;
+    final metadata = result.isNotEmpty ? result.first : null;
+
+    // ✅ Store in cache
+    if (metadata != null) {
+      _metadataCache[surahId] = metadata;
+    }
+
+    return metadata;
   }
 
-  /// Get complete Surah with verses
+  /// Get complete Surah with verses - ✅ OPTIMIZED with LRU cache
   static Future<Surah> getSurah(int surahId) async {
+    // ✅ Check LRU cache first
+    if (_surahCache.containsKey(surahId)) {
+      print('[DB] ✅ Surah $surahId loaded from CACHE');
+      return _surahCache[surahId]!;
+    }
+
     await _ensureInitialized();
 
-    print('[DB] Loading surah $surahId from local database...');
+    print('[DB] Loading surah $surahId from database...');
 
     // Get metadata
     final metadata = await getSurahMetadata(surahId);
@@ -246,14 +326,23 @@ class LocalDatabaseService {
     // Sort verses by number
     verses.sort((a, b) => a.number.compareTo(b.number));
 
-    print('[DB] Surah $surahId loaded: ${verses.length} verses');
-
-    return Surah(
+    final surah = Surah(
       number: surahId,
       name: metadata['name_simple'] ?? metadata['name'] ?? 'Unknown',
       nameArabic: metadata['name_arabic'] ?? 'سورة',
       verses: verses,
     );
+
+    // ✅ Store in LRU cache with eviction
+    if (_surahCache.length >= _maxCacheSize) {
+      // Remove oldest entry (first key)
+      _surahCache.remove(_surahCache.keys.first);
+    }
+    _surahCache[surahId] = surah;
+
+    print('[DB] Surah $surahId loaded and cached: ${verses.length} verses');
+
+    return surah;
   }
 
   /// Search verses by Arabic text OR surah name (Latin/Arabic)
@@ -424,35 +513,9 @@ class LocalDatabaseService {
 
       final firstWordId = wordResult.first['id'] as int;
 
-      // Query pages database to find page containing this word
-      final databasesPath = await getDatabasesPath();
-
-      // ✅ FIX: Get current layout to determine which DB to use
+      // ✅ OPTIMIZED: Use cached pagesDb connection
       final currentLayout = await MushafSettingsService().getMushafLayout();
-      final String dbFileName;
-
-      switch (currentLayout) {
-        case MushafLayout.qpc:
-          dbFileName = 'qpc-v1-15-lines.db';
-          break;
-        case MushafLayout.indopak:
-          dbFileName = 'qudratullah-indopak-15-lines.db';
-          break;
-      }
-
-      final pagesPath = join(databasesPath, dbFileName);
-
-      if (!await File(pagesPath).exists()) {
-        print('[DB] Pages database not found, copying $dbFileName...');
-        final assetPath = currentLayout == MushafLayout.qpc
-            ? 'assets/data/qpc-v1-15-lines.db'
-            : 'assets/indopak/qudratullah-indopak-15-lines.db';
-        final data = await rootBundle.load(assetPath);
-        final bytes = data.buffer.asUint8List();
-        await File(pagesPath).writeAsBytes(bytes, flush: true);
-      }
-
-      final pagesDb = await openDatabase(pagesPath, readOnly: true);
+      final pagesDb = await _getPagesDb(currentLayout);
 
       final pageResult = await pagesDb.rawQuery(
         '''
@@ -465,7 +528,7 @@ class LocalDatabaseService {
         [firstWordId, firstWordId],
       );
 
-      await pagesDb.close();
+      // ✅ No close() - connection stays cached!
 
       if (pageResult.isNotEmpty) {
         return pageResult.first['page_number'] as int;
@@ -541,12 +604,24 @@ class LocalDatabaseService {
     print('[LocalDB] Pre-initialization complete');
   }
 
-  /// Close all databases
+  /// Close all databases and clear caches
   static Future<void> close() async {
     await _wordsDb?.close();
     await _chaptersDb?.close();
+    await _pagesDbQpc?.close();
+    await _pagesDbIndopak?.close();
+
     _wordsDb = null;
     _chaptersDb = null;
+    _pagesDbQpc = null;
+    _pagesDbIndopak = null;
+
+    // ✅ Clear all caches
+    _surahCache.clear();
+    _metadataCache.clear();
+    _pageSurahMappingCache = null;
+
+    print('[LocalDB] All databases closed and caches cleared');
   }
 
   /// ✅ NEW: Close pages database connection

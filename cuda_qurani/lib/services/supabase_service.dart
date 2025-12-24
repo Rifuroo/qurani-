@@ -325,6 +325,81 @@ class SupabaseService {
     }
   }
 
+  /// ✅ NEW: Update user's subscription plan (after successful transaction)
+  /// Upserts the subscription record - creates if not exists, updates if exists
+  Future<bool> updateUserSubscriptionPlan(String userId, String plan) async {
+    try {
+      print('📝 Updating subscription for user $userId to: $plan');
+
+      // Check if subscription exists
+      final checkResponse = await http.get(
+        Uri.parse(
+          '$supabaseUrl/rest/v1/subscriptions?user_id=eq.$userId&select=id',
+        ),
+        headers: _headers,
+      );
+
+      final exists =
+          checkResponse.statusCode == 200 &&
+          (jsonDecode(checkResponse.body) as List).isNotEmpty;
+
+      if (exists) {
+        // Update existing subscription
+        final response = await http.patch(
+          Uri.parse('$supabaseUrl/rest/v1/subscriptions?user_id=eq.$userId'),
+          headers: {
+            ..._headers,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: jsonEncode({
+            'plan': plan,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          }),
+        );
+
+        if (response.statusCode == 204 || response.statusCode == 200) {
+          print('✅ Subscription updated successfully');
+          return true;
+        } else {
+          print(
+            '❌ Failed to update subscription: ${response.statusCode} - ${response.body}',
+          );
+          return false;
+        }
+      } else {
+        // Insert new subscription
+        final response = await http.post(
+          Uri.parse('$supabaseUrl/rest/v1/subscriptions'),
+          headers: {
+            ..._headers,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: jsonEncode({
+            'user_id': userId,
+            'plan': plan,
+            'created_at': DateTime.now().toUtc().toIso8601String(),
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          }),
+        );
+
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          print('✅ Subscription created successfully');
+          return true;
+        } else {
+          print(
+            '❌ Failed to create subscription: ${response.statusCode} - ${response.body}',
+          );
+          return false;
+        }
+      }
+    } catch (e) {
+      print('❌ Error updating subscription: $e');
+      return false;
+    }
+  }
+
   /// Get user's daily goal
   Future<Map<String, dynamic>?> getUserGoal(String userId) async {
     try {

@@ -112,6 +112,95 @@ class QuranService {
     print('[QuranService] Loaded layout: ${_currentLayout.displayName}');
   }
 
+  // ✅ TARTEEL-STYLE: Flag to track if all pages are cached
+  bool _allPagesCached = false;
+  bool get isFullyCached => _allPagesCached;
+
+  /// ✅ TARTEEL-STYLE OPTIMIZED: Preload ALL 604 pages with CONCURRENT batches
+  /// Uses multiple workers to load pages in parallel for much faster loading
+  Stream<double> preloadAllPages() async* {
+    if (_allPagesCached) {
+      print('[QuranService] ✅ All pages already cached');
+      yield 1.0;
+      return;
+    }
+
+    const totalPages = 604;
+    const batchSize = 50; // Larger batches
+    const concurrentBatches = 4; // Load 4 batches at once = 200 pages parallel
+
+    print(
+      '[QuranService] 🚀 TARTEEL-STYLE: Starting FAST cache of $totalPages pages (${concurrentBatches}x parallel)...',
+    );
+    final stopwatch = Stopwatch()..start();
+
+    int loadedPages = 0;
+    final List<List<int>> allBatches = [];
+
+    // Create all batches first
+    for (int startPage = 1; startPage <= totalPages; startPage += batchSize) {
+      final endPage = (startPage + batchSize - 1).clamp(1, totalPages);
+      final batch = List.generate(
+        endPage - startPage + 1,
+        (i) => startPage + i,
+      );
+      allBatches.add(batch);
+    }
+
+    // Process batches in groups of concurrentBatches
+    for (int i = 0; i < allBatches.length; i += concurrentBatches) {
+      final batchGroup = allBatches.skip(i).take(concurrentBatches).toList();
+
+      // Load all batches in this group concurrently
+      await Future.wait(
+        batchGroup.map((batch) async {
+          try {
+            await getMushafPageLinesBatch(batch);
+          } catch (e) {
+            print('[QuranService] ⚠️ Failed batch: $e');
+          }
+        }),
+      );
+
+      loadedPages += batchGroup.fold(0, (sum, batch) => sum + batch.length);
+      final progress = (loadedPages / totalPages).clamp(0.0, 1.0);
+      yield progress;
+
+      // Log progress
+      if (i % 4 == 0 || loadedPages >= totalPages) {
+        print(
+          '[QuranService] 📊 Cached $loadedPages/$totalPages pages (${(progress * 100).toInt()}%)',
+        );
+      }
+    }
+
+    stopwatch.stop();
+    _allPagesCached = true;
+
+    print(
+      '[QuranService] ✅ TARTEEL-STYLE: All $totalPages pages cached in ${stopwatch.elapsedMilliseconds}ms',
+    );
+    print('[QuranService] 💾 Cache size: ${_pageCache.length} pages in memory');
+
+    yield 1.0;
+  }
+
+  /// ✅ TARTEEL-STYLE: Preload all pages in background (non-blocking)
+  void preloadAllPagesInBackground() {
+    print('[QuranService] 🚀 Starting background preload...');
+    preloadAllPages().listen(
+      (progress) {
+        // Logging is internal
+      },
+      onDone: () {
+        print('[QuranService] ✅ Background preload complete!');
+      },
+      onError: (e) {
+        print('[QuranService] ❌ Background preload error: $e');
+      },
+    );
+  }
+
   // ✅ OPTIMIZED: Update cache access order for LRU eviction
   void _updateCacheAccess(int pageNumber) {
     _cacheAccessOrder.remove(pageNumber);
@@ -193,6 +282,11 @@ class QuranService {
   }
 
   Future<ChapterData> getChapterInfo(int surahId) async {
+    // ✅ OPTIMIZED: Check cache first (chapters never change)
+    if (_chapterCache.containsKey(surahId)) {
+      return _chapterCache[surahId]!;
+    }
+
     final metadataDB = await _getMetadataDB();
     final result = await metadataDB.query(
       'chapters',
@@ -201,7 +295,10 @@ class QuranService {
       limit: 1,
     );
     if (result.isEmpty) throw Exception('Chapter not found: $surahId');
-    return ChapterData.fromSqlite(result.first);
+
+    final chapter = ChapterData.fromSqlite(result.first);
+    _chapterCache[surahId] = chapter; // ✅ Cache for future calls
+    return chapter;
   }
 
   Future<List<WordData>> getSurahWords(
@@ -392,6 +489,12 @@ class QuranService {
     return words;
   }
 
+  // ✅ NEW: Cache for total words per ayah (avoids N+1 queries)
+  final Map<String, int> _totalWordsCache = {};
+
+  // ✅ NEW: Cache for chapter info (114 surahs only, load once)
+  final Map<int, ChapterData> _chapterCache = {};
+
   // ✅ OPTIMIZED: Cache ayat data for pages to avoid repeated queries
   final Map<int, List<AyatData>> _ayatCache = {};
 
@@ -537,19 +640,70 @@ class QuranService {
     }
   }
 
-  // ✅ Internal method to actually load page lines
+  // ✅ MEGA-OPTIMIZED: Batch load ALL words for page in SINGLE query
   Future<List<MushafPageLine>> _loadMushafPageLinesInternal(
     int pageNumber,
   ) async {
-    print('MUSHAF_LINES: Getting lines for page $pageNumber');
     final pageLayout = await getPageLayout(pageNumber);
+    if (pageLayout.isEmpty) return [];
+
+    // ✅ STEP 1: Find min/max word IDs for SINGLE batch query
+    int? minWordId;
+    int? maxWordId;
+    final Set<int> surahNumbers = {};
+
+    for (final layout in pageLayout) {
+      if (layout.lineType == 'ayah' &&
+          layout.firstWordId != null &&
+          layout.lastWordId != null) {
+        if (minWordId == null || layout.firstWordId! < minWordId) {
+          minWordId = layout.firstWordId!;
+        }
+        if (maxWordId == null || layout.lastWordId! > maxWordId) {
+          maxWordId = layout.lastWordId!;
+        }
+      }
+      if (layout.lineType == 'surah_name' && layout.surahNumber != null) {
+        surahNumbers.add(layout.surahNumber!);
+      }
+    }
+
+    // ✅ STEP 2: Pre-load ALL words for page in SINGLE query
+    Map<int, WordData> allWordsMap = {};
+    Map<String, int> maxWordPerAyah = {}; // Track max word per ayah
+
+    if (minWordId != null && maxWordId != null) {
+      final db = await _getWordsDatabase(true);
+      final result = await db.query(
+        'words',
+        where: 'id >= ? AND id <= ?',
+        whereArgs: [minWordId, maxWordId],
+        orderBy: 'id ASC',
+      );
+      for (final row in result) {
+        final word = WordData.fromSqlite(row);
+        allWordsMap[word.id] = word;
+        // ✅ Pre-compute max word number per ayah
+        final key = '${word.surah}:${word.ayah}';
+        if (!maxWordPerAyah.containsKey(key) ||
+            word.wordNumber > maxWordPerAyah[key]!) {
+          maxWordPerAyah[key] = word.wordNumber;
+        }
+      }
+    }
+
+    // ✅ STEP 3: Pre-load chapter info (parallel, uses cache)
+    await Future.wait(surahNumbers.map((s) => getChapterInfo(s)));
+
+    // ✅ STEP 4: Build page lines WITHOUT additional queries
     final List<MushafPageLine> pageLines = [];
     for (final layout in pageLayout) {
-      MushafPageLine line;
+      MushafPageLine? line;
       switch (layout.lineType) {
         case 'surah_name':
-          if (layout.surahNumber != null) {
-            final chapter = await getChapterInfo(layout.surahNumber!);
+          if (layout.surahNumber != null &&
+              _chapterCache.containsKey(layout.surahNumber!)) {
+            final chapter = _chapterCache[layout.surahNumber!]!;
             line = MushafPageLine(
               lineNumber: layout.lineNumber,
               lineType: layout.lineType,
@@ -558,8 +712,6 @@ class QuranService {
               surahNameArabic: chapter.nameArabic,
               surahNameSimple: chapter.nameSimple,
             );
-          } else {
-            continue;
           }
           break;
         case 'basmallah':
@@ -567,25 +719,26 @@ class QuranService {
             lineNumber: layout.lineNumber,
             lineType: layout.lineType,
             isCentered: layout.isCentered,
-            basmallahText: 'ï·½',
+            basmallahText: '﷽',
           );
           break;
         case 'ayah':
           if (layout.firstWordId == null || layout.lastWordId == null) continue;
-          final lineWords = await _getWordsByIdRange(
-            layout.firstWordId!,
-            layout.lastWordId!,
-            isQuranMode: true,
-          );
+          // ✅ Get words from pre-loaded map (NO query!)
+          final List<WordData> lineWords = [];
+          for (int id = layout.firstWordId!; id <= layout.lastWordId!; id++) {
+            if (allWordsMap.containsKey(id)) {
+              lineWords.add(allWordsMap[id]!);
+            }
+          }
           if (lineWords.isEmpty) continue;
+
           Map<String, List<WordData>> ayahSegments = {};
           for (final word in lineWords) {
             final key = '${word.surah}:${word.ayah}';
-            if (!ayahSegments.containsKey(key)) {
-              ayahSegments[key] = [];
-            }
-            ayahSegments[key]!.add(word);
+            ayahSegments.putIfAbsent(key, () => []).add(word);
           }
+
           line = MushafPageLine(
             lineNumber: layout.lineNumber,
             lineType: layout.lineType,
@@ -594,85 +747,35 @@ class QuranService {
             lastWordId: layout.lastWordId,
             ayahSegments: ayahSegments.entries.map((entry) {
               final parts = entry.key.split(':');
+              final surahId = int.parse(parts[0]);
+              final ayahNum = int.parse(parts[1]);
+              final totalWords =
+                  maxWordPerAyah[entry.key] ?? entry.value.last.wordNumber;
+
               return AyahSegment(
-                surahId: int.parse(parts[0]),
-                ayahNumber: int.parse(parts[1]),
+                surahId: surahId,
+                ayahNumber: ayahNum,
                 words: entry.value,
                 isStartOfAyah: entry.value.first.wordNumber == 1,
-                isEndOfAyah: false,
+                isEndOfAyah: entry.value.last.wordNumber == totalWords,
               );
             }).toList(),
           );
           break;
-        default:
-          continue;
       }
-      pageLines.add(line);
+      if (line != null) pageLines.add(line);
     }
-    for (final line in pageLines) {
-      if (line.ayahSegments != null) {
-        for (final segment in line.ayahSegments!) {
-          final totalWordsInAyah = await _getTotalWordsInAyah(
-            segment.surahId,
-            segment.ayahNumber,
-            isQuranMode: true,
-          );
-          if (segment.words.isNotEmpty &&
-              segment.words.last.wordNumber == totalWordsInAyah) {
-            segment.isEndOfAyah = true;
-          }
-        }
-      }
-    }
-    // ✅ OPTIMIZED: LRU cache implementation
-    // ✅ ULTIMATE: Smart cache with distance-based eviction
+
+    // ✅ Cache result
     _updateCacheAccess(pageNumber);
     _pageCache[pageNumber] = pageLines;
 
-    // ✅ SMART EVICTION: Only evict when cache is VERY full
-    if (_pageCache.length > cacheEvictionThreshold) {
-      // ✅ NEW: Evict pages FAR from current position (not just LRU)
-      final currentPage = _getCurrentVisiblePage();
-
-      // Find pages far from current (distance > 100)
-      final distantPages = _cacheAccessOrder
-          .where((p) => (p - currentPage).abs() > 100)
-          .toList();
-
-      if (distantPages.isNotEmpty) {
-        // Evict oldest distant page
-        final pageToEvict = distantPages.first;
-        _cacheAccessOrder.remove(pageToEvict);
-        _pageCache.remove(pageToEvict);
-
-        if (_pageCache.length % 50 == 0) {
-          print(
-            'MUSHAF_CACHE: Smart evicted page $pageToEvict (distance: ${(pageToEvict - currentPage).abs()})',
-          );
-        }
-      } else {
-        // Fallback to LRU if no distant pages
-        final lruPage = _cacheAccessOrder.removeAt(0);
-        _pageCache.remove(lruPage);
-
-        // ✅ Reduce log spam
-        if (_pageCache.length % 50 == 0) {
-          print(
-            'MUSHAF_CACHE: Evicted LRU page $lruPage (cache size: ${_pageCache.length})',
-          );
-        }
-      }
-    }
-    // ✅ Reduce log spam - only log every 10th page or first 20 pages
-    if (pageNumber <= 20 ||
-        pageNumber % 10 == 0 ||
-        _pageCache.length % 10 == 0) {
+    if (pageNumber <= 20 || pageNumber % 50 == 0) {
       print(
-        'MUSHAF_LINES: Processed ${pageLines.length} lines (cache: ${_pageCache.length}/$quranServiceCacheSize)',
+        'MUSHAF_LINES: Page $pageNumber loaded (${pageLines.length} lines, cache: ${_pageCache.length})',
       );
     }
 
-    // ✅ CRITICAL: Return cached data (already in cache now)
     return pageLines;
   }
 

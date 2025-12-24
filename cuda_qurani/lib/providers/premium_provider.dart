@@ -139,11 +139,32 @@ class PremiumProvider extends ChangeNotifier {
     return premiumOnlyFeatures.contains(feature);
   }
 
-  /// Manually set plan (for testing/admin purposes)
-  void setPlan(String newPlan) {
+  /// ✅ FIXED: Set plan and PERSIST to Supabase database
+  /// Called after successful transaction to update both local state AND database
+  Future<void> setPlan(String newPlan) async {
     _plan = newPlan;
     notifyListeners();
-    print('✅ Premium: Plan manually set to: $_plan');
+    print('✅ Premium: Plan set locally to: $_plan');
+
+    // ✅ CRITICAL: Also persist to Supabase database
+    final userId = _authService.userId;
+    if (userId != null) {
+      final success = await _supabaseService.updateUserSubscriptionPlan(
+        userId,
+        newPlan,
+      );
+      if (success) {
+        print('✅ Premium: Plan persisted to Supabase: $newPlan');
+      } else {
+        print(
+          '⚠️ Premium: Failed to persist plan to Supabase, but local state updated',
+        );
+        // Local state is updated, so UI will show premium
+        // On app restart, it will try to reload from database
+      }
+    } else {
+      print('⚠️ Premium: No userId, plan not persisted to database');
+    }
   }
 
   /// Refresh plan from database

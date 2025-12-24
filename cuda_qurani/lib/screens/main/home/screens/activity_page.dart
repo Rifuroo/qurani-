@@ -49,10 +49,11 @@ class _ActivityPageState extends State<ActivityPage> {
   static Map<String, dynamic>? _cache;
   static DateTime? _cacheTime;
 
-  // Filter states
+  // Filter states - each chart has independent timeframe
   String _globalFilter = 'day';
   String _pagesTimeframe = 'day';
   String _engagementTimeframe = 'day';
+  String _accuracyTimeframe = 'day'; // ✅ NEW: Separate timeframe for accuracy
   String _statisticsTimeframe = 'THIS DAY';
 
   final List<String> _timeframeOptions = ['day', 'week', 'month'];
@@ -192,7 +193,9 @@ class _ActivityPageState extends State<ActivityPage> {
   List<FlSpot> _getAccuracyChartData() {
     if (_activityData == null) return [const FlSpot(0, 0)];
 
-    final chartKey = _getAccuracyChartKey(_engagementTimeframe);
+    final chartKey = _getAccuracyChartKey(
+      _accuracyTimeframe,
+    ); // ✅ Use own timeframe
     final chartData = _activityData![chartKey] as List? ?? [];
     if (chartData.isEmpty) return [const FlSpot(0, 0)];
 
@@ -207,7 +210,9 @@ class _ActivityPageState extends State<ActivityPage> {
   List<String> _getAccuracyXLabels() {
     if (_activityData == null) return [''];
 
-    final chartKey = _getAccuracyChartKey(_engagementTimeframe);
+    final chartKey = _getAccuracyChartKey(
+      _accuracyTimeframe,
+    ); // ✅ Use own timeframe
     final chartData = _activityData![chartKey] as List? ?? [];
     if (chartData.isEmpty) return [''];
 
@@ -220,12 +225,26 @@ class _ActivityPageState extends State<ActivityPage> {
     return 100.0; // Accuracy is always 0-100%
   }
 
-  // Get pages chart data (currently only day view available)
+  // ✅ NEW: Get pages chart key based on timeframe
+  String _getPagesChartKey(String timeframe) {
+    switch (timeframe) {
+      case 'day':
+        return 'pages_day';
+      case 'week':
+        return 'pages_week';
+      case 'month':
+        return 'pages_month';
+      default:
+        return 'pages_day';
+    }
+  }
+
+  // Get pages chart data based on selected timeframe
   List<FlSpot> _getPagesChartData() {
     if (_activityData == null) return [const FlSpot(0, 0)];
 
-    // For now, pages only has day view from database
-    final pagesData = _activityData!['pages_day'] as List? ?? [];
+    final chartKey = _getPagesChartKey(_pagesTimeframe); // ✅ Use timeframe
+    final pagesData = _activityData![chartKey] as List? ?? [];
     if (pagesData.isEmpty) return [const FlSpot(0, 0)];
 
     final spots = <FlSpot>[];
@@ -239,7 +258,8 @@ class _ActivityPageState extends State<ActivityPage> {
   List<String> _getPagesXLabels() {
     if (_activityData == null) return [''];
 
-    final pagesData = _activityData!['pages_day'] as List? ?? [];
+    final chartKey = _getPagesChartKey(_pagesTimeframe); // ✅ Use timeframe
+    final pagesData = _activityData![chartKey] as List? ?? [];
     if (pagesData.isEmpty) return [''];
 
     return pagesData.map((d) {
@@ -437,11 +457,17 @@ class _ActivityPageState extends State<ActivityPage> {
       _globalFilter = newValue;
       _pagesTimeframe = newValue;
       _engagementTimeframe = newValue;
+      _accuracyTimeframe = newValue; // ✅ Update all charts
       _statisticsTimeframe = _mapGlobalToStatTab(newValue);
     });
   }
 
-  void _changeTimeframe(String currentTimeframe, bool isNext, bool isPages) {
+  // ✅ REFACTORED: Support 3 chart types: 'pages', 'engagement', 'accuracy'
+  void _changeTimeframe(
+    String currentTimeframe,
+    bool isNext,
+    String chartType,
+  ) {
     final currentIndex = _timeframeOptions.indexOf(currentTimeframe);
     int newIndex = isNext
         ? (currentIndex + 1) % _timeframeOptions.length
@@ -450,12 +476,20 @@ class _ActivityPageState extends State<ActivityPage> {
 
     AppHaptics.light();
     setState(() {
-      if (isPages) {
-        _pagesTimeframe = _timeframeOptions[newIndex];
-      } else {
-        _engagementTimeframe = _timeframeOptions[newIndex];
+      switch (chartType) {
+        case 'pages':
+          _pagesTimeframe = _timeframeOptions[newIndex];
+          break;
+        case 'engagement':
+          _engagementTimeframe = _timeframeOptions[newIndex];
+          break;
+        case 'accuracy':
+          _accuracyTimeframe = _timeframeOptions[newIndex];
+          break;
       }
-      if (_pagesTimeframe == _engagementTimeframe) {
+      // Update global filter only if all match
+      if (_pagesTimeframe == _engagementTimeframe &&
+          _engagementTimeframe == _accuracyTimeframe) {
         _globalFilter = _pagesTimeframe;
         _statisticsTimeframe = _mapGlobalToStatTab(_pagesTimeframe);
       }
@@ -727,7 +761,7 @@ class _ActivityPageState extends State<ActivityPage> {
                   letterSpacing: -0.3,
                 ),
               ),
-              _buildTimeframeSelector(_pagesTimeframe, true, context),
+              _buildTimeframeSelector(_pagesTimeframe, 'pages', context),
             ],
           ),
         ),
@@ -785,7 +819,11 @@ class _ActivityPageState extends State<ActivityPage> {
                   letterSpacing: -0.3,
                 ),
               ),
-              _buildTimeframeSelector(_engagementTimeframe, false, context),
+              _buildTimeframeSelector(
+                _engagementTimeframe,
+                'engagement',
+                context,
+              ),
             ],
           ),
         ),
@@ -843,7 +881,7 @@ class _ActivityPageState extends State<ActivityPage> {
                   letterSpacing: -0.3,
                 ),
               ),
-              _buildTimeframeSelector(_engagementTimeframe, false, context),
+              _buildTimeframeSelector(_accuracyTimeframe, 'accuracy', context),
             ],
           ),
         ),
@@ -1012,7 +1050,7 @@ class _ActivityPageState extends State<ActivityPage> {
 
   Widget _buildTimeframeSelector(
     String current,
-    bool isPages,
+    String chartType, // ✅ Changed from bool isPages
     BuildContext context,
   ) {
     final s = AppDesignSystem.getScaleFactor(context);
@@ -1020,7 +1058,7 @@ class _ActivityPageState extends State<ActivityPage> {
       children: [
         _buildSelectorButton(
           Icons.chevron_left,
-          () => _changeTimeframe(current, false, isPages),
+          () => _changeTimeframe(current, false, chartType),
           context,
         ),
         SizedBox(width: 10 * s),
@@ -1035,7 +1073,7 @@ class _ActivityPageState extends State<ActivityPage> {
         SizedBox(width: 10 * s),
         _buildSelectorButton(
           Icons.chevron_right,
-          () => _changeTimeframe(current, true, isPages),
+          () => _changeTimeframe(current, true, chartType),
           context,
         ),
       ],
