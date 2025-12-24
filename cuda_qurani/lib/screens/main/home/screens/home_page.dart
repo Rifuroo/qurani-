@@ -1,4 +1,4 @@
-// lib/screens/main/home/screens/home_page.dart
+  // lib/screens/main/home/screens/home_page.dart
 
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
@@ -162,6 +162,9 @@ class _HomePageState extends State<HomePage> {
 
   /// Load latest resumable session from backend
   Future<void> _loadLatestSession() async {
+    // ✅ FIX: Wait for auth state to propagate (same as _loadHomePageData)
+    await Future.delayed(const Duration(milliseconds: 100));
+
     if (!_authService.isAuthenticated) {
       if (mounted) setState(() => _isLoadingSession = false);
       return;
