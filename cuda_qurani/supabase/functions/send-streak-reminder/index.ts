@@ -36,11 +36,34 @@ serve(async (req) => {
         const userIds = incompleteGoals.map((g: any) => g.user_id);
         console.log(`📝 Found ${userIds.length} users with incomplete goals.`);
 
-        // 2. Ambil FCM tokens untuk user-user tersebut (notification_enabled = true atau NULL)
+        // 2. Cek subscription: hanya user premium yang dapat notifikasi
+        const { data: premiumUsers, error: subError } = await supabase
+            .from('subscriptions')
+            .select('user_id')
+            .in('user_id', userIds)
+            .neq('plan', 'free')
+            .eq('status', 'active')
+
+        if (subError) {
+            console.error("❌ Error fetching subscriptions:", subError);
+            throw subError;
+        }
+
+        if (!premiumUsers || premiumUsers.length === 0) {
+            console.log("⚠️ No premium users with incomplete goals.");
+            return new Response(JSON.stringify({ message: "No premium users to notify" }), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
+        const premiumUserIds = premiumUsers.map((s: any) => s.user_id);
+        console.log(`👑 Found ${premiumUserIds.length} premium users.`);
+
+        // 3. Ambil FCM tokens untuk user premium (notification_enabled = true atau NULL)
         const { data: tokens, error: tokenError } = await supabase
             .from('user_fcm_tokens')
             .select('fcm_token, language_code, user_id, notification_enabled')
-            .in('user_id', userIds)
+            .in('user_id', premiumUserIds)
             .neq('notification_enabled', false)
 
         if (tokenError) {
@@ -49,7 +72,7 @@ serve(async (req) => {
         }
 
         if (!tokens || tokens.length === 0) {
-            console.log("⚠️ Found users but no FCM tokens registered.");
+            console.log("⚠️ Found premium users but no FCM tokens registered.");
             return new Response(JSON.stringify({ message: "No tokens found" }), {
                 headers: { "Content-Type": "application/json" }
             });

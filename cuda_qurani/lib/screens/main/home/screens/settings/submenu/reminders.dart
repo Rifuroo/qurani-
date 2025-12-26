@@ -101,56 +101,16 @@ class _RemindersPageState extends State<RemindersPage> {
 
               SizedBox(height: AppDesignSystem.space16 * s * 0.9),
 
-              // Info text and Allow button
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _translations.isNotEmpty 
-                      ? LanguageHelper.tr(_translations, 'streak_reminder_desc')
-                      : 'Please allow notifications in your device settings to receive reminders.',
-                      style: TextStyle(
-                        fontSize: 14 * s * 0.9,
-                        fontWeight: AppTypography.regular,
-                        color: AppColors.getError(context),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: AppDesignSystem.space12 * s * 0.9),
-                  // Allow button
-                  ElevatedButton(
-                    onPressed: () async {
-                      AppHaptics.selection();
-                      final granted = await context.read<ReminderProvider>().requestPermissions();
-                      if (granted && mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Notifikasi diaktifkan!')),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.getTextPrimary(context),
-                      foregroundColor: AppColors.getTextInverse(context),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppDesignSystem.space20 * s * 1.5,
-                        vertical: AppDesignSystem.space10 * s * 0.8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppDesignSystem.radiusMedium * s * 1.5),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      _translations.isNotEmpty 
-                      ? LanguageHelper.tr(_translations, 'allow_text')
-                      : 'Allow',
-                      style: TextStyle(
-                        fontSize: 14 * s * 0.9,
-                        fontWeight: AppTypography.semiBold,
-                      ),
-                    ),
-                  ),
-                ],
+              // Info text (tanpa tombol Allow)
+              Text(
+                _translations.isNotEmpty 
+                ? LanguageHelper.tr(_translations, 'streak_reminder_desc')
+                : 'Please allow notifications in your device settings to receive reminders.',
+                style: TextStyle(
+                  fontSize: 14 * s * 0.9,
+                  fontWeight: AppTypography.regular,
+                  color: AppColors.getError(context),
+                ),
               ),
             ],
           ),

@@ -51,10 +51,22 @@ class ReminderProvider extends ChangeNotifier {
 
       print('🔄 Syncing FCM Token for user ${user.id} (Lang: $languageCode, Enabled: $notificationEnabled)...');
 
+      final deviceType = defaultTargetPlatform == TargetPlatform.android ? 'android' : 'ios';
+
+      // Hapus token lama untuk user yang sama (kecuali token saat ini)
+      // Ini mencegah duplikat token saat user reinstall/clear data
+      await Supabase.instance.client
+          .from('user_fcm_tokens')
+          .delete()
+          .eq('user_id', user.id)
+          .neq('fcm_token', token);
+      
+      print('🧹 Cleaned up old tokens for user ${user.id}');
+
       final data = <String, dynamic>{
         'user_id': user.id,
         'fcm_token': token,
-        'device_type': defaultTargetPlatform == TargetPlatform.android ? 'android' : 'ios',
+        'device_type': deviceType,
         'updated_at': DateTime.now().toIso8601String(),
       };
       
