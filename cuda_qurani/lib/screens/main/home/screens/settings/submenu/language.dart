@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/core/services/language_service.dart';
+import 'package:cuda_qurani/providers/reminder_provider.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
 
 /// ==================== LANGUAGE SETTINGS PAGE ====================
@@ -104,6 +105,10 @@ class _LanguagePageState extends State<LanguagePage> {
     Navigator.pop(context);
 
     if (success) {
+      // Sync FCM token with new language preference
+      final reminderProvider = Provider.of<ReminderProvider>(context, listen: false);
+      await reminderProvider.syncLanguagePreference(language.code);
+      
       // Restart app untuk apply bahasa baru
       await provider.restartApp(context);
     }

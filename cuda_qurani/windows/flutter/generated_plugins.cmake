@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
+  firebase_core
   flutter_localization
   permission_handler_windows
   record_windows

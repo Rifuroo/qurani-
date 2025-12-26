@@ -1,4 +1,3 @@
-// lib/screens/main/home/screens/settings/submenu/reminders.dart
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +5,7 @@ import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
 import 'package:cuda_qurani/providers/premium_provider.dart';
 import 'package:cuda_qurani/models/premium_features.dart';
+import 'package:cuda_qurani/providers/reminder_provider.dart';
 import 'package:cuda_qurani/core/widgets/premium_dialog.dart';
 
 /// ==================== REMINDERS SETTINGS PAGE ====================
@@ -34,17 +34,9 @@ class _RemindersPageState extends State<RemindersPage> {
       _translations = trans;
     });
   }
-  // Default state untuk streak reminder (dummy state)
-  bool _streakReminderEnabled = false;
-
   void _toggleStreakReminder(bool value) {
-    setState(() {
-      _streakReminderEnabled = value;
-    });
+    context.read<ReminderProvider>().toggleStreakReminder(value);
     AppHaptics.selection();
-    
-    // TODO: Implement reminder toggle logic
-    // Example: Save to SharedPreferences or update via Provider
   }
 
   @override
@@ -93,11 +85,15 @@ class _RemindersPageState extends State<RemindersPage> {
                       ),
                     ),
                     // 🔒 PREMIUM GATED
-                    _buildPremiumSwitch(
-                      context,
-                      feature: PremiumFeature.notifications,
-                      value: _streakReminderEnabled,
-                      onChanged: _toggleStreakReminder,
+                    Consumer<ReminderProvider>(
+                      builder: (context, reminderProvider, child) {
+                        return _buildPremiumSwitch(
+                          context,
+                          feature: PremiumFeature.notifications,
+                          value: reminderProvider.streakReminderEnabled,
+                          onChanged: _toggleStreakReminder,
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -123,10 +119,14 @@ class _RemindersPageState extends State<RemindersPage> {
                   SizedBox(width: AppDesignSystem.space12 * s * 0.9),
                   // Allow button
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       AppHaptics.selection();
-                      // TODO: Open device notification settings
-                      // Example: AppSettings.openNotificationSettings();
+                      final granted = await context.read<ReminderProvider>().requestPermissions();
+                      if (granted && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Notifikasi diaktifkan!')),
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.getTextPrimary(context),

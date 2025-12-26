@@ -12,12 +12,14 @@ import 'package:cuda_qurani/screens/auth_wrapper.dart';
 import 'package:cuda_qurani/providers/auth_provider.dart';
 import 'package:cuda_qurani/screens/main/stt/services/quran_service.dart'; // ✅ TARTEEL: For preload
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cuda_qurani/config/app_config.dart';
 import 'package:cuda_qurani/screens/splash_screen.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/providers/premium_provider.dart';
 import 'package:cuda_qurani/providers/theme_provider.dart';
+import 'package:cuda_qurani/providers/reminder_provider.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 
 // Global flags to track initialization
@@ -29,6 +31,9 @@ bool get isAppReady => _isAppFullyInitialized;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp();
 
   // ✅ OPTIMIZATION: Only initialize critical services synchronously
   await Supabase.initialize(
@@ -139,6 +144,10 @@ class MainApp extends StatelessWidget {
         // ✅ PremiumProvider depends on AuthProvider, so initialize after
         ChangeNotifierProvider(
           create: (_) => PremiumProvider()..initialize(),
+          lazy: false,
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ReminderProvider()..initialize(),
           lazy: false,
         ),
         ChangeNotifierProvider(create: (_) => RecitationProvider(), lazy: true),
