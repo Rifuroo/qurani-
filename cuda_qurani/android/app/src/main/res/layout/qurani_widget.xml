@@ -33,14 +33,17 @@
         android:layout_below="@id/widget_logo"
         android:layout_marginTop="12dp"
         android:layout_above="@id/widget_ayah_reference"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:gravity="end"> <!-- Align children to right -->
 
         <!-- Arabic -->
         <TextView
             android:id="@+id/widget_ayah_arabic"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="end"
+            android:gravity="right" 
+            android:textDirection="rtl"
+            android:fontFamily="@font/uthmanic_hafs"
             android:text="..."
             android:textColor="#FFD700"
             android:textSize="18sp"
@@ -58,7 +61,8 @@
             android:textColor="#FFFFFF"
             android:textSize="13sp"
             android:maxLines="3"
-            android:ellipsize="end" />
+            android:ellipsize="end"
+            android:gravity="start" /> <!-- Translation stays Left -->
     </LinearLayout>
 
     <!-- Reference pojok kanan bawah -->

@@ -19,9 +19,11 @@ class QuraniWidgetProvider : HomeWidgetProvider() {
                 val surahId = widgetData.getInt("ayah_surah_id", 1)
                 val ayahNum = widgetData.getInt("ayah_number", 1)
                 
-                // Format Ayah with End Symbol (Ornate Parentheses)
+                // Format Ayah with Ornate Parentheses ﴾ ١٢٣ ﴿ (Best fallback for Widget)
                 val arabicDigits = toArabicDigits(ayahNum)
-                val formattedArabic = "$arabic \uFD3F$arabicDigits\uFD3E"
+                // Remove existing end-of-verse symbols/numbers
+                val cleanArabic = arabic?.replace(Regex("[\\u06DD\\uFD3E\\uFD3F\\d\\u0660-\\u0669]+\\s*$"), "")?.trim() ?: ""
+                val formattedArabic = "$cleanArabic \uFD3F$arabicDigits\uFD3E"
 
                 // Set text directly
                 setTextViewText(R.id.widget_ayah_arabic, formattedArabic)
