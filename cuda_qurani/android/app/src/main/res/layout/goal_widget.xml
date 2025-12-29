@@ -19,7 +19,6 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Target Harian"
             android:textColor="#FFFFFF"
             android:textSize="13sp"
             android:textStyle="bold" />
@@ -28,7 +27,6 @@
             android:id="@+id/widget_goal_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0/10 Ayat"
             android:textColor="#FFD700"
             android:textSize="12sp"
             android:textStyle="bold" />

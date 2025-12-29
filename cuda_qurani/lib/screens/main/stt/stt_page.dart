@@ -24,6 +24,7 @@ class SttPage extends StatefulWidget {
   final bool isFromHistory;
   final Map<String, dynamic>? initialWordStatusMap;
   final String? resumeSessionId; // ✅ NEW: Continue existing session
+  final int? highlightAyahId; // ✅ NEW: Deep link highlight
 
   const SttPage({
     Key? key,
@@ -33,6 +34,7 @@ class SttPage extends StatefulWidget {
     this.isFromHistory = false,
     this.initialWordStatusMap,
     this.resumeSessionId, // ✅ NEW
+    this.highlightAyahId, // ✅ NEW: Deep link highlight
   }) : assert(
          (suratId != null ? 1 : 0) +
                  (pageId != null ? 1 : 0) +
@@ -80,6 +82,7 @@ class _SttPageState extends State<SttPage> {
               isFromHistory: widget.isFromHistory,
               initialWordStatusMap: widget.initialWordStatusMap,
               resumeSessionId: widget.resumeSessionId, // ✅ NEW
+              highlightAyahId: widget.highlightAyahId, // ✅ NEW
             );
 
             // ✅ NEW: Set PremiumProvider for word color gating

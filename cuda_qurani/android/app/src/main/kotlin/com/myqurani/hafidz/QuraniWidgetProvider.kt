@@ -16,6 +16,7 @@ class QuraniWidgetProvider : HomeWidgetProvider() {
                 val arabic = widgetData.getString("ayah_arabic", "Loading...")
                 val translation = widgetData.getString("ayah_translation", "Tap to refresh")
                 val reference = widgetData.getString("ayah_reference", "")
+                val titleText = widgetData.getString("ayah_title_text", "Ayah of the Day") // Localized title
                 val surahId = widgetData.getInt("ayah_surah_id", 1)
                 val ayahNum = widgetData.getInt("ayah_number", 1)
                 
@@ -24,8 +25,9 @@ class QuraniWidgetProvider : HomeWidgetProvider() {
                 // Remove existing end-of-verse symbols/numbers
                 val cleanArabic = arabic?.replace(Regex("[\\u06DD\\uFD3E\\uFD3F\\d\\u0660-\\u0669]+\\s*$"), "")?.trim() ?: ""
                 val formattedArabic = "$cleanArabic \uFD3F$arabicDigits\uFD3E"
-
+                
                 // Set text directly
+                setTextViewText(R.id.widget_title, titleText)
                 setTextViewText(R.id.widget_ayah_arabic, formattedArabic)
                 setTextViewText(R.id.widget_ayah_translation, translation)
                 setTextViewText(R.id.widget_ayah_reference, reference)

@@ -6,6 +6,8 @@ import 'package:cuda_qurani/services/widget_service.dart';
 import 'package:cuda_qurani/services/daily_ayah_service.dart';
 import 'package:flutter/material.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:home_widget/home_widget.dart'; // ✅ NEW
+import 'package:cuda_qurani/screens/main/stt/stt_page.dart'; // ✅ NEW
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -296,9 +298,41 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
 
     if (!mounted) return;
 
+    // ✅ CHECK FOR DEEP LINK FROM WIDGET
+    int? targetPage;
+    int? deepLinkAyahNum;
+    
+    try {
+      // Check if DB is ready (max 3 seconds wait if needed)
+      if (!context.isDatabaseReady) {
+        int dbAttempts = 0;
+        while (!context.isDatabaseReady && dbAttempts < 30) {
+           await Future.delayed(const Duration(milliseconds: 100));
+           dbAttempts++;
+        }
+      }
+
+      final Uri? widgetUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
+      if (widgetUri != null && widgetUri.scheme == 'qurani' && widgetUri.host == 'ayah') {
+        final segments = widgetUri.pathSegments; // Expected: [surahId, ayahNum]
+        if (segments.length >= 2) {
+          final surahId = int.tryParse(segments[0]);
+          final ayahNum = int.tryParse(segments[1]);
+          
+          if (surahId != null && ayahNum != null) {
+            targetPage = await LocalDatabaseService.getPageNumber(surahId, ayahNum);
+            deepLinkAyahNum = ayahNum;
+            print('🔗 Deep Link Detected: Surah $surahId:$ayahNum -> Page $targetPage');
+          }
+        }
+      }
+    } catch (e) {
+      print('⚠️ Deep Link Error: $e');
+    }
+
     print('🚀 Navigating to AuthWrapper...');
     // Navigate to AuthWrapper
-    Navigator.of(context).pushReplacement(
+    await Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             const AuthWrapper(),
@@ -309,6 +343,19 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
         },
       ),
     );
+    
+    // ✅ NAVIGATE TO DEEP LINK TARGET IF EXISTS
+    if (targetPage != null && mounted) {
+      // Push SttPage on top of AuthWrapper
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SttPage(
+            pageId: targetPage,
+            highlightAyahId: deepLinkAyahNum,
+          ),
+        ),
+      );
+    }
   }
 
   /// ✅ TARTEEL-STYLE: Preload all 604 pages in background

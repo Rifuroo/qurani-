@@ -201,10 +201,25 @@ class _HomePageState extends State<HomePage> {
         
         // ✅ SYNC WITH HOME SCREEN WIDGET
         if (_hasGoal) {
+          final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+          final lang = languageProvider.currentLanguageCode;
+          
+          String title = 'Daily Goal';
+          String unit = 'Verses';
+          if (lang == 'id') {
+            title = 'Target Harian';
+            unit = 'Ayat';
+          } else if (lang == 'ar') {
+            title = 'الهدف اليومي';
+            unit = 'آيات';
+          }
+          
           WidgetService.updateGoalWidget(
             current: _goalCurrent,
             target: _goalTarget,
             goalType: _goalType,
+            titleText: title,
+            progressText: "$_goalCurrent/$_goalTarget $unit",
           );
         }
 

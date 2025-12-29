@@ -8,6 +8,9 @@ import 'package:cuda_qurani/core/services/language_service.dart';
 import 'package:cuda_qurani/providers/reminder_provider.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
 import 'package:cuda_qurani/services/daily_ayah_service.dart';
+import 'package:cuda_qurani/services/widget_service.dart'; // ✅ NEW
+import 'package:cuda_qurani/services/supabase_service.dart'; // ✅ NEW
+import 'package:cuda_qurani/providers/auth_provider.dart'; // ✅ NEW
 
 /// ==================== LANGUAGE SETTINGS PAGE ====================
 /// Halaman untuk memilih bahasa aplikasi
@@ -108,13 +111,62 @@ class _LanguagePageState extends State<LanguagePage> {
     if (success) {
       // Sync FCM token with new language preference
       final reminderProvider = Provider.of<ReminderProvider>(context, listen: false);
-      await reminderProvider.syncLanguagePreference(language.code);
-      
+      try {
+          await reminderProvider.syncLanguagePreference(language.code);
+      } catch (e) {
+          print('Error syncing language preference: $e');
+      }
+
       // Refresh widget to reflect new language
       await DailyAyahService.refreshDailyAyah();
 
+      // ✅ REFRESH GOAL WIDGET
+      try {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final userId = authProvider.currentUser?.id;
+        if (userId != null) {
+          // Fetch latest goal data
+          // We can use SupabaseService directly or just read localized strings and assume stale data?
+          // Better to fetch current goal settings.
+          final userGoal = await SupabaseService().getUserGoal(userId);
+          // userGoal: {goal_type, target_value, ...}
+          
+          if (userGoal != null) {
+             final type = userGoal['goal_type'] as String? ?? 'verses';
+             final target = userGoal['target_value'] as int? ?? 10;
+             // Progress? fetch or assume 0 if expensive?
+             // Fetch progress
+             final progressData = await SupabaseService().getDailyGoalProgress(userId);
+             final current = progressData?['progress_value'] as int? ?? 0;
+             
+             // Localize strings
+             String title = 'Daily Goal';
+             String unit = 'Verses';
+             if (language.code == 'id') {
+               title = 'Target Harian';
+               unit = 'Ayat';
+             } else if (language.code == 'ar') {
+               title = 'الهدف اليومي';
+               unit = 'آيات';
+             }
+             
+             await WidgetService.updateGoalWidget(
+               current: current,
+               target: target,
+               goalType: type,
+               titleText: title,
+               progressText: "$current/$target $unit",
+             );
+          }
+        }
+      } catch (e) {
+        print('Error updating localized goal widget: $e');
+      }
+
       // Restart app untuk apply bahasa baru
-      await provider.restartApp(context);
+      if (context.mounted) {
+         await provider.restartApp(context);
+      }
     }
   }
 

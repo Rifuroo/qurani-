@@ -109,23 +109,54 @@ class DailyAyahService {
       final verse = surah.verses.firstWhere((v) => v.number == ayahNum);
       final verseText = verse.text; // Arabic text
       
-      final surahName = metadata?['name_simple'] ?? metadata?['name'] ?? 'Surah';
+      final surahNameSimple = metadata?['name_simple'] ?? metadata?['name'] ?? 'Surah';
+      final surahNameArabic = metadata?['name_arabic'] ?? surahNameSimple;
       
+      String reference = "$surahNameSimple ($surahId:$ayahNum)";
+
+      if (languageCode == 'ar') {
+        final surahNumAr = toArabicDigits(surahId);
+        final ayahNumAr = toArabicDigits(ayahNum);
+        reference = "$surahNameArabic ($surahNumAr:$ayahNumAr)";
+      }
+
       // Determine translation text based on language setting
       // Fallback to Indonesian if key not found (as user requested "sesuai sumber")
-      String translationText = ayahData[languageCode] ?? ayahData['id'] ?? ayahData['en'];
+      String translationText = '';
+      if (languageCode == 'ar') {
+        translationText = ''; // No translation needed for Arabic
+      } else {
+        translationText = ayahData[languageCode] ?? ayahData['id'] ?? ayahData['en'];
+      }
+      
+      // Determine widget title
+      String widgetTitle = 'Ayah of the Day';
+      if (languageCode == 'id') widgetTitle = 'Ayat Hari Ini';
+      else if (languageCode == 'ar') widgetTitle = 'آية اليوم';
 
       await WidgetService.updateAyahWidget(
         arabicText: verseText,
         translationText: translationText,
-        reference: "$surahName ($surahId:$ayahNum)",
+        reference: reference,
         surahId: surahId,
         ayahNumber: ayahNum,
+        titleText: widgetTitle,
       );
       
-      print('Daily Ayah refreshed: $surahName $ayahNum');
+      print('Daily Ayah refreshed: $surahNameSimple $ayahNum');
     } catch (e) {
       print('DailyAyahService Error: $e');
     }
+  }
+
+  static String toArabicDigits(int number) {
+    const english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    
+    String str = number.toString();
+    for (int i = 0; i < english.length; i++) {
+      str = str.replaceAll(english[i], arabic[i]);
+    }
+    return str;
   }
 }

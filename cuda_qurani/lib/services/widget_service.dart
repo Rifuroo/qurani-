@@ -11,11 +11,15 @@ class WidgetService {
     required int current,
     required int target,
     String? goalType,
+    required String titleText, // "Target Harian" / "Daily Goal"
+    required String progressText, // "0/10 Ayat" / "0/10 Verses"
   }) async {
     try {
       await HomeWidget.saveWidgetData<int>('goal_current', current);
       await HomeWidget.saveWidgetData<int>('goal_target', target);
       await HomeWidget.saveWidgetData<String>('goal_type', goalType ?? 'verses');
+      await HomeWidget.saveWidgetData<String>('goal_title_text', titleText);
+      await HomeWidget.saveWidgetData<String>('goal_progress_text', progressText);
       
       await _updateWidget(androidName: androidGoalWidgetName);
     } catch (e) {
@@ -30,6 +34,7 @@ class WidgetService {
     required String reference,
     required int surahId,
     required int ayahNumber,
+    required String titleText, // "Ayah of the Day" / "Ayat Hari Ini"
   }) async {
     try {
       await HomeWidget.saveWidgetData<String>('ayah_arabic', arabicText);
@@ -37,6 +42,7 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>('ayah_reference', reference);
       await HomeWidget.saveWidgetData<int>('ayah_surah_id', surahId);
       await HomeWidget.saveWidgetData<int>('ayah_number', ayahNumber);
+      await HomeWidget.saveWidgetData<String>('ayah_title_text', titleText);
       
       await _updateWidget(androidName: androidWidgetName);
     } catch (e) {

@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import './main/auth/login/login_page.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
+import 'package:home_widget/home_widget.dart'; // ✅ NEW
+import 'package:cuda_qurani/screens/main/stt/stt_page.dart'; // ✅ NEW
+import 'package:cuda_qurani/services/local_database_service.dart'; // ✅ NEW
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -14,15 +17,44 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   @override
+  void initState() {
+    super.initState();
+    // ✅ Listen for widget clicks when app is running
+    HomeWidget.widgetClicked.listen(_handleDeepLink);
+  }
+
+  Future<void> _handleDeepLink(Uri? uri) async {
+    if (uri != null && uri.scheme == 'qurani' && uri.host == 'ayah') {
+      try {
+        final segments = uri.pathSegments; // Expected: [surahId, ayahNum]
+        if (segments.length >= 2) {
+          final surahId = int.tryParse(segments[0]);
+          final ayahNum = int.tryParse(segments[1]);
+          
+          if (surahId != null && ayahNum != null) {
+            final pageId = await LocalDatabaseService.getPageNumber(surahId, ayahNum);
+             if (mounted) {
+               Navigator.of(context).push(
+                 MaterialPageRoute(
+                   builder: (_) => SttPage(
+                     pageId: pageId,
+                     highlightAyahId: ayahNum, // highlightAyahId for scrolling
+                   ),
+                 ),
+               );
+             }
+          }
+        }
+      } catch (e) {
+        print('Deep link error: $e');
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
-        // 🔍 DEBUG: Log auth state
-        print('🎯 AuthWrapper: Building...');
-        print('   - isLoading: ${auth.isLoading}');
-        print('   - isAuthenticated: ${auth.isAuthenticated}');
-        print('   - currentUser: ${auth.currentUser?.email ?? "null"}');
-
         // ✅ Show loading screen while AuthProvider is initializing
         if (auth.isLoading) {
           print('   → Showing LOADING screen');
@@ -54,8 +86,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         // Authenticated -> Home
         if (auth.isAuthenticated) {
-          // ✅ PremiumProvider now auto-refreshes via auth state listener
-          // No need for manual refresh here
           print('   → Navigating to HOME');
           return const HomePage();
         }

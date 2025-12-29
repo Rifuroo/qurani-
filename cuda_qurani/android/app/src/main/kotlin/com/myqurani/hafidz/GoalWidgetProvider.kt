@@ -13,12 +13,15 @@ class GoalWidgetProvider : HomeWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.goal_widget).apply {
                 val current = widgetData.getInt("goal_current", 0)
                 val target = widgetData.getInt("goal_target", 10)
+                val titleText = widgetData.getString("goal_title_text", "Target Harian")
+                val progressText = widgetData.getString("goal_progress_text", "$current/$target Ayat")
                 
                 val safeTarget = if (target > 0) target else 1
                 val progress = (current.toFloat() / safeTarget.toFloat() * 100).toInt()
 
                 setProgressBar(R.id.widget_goal_progress, 100, progress, false)
-                setTextViewText(R.id.widget_goal_text, "$current/$target Ayat")
+                setTextViewText(R.id.widget_goal_title, titleText)
+                setTextViewText(R.id.widget_goal_text, progressText)
 
                 // Open App on Click
                 val pendingIntent = HomeWidgetLaunchIntent.getActivity(context, MainActivity::class.java)

@@ -42,6 +42,9 @@ class SttController with ChangeNotifier {
 
   MushafLayout _mushafLayout = MushafLayout.qpc;
   MushafLayout get mushafLayout => _mushafLayout;
+  
+  // ✅ NEW: Highlight specific ayah (from deep link)
+  final int? highlightAyahId;
 
   // ✅ TAMBAHKAN getter untuk total pages (dynamic based on layout)
   int get totalPages => _mushafLayout.totalPages;
@@ -53,6 +56,7 @@ class SttController with ChangeNotifier {
     this.isFromHistory = false,
     this.initialWordStatusMap,
     this.resumeSessionId, // ? NEW
+    this.highlightAyahId, // ✅ NEW
   }) {
     print(
       '🗃️ SttController: CONSTRUCTOR - surah:$suratId page:$pageId juz:$juzId',
@@ -430,6 +434,15 @@ class SttController with ChangeNotifier {
 
       // 🚀 STEP 2: Load ONLY that page (minimal data)
       await _loadSinglePageData(targetPage);
+
+      // ✅ NEW: Highlight specific ayah if requested (Deep Link)
+      if (highlightAyahId != null) {
+        final index = _currentPageAyats.indexWhere((a) => a.ayah == highlightAyahId);
+        if (index != -1) {
+          _currentAyatIndex = index;
+          appLogger.log('APP_INIT', 'Highlighting deep link ayah: $highlightAyahId (index $index)');
+        }
+      }
 
       _sessionStartTime = DateTime.now();
 
