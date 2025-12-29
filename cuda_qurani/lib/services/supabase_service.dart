@@ -430,18 +430,29 @@ class SupabaseService {
     int targetValue,
   ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$supabaseUrl/rest/v1/user_goals'),
-        headers: {..._headers, 'Prefer': 'resolution=merge-duplicates'},
-        body: jsonEncode({
-          'user_id': userId,
-          'goal_type': goalType,
-          'target_value': targetValue,
-          'is_active': true,
-        }),
-      );
+      final today = DateTime.now().toIso8601String().split('T')[0];
 
-      return response.statusCode == 200 || response.statusCode == 201;
+      // 1. Upsert Master Goal Setting
+      // Constraint: user_goals_user_id_key (user_id)
+      await Supabase.instance.client.from('user_goals').upsert({
+        'user_id': userId,
+        'goal_type': goalType,
+        'target_value': targetValue,
+        'is_active': true,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'user_id');
+
+      // 2. Upsert Today's Progress Snapshot
+      // Constraint: daily_goal_progress_user_id_goal_date_key (user_id, goal_date)
+      await Supabase.instance.client.from('daily_goal_progress').upsert({
+        'user_id': userId,
+        'goal_date': today,
+        'goal_type': goalType,
+        'target_value': targetValue,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'user_id,goal_date');
+
+      return true;
     } catch (e) {
       print('❌ Error setting user goal: $e');
       return false;

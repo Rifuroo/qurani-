@@ -11,6 +11,7 @@ import 'package:cuda_qurani/services/supabase_service.dart';
 import 'package:cuda_qurani/services/auth_service.dart';
 import 'package:cuda_qurani/screens/main/stt/stt_page.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
+import 'package:cuda_qurani/core/widgets/goal_dialog.dart'; // 🎯 NEW: Goal Setting
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/providers/premium_provider.dart'; // ✅ NEW: Premium gating
@@ -668,6 +669,31 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // ==================== GOAL SETTING ====================
+  /// Opens the goal setting dialog
+  Future<void> _showGoalDialog() async {
+    final userUuid = _authService.userId;
+    if (userUuid == null) return;
+
+    AppHaptics.medium();
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => GoalDialog(
+        initialType: _goalType,
+        initialTarget: _goalTarget,
+        userId: userUuid,
+      ),
+    );
+
+    if (result == true) {
+      // Refresh to show updated goal
+      _refreshAllData();
+    }
+  }
+
   // ==================== STREAK SECTION ====================
   Widget _buildStreakSection(BuildContext context) {
     return Column(
@@ -909,18 +935,10 @@ class _HomePageState extends State<HomePage> {
   Widget _buildTodayGoal(BuildContext context) {
     String goalIcon = '📖';
     final String goalText = _t('home.goal_text');
-    final String pageText = _t('home.page_text');
     String goalLabel = '${_t('home.verses_text')} $goalText';
-    if (_goalType == 'minutes') {
-      goalLabel = '${_t('home.time_text')} $goalText';
-      goalIcon = '⏱️';
-    } else if (_goalType == 'pages') {
-      goalLabel = '$pageText $goalText';
-      goalIcon = '📄';
-    }
 
     String progressText =
-        '${context.formatNumber(_goalCurrent)}/${context.formatNumber(_goalTarget)} ${_goalType == 'minutes' ? _t('home.session.min_text') : _goalType}';
+        '${context.formatNumber(_goalCurrent)}/${context.formatNumber(_goalTarget)} ${_t('home.$_goalType')}';
     double progressPercent = _goalTarget > 0
         ? (_goalCurrent / _goalTarget).clamp(0.0, 1.0)
         : 0.0;
@@ -942,6 +960,7 @@ class _HomePageState extends State<HomePage> {
           child: InkWell(
             onTap: () {
               AppHaptics.light();
+              _showGoalDialog();
             },
             borderRadius: BorderRadius.circular(AppDesignSystem.radiusLarge),
             splashColor: AppComponentStyles.rippleColor,

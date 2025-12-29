@@ -54,6 +54,15 @@
     "complete_sessions_to_earn_badges_text": "أكمل الجلسات للحصول على الشارات",
     "resume_session_text": "استئناف الجلسة",
     "premium_feature_text": "ميزة بريميوم",
-    "upgrade_to_premium_text": "الترقية إلى بريميوم"
+    "upgrade_to_premium_text": "الترقية إلى بريميوم",
+    "goal_type_text": "اختر نوع الهدف",
+    "target_value_text": "قيمة الهدف",
+    "save_goal_text": "حفظ الهدف",
+    "goal_saved_success_text": "تم حفظ الهدف بنجاح!",
+    "goal_save_failed_text": "فشل في حفظ الهدف",
+    "verses": "آيات",
+    "minutes": "دقائق",
+    "pages": "صفحات",
+    "pages_text": "صفحات"
   }
 }

@@ -54,6 +54,15 @@
         "complete_sessions_to_earn_badges_text": "Complete sessions to earn badges",
         "resume_session_text": "Resume Session",
         "premium_feature_text": "Premium Feature",
-        "upgrade_to_premium_text": "Upgrade to Premium"
+        "upgrade_to_premium_text": "Upgrade to Premium",
+        "goal_type_text": "Select Goal Type",
+        "target_value_text": "Target Value",
+        "save_goal_text": "Save Goal",
+        "goal_saved_success_text": "Goal saved successfully!",
+        "goal_save_failed_text": "Failed to save goal",
+        "verses": "Verses",
+        "minutes": "Minutes",
+        "pages": "Pages",
+        "pages_text": "Pages"
     }
 }
