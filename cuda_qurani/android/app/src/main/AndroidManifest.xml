@@ -47,6 +47,24 @@
             android:name="com.google.android.gms.auth.api.credentials.Workaround"
             android:value="true" />
 
+        <!-- Widget Receiver: Ayah of the Day -->
+        <receiver android:name="com.myqurani.hafidz.QuraniWidgetProvider" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/qurani_widget_info" />
+        </receiver>
+
+        <!-- Widget Receiver: Target Goal -->
+        <receiver android:name="com.myqurani.hafidz.GoalWidgetProvider" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/goal_widget_info" />
+        </receiver>
+
     </application>
 
     <!-- Needed for Process Text plugin -->

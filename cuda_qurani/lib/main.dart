@@ -2,7 +2,10 @@ import 'package:cuda_qurani/screens/main/stt/database/db_helper.dart';
 import 'package:cuda_qurani/services/local_database_service.dart';
 import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:cuda_qurani/services/reciter_database_service.dart';
+import 'package:cuda_qurani/services/widget_service.dart';
+import 'package:cuda_qurani/services/daily_ayah_service.dart';
 import 'package:flutter/material.dart';
+import 'package:workmanager/workmanager.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +31,22 @@ bool _isAppFullyInitialized = false;
 
 /// Check if app is fully initialized for heavy operations
 bool get isAppReady => _isAppFullyInitialized;
+
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    print('Workmanager: Executing task $task');
+    try {
+      // Initialize critical services for background task
+      await LocalDatabaseService.preInitialize();
+      await DailyAyahService.refreshDailyAyah();
+      return Future.value(true);
+    } catch (e) {
+      print('Workmanager: Task failed: $e');
+      return Future.value(false);
+    }
+  });
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,6 +79,23 @@ void main() async {
 Future<void> _initializeServicesInBackground() async {
   try {
     print('[STARTUP] 🚀 Starting background initialization...');
+
+    // Initialize Workmanager in background
+    Workmanager().initialize(
+      callbackDispatcher,
+      isInDebugMode: false,
+    ).then((_) {
+      // Register periodic task for widget update (every 6 hours)
+      Workmanager().registerPeriodicTask(
+        'update-widget-task',
+        'update-widget-task',
+        frequency: const Duration(hours: 6),
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+      );
+    });
+
+    // Initial trigger for widget (don't block UI)
+    DailyAyahService.refreshDailyAyah();
 
     // Initialize in parallel for better performance
     await Future.wait([

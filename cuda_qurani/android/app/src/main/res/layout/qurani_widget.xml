@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:padding="16dp">
+
+    <!-- Logo pojok kiri atas -->
+    <ImageView
+        android:id="@+id/widget_logo"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:src="@drawable/qurani_logo" />
+
+    <!-- Title pojok kanan atas -->
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="8dp"
+        android:text="Ayah of the Day"
+        android:textColor="#B3FFFFFF"
+        android:textSize="12sp" />
+
+    <!-- Container untuk konten tengah -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/widget_logo"
+        android:layout_marginTop="12dp"
+        android:layout_above="@id/widget_ayah_reference"
+        android:orientation="vertical">
+
+        <!-- Arabic -->
+        <TextView
+            android:id="@+id/widget_ayah_arabic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:text="..."
+            android:textColor="#FFD700"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:maxLines="3"
+            android:ellipsize="end" />
+
+        <!-- Translation -->
+        <TextView
+            android:id="@+id/widget_ayah_translation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="..."
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:maxLines="3"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+    <!-- Reference pojok kanan bawah -->
+    <TextView
+        android:id="@+id/widget_ayah_reference"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:text="Ref"
+        android:textColor="#B3FFFFFF"
+        android:textSize="11sp"
+        android:textStyle="italic" />
+
+</RelativeLayout>

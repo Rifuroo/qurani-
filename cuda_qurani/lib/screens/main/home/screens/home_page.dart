@@ -12,6 +12,8 @@ import 'package:cuda_qurani/services/auth_service.dart';
 import 'package:cuda_qurani/screens/main/stt/stt_page.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/core/widgets/goal_dialog.dart'; // 🎯 NEW: Goal Setting
+import 'package:cuda_qurani/services/widget_service.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/providers/premium_provider.dart'; // ✅ NEW: Premium gating
@@ -81,6 +83,52 @@ class _HomePageState extends State<HomePage> {
     _loadHomePageData();
     // ✅ FIX: Load session immediately - premium check is in UI layer
     _loadLatestSession();
+    
+    // ✅ Check for widget launch
+    _checkForWidgetLaunch();
+  }
+
+  /// Listen for widget clicks to open specific Ayah
+  Future<void> _checkForWidgetLaunch() async {
+    // Check initiallyLaunched (app start)
+    try {
+      final launchedUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
+      if (launchedUri != null) {
+        _handleDeepLink(launchedUri);
+      }
+
+      // Listen for stream (app already running)
+      HomeWidget.widgetClicked.listen((Uri? uri) {
+        if (uri != null) {
+          _handleDeepLink(uri);
+        }
+      });
+    } catch (e) {
+      print('[HOME] Widget launch error: $e');
+    }
+  }
+
+  void _handleDeepLink(Uri uri) {
+    if (uri.scheme == 'qurani' && uri.authority == 'ayah') {
+      final segments = uri.pathSegments;
+      if (segments.length >= 2) {
+        final surahId = int.tryParse(segments[0]);
+        // final ayahNum = int.tryParse(segments[1]); // Not used for now, just open Surah
+
+        if (surahId != null) {
+          print('[HOME] Deep link to Surah $surahId');
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SttPage(
+                suratId: surahId, 
+                // We could pass ayahNum to scroll there, 
+                // but SttPage constructor needs update or handle it inside
+              ),
+            ),
+          );
+        }
+      }
+    }
   }
 
   /// OPTIMIZED: Load ALL home page data in ONE call
@@ -150,6 +198,16 @@ class _HomePageState extends State<HomePage> {
             .toList();
 
         setState(() => _isLoadingStats = false);
+        
+        // ✅ SYNC WITH HOME SCREEN WIDGET
+        if (_hasGoal) {
+          WidgetService.updateGoalWidget(
+            current: _goalCurrent,
+            target: _goalTarget,
+            goalType: _goalType,
+          );
+        }
+
         print(
           '✅ HOME: Data loaded - streak: $_currentStreak, badges: $_earnedBadgesCount/$_totalBadgesCount, progress: ${_recentProgress.length} surahs',
         );

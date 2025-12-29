@@ -1,0 +1,32 @@
+package com.myqurani.hafidz
+
+import android.appwidget.AppWidgetManager
+import android.content.Context
+import android.content.SharedPreferences
+import android.widget.RemoteViews
+import es.antonborri.home_widget.HomeWidgetProvider
+import es.antonborri.home_widget.HomeWidgetLaunchIntent
+
+class GoalWidgetProvider : HomeWidgetProvider() {
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray, widgetData: SharedPreferences) {
+        for (appWidgetId in appWidgetIds) {
+            val views = RemoteViews(context.packageName, R.layout.goal_widget).apply {
+                val current = widgetData.getInt("goal_current", 0)
+                val target = widgetData.getInt("goal_target", 10)
+                
+                val safeTarget = if (target > 0) target else 1
+                val progress = (current.toFloat() / safeTarget.toFloat() * 100).toInt()
+
+                setProgressBar(R.id.widget_goal_progress, 100, progress, false)
+                setTextViewText(R.id.widget_goal_text, "$current/$target Ayat")
+
+                // Open App on Click
+                val pendingIntent = HomeWidgetLaunchIntent.getActivity(context, MainActivity::class.java)
+                setOnClickPendingIntent(R.id.widget_goal_title, pendingIntent)
+                setOnClickPendingIntent(R.id.widget_goal_text, pendingIntent)
+                setOnClickPendingIntent(R.id.widget_goal_progress, pendingIntent)
+            }
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
+    }
+}

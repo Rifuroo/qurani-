@@ -7,6 +7,7 @@ import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/core/services/language_service.dart';
 import 'package:cuda_qurani/providers/reminder_provider.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
+import 'package:cuda_qurani/services/daily_ayah_service.dart';
 
 /// ==================== LANGUAGE SETTINGS PAGE ====================
 /// Halaman untuk memilih bahasa aplikasi
@@ -109,6 +110,9 @@ class _LanguagePageState extends State<LanguagePage> {
       final reminderProvider = Provider.of<ReminderProvider>(context, listen: false);
       await reminderProvider.syncLanguagePreference(language.code);
       
+      // Refresh widget to reflect new language
+      await DailyAyahService.refreshDailyAyah();
+
       // Restart app untuk apply bahasa baru
       await provider.restartApp(context);
     }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Qurani Hafidz</string>
+    <string name="goal_widget_description">Target Harian Widget</string>
+    <string name="ayah_widget_description">Ayah of the Day Widget</string>
+</resources>

@@ -59,6 +59,10 @@ dependencies:
   sqflite_common_ffi: ^2.3.6
   supabase: ^2.10.0
   supabase_flutter: ^2.10.3 
+  
+  # Home Widget
+  home_widget: ^0.8.1
+  workmanager: ^0.9.0
 
   dio: ^5.9.0
   restart_app: ^1.3.2

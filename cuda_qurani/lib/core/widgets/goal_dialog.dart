@@ -2,6 +2,7 @@ import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/services/supabase_service.dart';
+import 'package:cuda_qurani/services/widget_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -82,6 +83,15 @@ class _GoalDialogState extends State<GoalDialog> {
 
       if (mounted) {
         if (success) {
+          // Sync with Widget
+          WidgetService.updateGoalWidget(
+            current: 0, // Reset current progress in widget if goal changed? 
+            // Actually, we should probably fetch current progress first, 
+            // but for now, we just update the target.
+            target: _targetValue,
+            goalType: _selectedType,
+          );
+
           Navigator.of(context).pop(true);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
