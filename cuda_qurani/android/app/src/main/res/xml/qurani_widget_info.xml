@@ -7,6 +7,7 @@
     android:updatePeriodMillis="21600000"
     android:description="@string/ayah_widget_description"
     android:previewImage="@drawable/preview_qurani_widget"
+    android:previewLayout="@layout/preview_qurani_widget_layout"
     android:initialLayout="@layout/qurani_widget"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen">

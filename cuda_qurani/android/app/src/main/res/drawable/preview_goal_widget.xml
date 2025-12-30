@@ -1,47 +1,30 @@
-<?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Background dengan gradient hijau -->
-    <item>
-        <shape>
-            <gradient
-                android:angle="315"
-                android:startColor="#247C64"
-                android:endColor="#1B5E20"
-                android:type="linear" />
-            <corners android:radius="16dp" />
-            <stroke android:width="1dp" android:color="#2D9A7E" />
-        </shape>
-    </item>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="180dp"
+    android:height="60dp"
+    android:viewportWidth="180"
+    android:viewportHeight="60">
+    <!-- Background -->
+    <path
+        android:fillColor="#247C64"
+        android:pathData="M15,0 L165,0 C173.3,0 180,6.7 180,15 L180,45 C180,53.3 173.3,60 165,60 L15,60 C6.7,60 0,53.3 0,45 L0,15 C0,6.7 6.7,0 15,0 Z" />
     
-    <!-- Simulasi teks "Target Harian" (kiri atas) -->
-    <item android:top="16dp" android:left="16dp" android:right="140dp" android:bottom="50dp">
-        <shape android:shape="rectangle">
-            <solid android:color="#FFFFFF" />
-            <corners android:radius="2dp" />
-        </shape>
-    </item>
-
-    <!-- Simulasi teks "0/10 Ayat" (kanan atas, warna gold) -->
-    <item android:top="16dp" android:left="160dp" android:right="16dp" android:bottom="50dp">
-        <shape android:shape="rectangle">
-            <solid android:color="#FFD700" />
-            <corners android:radius="2dp" />
-        </shape>
-    </item>
-
-    <!-- Progress Bar Track (abu-abu transparan) -->
-    <item android:top="42dp" android:left="16dp" android:right="16dp" android:bottom="22dp">
-        <shape android:shape="rectangle">
-            <solid android:color="#40FFFFFF" />
-            <corners android:radius="3dp" />
-        </shape>
-    </item>
+    <!-- Title Simulation (Fine Lines) -->
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M15,18 L35,18 L35,22 L15,22 Z M40,18 L70,18 L70,22 L40,22 Z" />
     
-    <!-- Progress Bar Fill (gold, 30% dari lebar) -->
-    <item android:top="42dp" android:left="16dp" android:right="180dp" android:bottom="22dp">
-        <shape android:shape="rectangle">
-            <solid android:color="#FFD700" />
-            <corners android:radius="3dp" />
-        </shape>
-    </item>
-</layer-list>
+    <!-- Count Simulation (Gold) -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M135,18 L145,18 L145,22 L135,22 Z M150,18 L165,18 L165,22 L150,22 Z" />
+    
+    <!-- Progress Track -->
+    <path
+        android:fillColor="#33FFFFFF"
+        android:pathData="M15,42 L165,42 L165,46 L15,46 Z" />
+    
+    <!-- Progress Fill -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M15,42 L110,42 L110,46 L15,46 Z" />
+</vector>

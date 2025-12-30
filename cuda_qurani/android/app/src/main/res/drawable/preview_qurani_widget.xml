@@ -1,66 +1,36 @@
-<?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Background dengan gradient hijau -->
-    <item>
-        <shape>
-            <gradient
-                android:angle="315"
-                android:startColor="#247C64"
-                android:endColor="#1B5E20"
-                android:type="linear" />
-            <corners android:radius="16dp" />
-            <stroke android:width="1dp" android:color="#2D9A7E" />
-        </shape>
-    </item>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="250dp"
+    android:height="110dp"
+    android:viewportWidth="250"
+    android:viewportHeight="110">
+    <!-- Background -->
+    <path
+        android:fillColor="#0E5E42"
+        android:pathData="M24,0 L226,0 C239.3,0 250,10.7 250,24 L250,86 C250,99.3 239.3,110 226,110 L24,110 C10.7,110 0,99.3 0,86 L0,24 C0,10.7 10.7,0 24,0 Z" />
     
-    <!-- Logo (kiri atas) -->
-    <item android:top="16dp" android:left="16dp" android:right="200dp" android:bottom="90dp">
-        <bitmap 
-            android:src="@drawable/qurani_logo"
-            android:gravity="top|start" />
-    </item>
+    <!-- Logo -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15,15 L35,15 L35,35 L15,35 Z"
+        android:fillAlpha="0.7" />
+    
+    <!-- Title -->
+    <path
+        android:fillColor="#B3FFFFFF"
+        android:pathData="M180,15 L235,15 L235,20 L180,20 Z" />
 
-    <!-- Simulasi teks "Ayah of the Day" (di bawah logo) -->
-    <item android:top="78dp" android:left="18dp" android:right="170dp" android:bottom="86dp">
-        <shape android:shape="rectangle">
-            <solid android:color="#B3FFFFFF" />
-            <corners android:radius="2dp" />
-        </shape>
-    </item>
+    <!-- Arabic Script Texture Simulation (Very detail) -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M100,45 L235,45 L235,48 L100,48 Z M120,52 L235,52 L235,55 L120,55 Z M110,60 L235,60 L235,63 L110,63 Z" />
+    
+    <!-- Translation Simulation -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15,75 L150,75 L150,78 L15,78 Z M15,82 L130,82 L130,85 L15,85 Z" />
 
-    <!-- Simulasi teks Arab (gold, 2 baris, rata kanan) -->
-    <item android:top="60dp" android:left="80dp" android:right="16dp" android:bottom="76dp">
-        <shape android:shape="rectangle">
-            <solid android:color="#FFD700" />
-            <corners android:radius="2dp" />
-        </shape>
-    </item>
-    <item android:top="78dp" android:left="100dp" android:right="16dp" android:bottom="58dp">
-        <shape android:shape="rectangle">
-            <solid android:color="#FFD700" />
-            <corners android:radius="2dp" />
-        </shape>
-    </item>
-
-    <!-- Simulasi terjemahan (putih, 2 baris) -->
-    <item android:top="102dp" android:left="16dp" android:right="60dp" android:bottom="38dp">
-        <shape android:shape="rectangle">
-            <solid android:color="#FFFFFF" />
-            <corners android:radius="2dp" />
-        </shape>
-    </item>
-    <item android:top="115dp" android:left="16dp" android:right="90dp" android:bottom="25dp">
-        <shape android:shape="rectangle">
-            <solid android:color="#FFFFFF" />
-            <corners android:radius="2dp" />
-        </shape>
-    </item>
-
-    <!-- Simulasi referensi (putih transparan, kanan bawah) -->
-    <item android:top="132dp" android:left="180dp" android:right="16dp" android:bottom="16dp">
-        <shape android:shape="rectangle">
-            <solid android:color="#B3FFFFFF" />
-            <corners android:radius="2dp" />
-        </shape>
-    </item>
-</layer-list>
+    <!-- Reference -->
+    <path
+        android:fillColor="#B3FFFFFF"
+        android:pathData="M200,95 L235,95 L235,98 L200,98 Z" />
+</vector>

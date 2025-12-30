@@ -30,6 +30,20 @@ class GoalWidgetProvider : HomeWidgetProvider() {
                 setOnClickPendingIntent(R.id.widget_goal_progress, pendingIntent)
             }
             appWidgetManager.updateAppWidget(appWidgetId, views)
+
+            // Update Generated Preview for Android 15+ (API 35+)
+            if (android.os.Build.VERSION.SDK_INT >= 35) {
+                try {
+                    val componentName = android.content.ComponentName(context, GoalWidgetProvider::class.java)
+                    appWidgetManager.setWidgetPreview(
+                        componentName,
+                        android.appwidget.AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
+                        views
+                    )
+                } catch (e: Exception) {
+                    // Fallback or ignore if API is not available as expected
+                }
+            }
         }
     }
 }
