@@ -188,6 +188,27 @@ class SupabaseService {
     return getSessions(userUuid: userUuid);
   }
 
+  /// ✅ NEW: Get session dates only (for local streak calculation)
+  Future<List<String>> getSessionDates(String userUuid) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          '$supabaseUrl/rest/v1/live_sessions?user_uuid=eq.$userUuid&select=created_at&order=created_at.desc',
+        ),
+        headers: _headers,
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map<String>((e) => e['created_at'] as String).toList();
+      }
+      return [];
+    } catch (e) {
+      print('❌ Error fetching session dates: $e');
+      return [];
+    }
+  }
+
   // ============================================================================
   // ACHIEVEMENT SYSTEM - NEW METHODS
   // ============================================================================

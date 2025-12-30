@@ -1,5 +1,6 @@
   // lib/screens/main/home/screens/home_page.dart
 
+import 'dart:math';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/main.dart';
@@ -44,6 +45,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Stats data - fetched from database
+  // Streak data - calculated locally
   int _currentStreak = 0;
   int _longestStreak = 0;
   int _versesRecited = 0;
@@ -149,10 +151,19 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
 
       if (data != null) {
-        // Parse streak
-        final streak = data['streak'] as Map<String, dynamic>? ?? {};
-        _currentStreak = streak['current'] ?? 0;
-        _longestStreak = streak['longest'] ?? 0;
+        // Parse streak (Backend value - fallback)
+        // final streak = data['streak'] as Map<String, dynamic>? ?? {};
+        // _currentStreak = streak['current'] ?? 0;
+        // _longestStreak = streak['longest'] ?? 0;
+
+        // ✅ FIX: Calculate streak LOCALLY to handle timezones correctly
+        final sessionDates = await _supabaseService.getSessionDates(userUuid);
+        final localStreak = _calculateLocalStreak(sessionDates);
+        _currentStreak = localStreak['current']!;
+        _longestStreak = localStreak['longest']!;
+        
+        print('🔥 Local Streak Calculation: Current=$_currentStreak, Longest=$_longestStreak');
+
 
         // Parse stats
         final stats = data['stats'] as Map<String, dynamic>? ?? {};
@@ -739,6 +750,107 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       }
+    }
+  }
+
+  /// ✅ Calculate streak locally based on session history
+  /// This ensures we respect the user's LOCAL timezone, not the server's UTC
+  Map<String, int> _calculateLocalStreak(List<String> dateStrings) {
+    if (dateStrings.isEmpty) {
+      return {'current': 0, 'longest': 0};
+    }
+
+    try {
+      // 1. Parse all dates to Local Time and strip time part
+      // Set allows unique dates only
+      final Set<DateTime> uniqueDates = {};
+      
+      for (final dateStr in dateStrings) {
+        final utcDate = DateTime.parse(dateStr);
+        final localDate = utcDate.toLocal();
+        // Create date-only DateTime (year, month, day)
+        final dateOnly = DateTime(localDate.year, localDate.month, localDate.day);
+        uniqueDates.add(dateOnly);
+      }
+      
+      final sortedDates = uniqueDates.toList()
+        ..sort((a, b) => b.compareTo(a)); // Sort DESC (newest first)
+
+      if (sortedDates.isEmpty) {
+        return {'current': 0, 'longest': 0};
+      }
+
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+      final yesterdayDate = todayDate.subtract(const Duration(days: 1));
+
+      // 2. Calculate Current Streak
+      int currentStreak = 0;
+      
+      // Check if the most recent activity is today or yesterday
+      // If most recent is older than yesterday, streak is broken -> 0
+      final mostRecent = sortedDates.first;
+      
+      bool isStreakActive = 
+          mostRecent.isAtSameMomentAs(todayDate) || 
+          mostRecent.isAtSameMomentAs(yesterdayDate);
+
+      if (isStreakActive) {
+        // Start counting backwards
+        // We need to find the "start" of the current sequence
+        
+        // If the latest is today, start checking from today
+        // If the latest is yesterday, start checking from yesterday
+        DateTime verifyDate = mostRecent;
+        currentStreak = 1;
+
+        for (int i = 1; i < sortedDates.length; i++) {
+          final prevDate = sortedDates[i];
+          final expectedPrevDate = verifyDate.subtract(const Duration(days: 1));
+          
+          if (prevDate.isAtSameMomentAs(expectedPrevDate)) {
+            currentStreak++;
+            verifyDate = prevDate;
+          } else {
+            // Gap found, stop counting
+            break;
+          }
+        }
+      } else {
+        currentStreak = 0;
+      }
+
+      // 3. Calculate Longest Streak
+      int longestStreak = 0;
+      int tempStreak = 1;
+
+      for (int i = 0; i < sortedDates.length - 1; i++) {
+        final currentDate = sortedDates[i];
+        final nextDate = sortedDates[i + 1];
+        final expectedNext = currentDate.subtract(const Duration(days: 1));
+
+        if (nextDate.isAtSameMomentAs(expectedNext)) {
+          tempStreak++;
+        } else {
+          // Gap found
+          longestStreak = max(longestStreak, tempStreak);
+          tempStreak = 1;
+        }
+      }
+      // Final check for the last sequence
+      longestStreak = max(longestStreak, tempStreak);
+      
+      // Ensure current doesn't exceed longest (logical constraint)
+      longestStreak = max(longestStreak, currentStreak);
+
+      return {
+        'current': currentStreak,
+        'longest': longestStreak,
+      };
+      
+    } catch (e) {
+      print('❌ Error calculating local streak: $e');
+      return {'current': 0, 'longest': 0};
     }
   }
 
