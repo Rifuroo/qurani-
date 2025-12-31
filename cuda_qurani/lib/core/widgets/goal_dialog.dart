@@ -6,7 +6,7 @@ import 'package:cuda_qurani/services/widget_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
-import 'package:cuda_qurani/core/providers/language_provider.dart';
+import 'package:cuda_qurani/services/daily_ayah_service.dart'; // ✅ NEW
 
 class GoalDialog extends StatefulWidget {
   final String initialType;
@@ -98,14 +98,17 @@ class _GoalDialogState extends State<GoalDialog> {
             unit = 'آيات';
           }
           
+          String progressValue = "0/$_targetValue";
+          if (lang == 'ar') {
+            progressValue = "${DailyAyahService.toArabicDigits(0)}/${DailyAyahService.toArabicDigits(_targetValue)}";
+          }
+
           WidgetService.updateGoalWidget(
-            current: 0, // Reset current progress in widget if goal changed? 
-            // Actually, we should probably fetch current progress first, 
-            // but for now, we just update the target.
+            current: 0, 
             target: _targetValue,
             goalType: _selectedType,
             titleText: title,
-            progressText: "0/$_targetValue $unit",
+            progressText: "$progressValue $unit",
           );
 
           Navigator.of(context).pop(true);

@@ -85,14 +85,14 @@ class DailyAyahService {
   ];
 
   /// Selects a random Ayah and updates the widget, respecting the user's language setting.
-  static Future<void> refreshDailyAyah() async {
+  static Future<void> refreshDailyAyah([String? languageCode]) async {
     try {
       // Ensure DB is initialized
       await LocalDatabaseService.preInitialize();
 
       // Get user language preference from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      final languageCode = prefs.getString('app_language') ?? 'id'; // Default to ID if not set
+      final currentLang = languageCode ?? prefs.getString('app_language') ?? 'id';
 
       // Select a truly random Ayah from the pool
       final random = Random();
@@ -114,25 +114,25 @@ class DailyAyahService {
       
       String reference = "$surahNameSimple ($surahId:$ayahNum)";
 
-      if (languageCode == 'ar') {
+      if (currentLang == 'ar') {
         final surahNumAr = toArabicDigits(surahId);
         final ayahNumAr = toArabicDigits(ayahNum);
         reference = "$surahNameArabic ($surahNumAr:$ayahNumAr)";
       }
 
       // Determine translation text based on language setting
-      // Fallback to Indonesian if key not found (as user requested "sesuai sumber")
+      // Hide translation if language is Arabic
       String translationText = '';
-      if (languageCode == 'ar') {
-        translationText = ''; // No translation needed for Arabic
+      if (currentLang == 'ar') {
+        translationText = ''; // No translation for Arabic
       } else {
-        translationText = ayahData[languageCode] ?? ayahData['id'] ?? ayahData['en'];
+        translationText = ayahData[currentLang] ?? ayahData['id'] ?? ayahData['en'];
       }
       
       // Determine widget title
       String widgetTitle = 'Ayah of the Day';
-      if (languageCode == 'id') widgetTitle = 'Ayat Hari Ini';
-      else if (languageCode == 'ar') widgetTitle = 'آية اليوم';
+      if (currentLang == 'id') widgetTitle = 'Ayat Hari Ini';
+      else if (currentLang == 'ar') widgetTitle = 'آية اليوم';
 
       await WidgetService.updateAyahWidget(
         arabicText: verseText,

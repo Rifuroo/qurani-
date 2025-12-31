@@ -5,12 +5,12 @@
     android:viewportHeight="60">
     <!-- Background -->
     <path
-        android:fillColor="#247C64"
+        android:fillColor="#0E5E42"
         android:pathData="M15,0 L165,0 C173.3,0 180,6.7 180,15 L180,45 C180,53.3 173.3,60 165,60 L15,60 C6.7,60 0,53.3 0,45 L0,15 C0,6.7 6.7,0 15,0 Z" />
     
     <!-- Title Simulation (Fine Lines) -->
     <path
-        android:fillColor="#E0E0E0"
+        android:fillColor="#B3FFFFFF"
         android:pathData="M15,18 L35,18 L35,22 L15,22 Z M40,18 L70,18 L70,22 L40,22 Z" />
     
     <!-- Count Simulation (Gold) -->

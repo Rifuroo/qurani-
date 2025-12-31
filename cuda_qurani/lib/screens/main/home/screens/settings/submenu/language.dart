@@ -118,7 +118,7 @@ class _LanguagePageState extends State<LanguagePage> {
       }
 
       // Refresh widget to reflect new language
-      await DailyAyahService.refreshDailyAyah();
+      await DailyAyahService.refreshDailyAyah(language.code);
 
       // ✅ REFRESH GOAL WIDGET
       try {
@@ -150,12 +150,17 @@ class _LanguagePageState extends State<LanguagePage> {
                unit = 'آيات';
              }
              
+             String progressValue = "$current/$target";
+             if (language.code == 'ar') {
+               progressValue = "${DailyAyahService.toArabicDigits(current)}/${DailyAyahService.toArabicDigits(target)}";
+             }
+             
              await WidgetService.updateGoalWidget(
                current: current,
                target: target,
                goalType: type,
                titleText: title,
-               progressText: "$current/$target $unit",
+               progressText: "$progressValue $unit",
              );
           }
         }

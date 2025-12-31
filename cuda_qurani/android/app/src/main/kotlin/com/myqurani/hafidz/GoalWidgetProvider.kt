@@ -11,8 +11,13 @@ class GoalWidgetProvider : HomeWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray, widgetData: SharedPreferences) {
         for (appWidgetId in appWidgetIds) {
             val views = RemoteViews(context.packageName, R.layout.goal_widget).apply {
-                val current = widgetData.getInt("goal_current", 0)
-                val target = widgetData.getInt("goal_target", 10)
+                // Safe number reading helpers
+                fun SharedPreferences.getSafeInt(key: String, def: Int): Int {
+                    return try { this.getInt(key, def) } catch (e: Exception) { this.getLong(key, def.toLong()).toInt() }
+                }
+
+                val current = widgetData.getSafeInt("goal_current", 0)
+                val target = widgetData.getSafeInt("goal_target", 10)
                 val titleText = widgetData.getString("goal_title_text", "Target Harian")
                 val progressText = widgetData.getString("goal_progress_text", "$current/$target Ayat")
                 

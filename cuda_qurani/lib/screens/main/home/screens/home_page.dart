@@ -14,6 +14,7 @@ import 'package:cuda_qurani/screens/main/stt/stt_page.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/core/widgets/goal_dialog.dart'; // 🎯 NEW: Goal Setting
 import 'package:cuda_qurani/services/widget_service.dart';
+import 'package:cuda_qurani/services/daily_ayah_service.dart'; // ✅ NEW
 import 'package:home_widget/home_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -225,12 +226,17 @@ class _HomePageState extends State<HomePage> {
             unit = 'آيات';
           }
           
+          String progressValue = "$_goalCurrent/$_goalTarget";
+          if (lang == 'ar') {
+            progressValue = "${DailyAyahService.toArabicDigits(_goalCurrent)}/${DailyAyahService.toArabicDigits(_goalTarget)}";
+          }
+          
           WidgetService.updateGoalWidget(
             current: _goalCurrent,
             target: _goalTarget,
             goalType: _goalType,
             titleText: title,
-            progressText: "$_goalCurrent/$_goalTarget $unit",
+            progressText: "$progressValue $unit",
           );
         }
 

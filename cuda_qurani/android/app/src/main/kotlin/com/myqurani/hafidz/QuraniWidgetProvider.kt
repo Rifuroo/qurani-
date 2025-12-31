@@ -12,13 +12,19 @@ class QuraniWidgetProvider : HomeWidgetProvider() {
         for (appWidgetId in appWidgetIds) {
             val views = RemoteViews(context.packageName, R.layout.qurani_widget).apply {
                 
-                // Get data with defaults
+                // Get data with defaults (Handle Long/Int mismatch from Flutter)
                 val arabic = widgetData.getString("ayah_arabic", "Loading...")
-                val translation = widgetData.getString("ayah_translation", "Tap to refresh")
+                val translation = widgetData.getString("ayah_translation", null)
                 val reference = widgetData.getString("ayah_reference", "")
-                val titleText = widgetData.getString("ayah_title_text", "Ayah of the Day") // Localized title
-                val surahId = widgetData.getInt("ayah_surah_id", 1)
-                val ayahNum = widgetData.getInt("ayah_number", 1)
+                val titleText = widgetData.getString("ayah_title_text", "Ayah of the Day")
+                
+                // Safe number reading helpers
+                fun SharedPreferences.getSafeInt(key: String, def: Int): Int {
+                    return try { this.getInt(key, def) } catch (e: Exception) { this.getLong(key, def.toLong()).toInt() }
+                }
+
+                val surahId = widgetData.getSafeInt("ayah_surah_id", 1)
+                val ayahNum = widgetData.getSafeInt("ayah_number", 1)
                 
                 // Format Ayah with Ornate Parentheses ﴾ ١٢٣ ﴿ (Best fallback for Widget)
                 val arabicDigits = toArabicDigits(ayahNum)
@@ -29,7 +35,14 @@ class QuraniWidgetProvider : HomeWidgetProvider() {
                 // Set text directly
                 setTextViewText(R.id.widget_title, titleText)
                 setTextViewText(R.id.widget_ayah_arabic, formattedArabic)
-                setTextViewText(R.id.widget_ayah_translation, translation)
+                
+                // Visibility logic for translation (Hide when empty/Arabic)
+                if (translation.isNullOrEmpty()) {
+                    setViewVisibility(R.id.widget_ayah_translation, android.view.View.GONE)
+                } else {
+                    setViewVisibility(R.id.widget_ayah_translation, android.view.View.VISIBLE)
+                    setTextViewText(R.id.widget_ayah_translation, translation)
+                }
                 setTextViewText(R.id.widget_ayah_reference, reference)
                 
                 // Open App on Click with Deep Link Data
