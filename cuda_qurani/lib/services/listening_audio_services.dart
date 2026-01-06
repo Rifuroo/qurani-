@@ -31,6 +31,20 @@ class ListeningAudioService {
   Stream<int>? get wordHighlightStream => _wordHighlightController?.stream;
   AudioPlayer get player => _player;
 
+  // Get current active track info
+  VerseReference? get currentVerse {
+    if (!_isPlaying ||
+        _currentTrackIndex < 0 ||
+        _currentTrackIndex >= _playlist.length) {
+      return null;
+    }
+    final track = _playlist[_currentTrackIndex];
+    return VerseReference(
+      surahId: track['surah_number'] as int,
+      verseNumber: track['ayah_number'] as int,
+    );
+  }
+
   // Initialize with reciter
   Future<void> initialize(
     PlaybackSettings settings,

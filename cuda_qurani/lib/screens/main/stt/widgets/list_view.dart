@@ -20,7 +20,8 @@ class QuranListView extends StatefulWidget {
 
 class _QuranListViewState extends State<QuranListView> {
   final ScrollController _scrollController = ScrollController();
-  final Map<int, GlobalKey> _pageKeys = {};
+  final Map<int, GlobalKey> _pageKeys = {}; // ✅ NEW: Track pages
+  final Map<int, GlobalKey> _verseKeys = {}; // ✅ NEW: Map for each verse GlobalKey
 
   // ✅ NEW: State variables sesuai algoritma
   int _currentVisiblePage = 1;
@@ -28,6 +29,12 @@ class _QuranListViewState extends State<QuranListView> {
   bool _preloadPaused = false;
   Timer? _debounceTimer;
   bool _hasJumped = false;
+  bool _isJumping = false;
+  
+  // ✅ NEW: Constant for consistent estimation 
+  // List view pages are usually a bit shorter than screen height due to wrapping.
+  // 0.88x is a better initial baseline for seeking.
+  static const double _estimatedHeightFactor = 0.88;
 
   // ✅ Background preloading state
   bool _isPreloading = false;
@@ -40,30 +47,20 @@ class _QuranListViewState extends State<QuranListView> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // ✅ PHASE 1: Immediate Jump & Setup
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _hasJumped) return;
 
       final controller = context.read<SttController>();
       final targetPage = controller.listViewCurrentPage;
 
-      print('🔍 LIST_VIEW_INIT: Jumping to saved position: $targetPage');
+      print('🔍 LIST_VIEW_INIT: Starting at page: $targetPage');
       _jumpToPage(targetPage);
       _currentVisiblePage = targetPage;
       _hasJumped = true;
 
-      // ✅ Load immediate visible range (±3 pages)
-      final immediateBatch = _buildPageRange(
-        targetPage - 3,
-        targetPage + 3,
-        controller.totalPages,
-      );
-      _loadImmediateRange(immediateBatch);
-
-      // ✅ Start background preload pipeline
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (!mounted) return;
-        _startPreloadPipeline(targetPage);
-      });
+      // ✅ PHASE 2: Start Smart Preload system (debounced)
+      _startSmartPreload(targetPage);
     });
   }
 
@@ -102,60 +99,100 @@ class _QuranListViewState extends State<QuranListView> {
     if (mounted) setState(() {});
   }
 
-  void _jumpToPage(int pageNumber) {
-    if (!mounted || !_scrollController.hasClients) return;
+  void _jumpToPage(int pageNumber, {int retryCount = 0}) {
+    if (!mounted) return;
+    if (retryCount > 10) { // ✅ INCREASED: More retries for high page numbers
+      print('⚠️ JUMP_FAIL: Max retries reached for Page $pageNumber');
+      _finalizeJump(pageNumber);
+      return;
+    }
 
+    _isJumping = true;
+    _preloadPaused = true;
+
+    final controller = context.read<SttController>();
+    final targetAyahId = controller.topVerseId;
+    final totalPages = controller.totalPages;
+    final clampedPage = pageNumber.clamp(1, totalPages);
+    final currentPos = _scrollController.offset;
     final screenHeight = MediaQuery.of(context).size.height;
-    final estimatedPageHeight = screenHeight * 0.75;
-    final offset = (pageNumber - 1) * estimatedPageHeight;
+    
+    print('🚀 SEEK_STEP [v$retryCount]: Target $clampedPage (Current Offset: ${currentPos.round()})');
 
-    _scrollController.jumpTo(
-      offset.clamp(0.0, _scrollController.position.maxScrollExtent),
-    );
-  }
-
-  void _onScroll() {
-    if (!mounted || !_scrollController.hasClients) return;
-
-    // ✅ PHASE 1: Accurate Center Detection (RenderBox Based)
-    // Algoritma: Loop key halaman yang aktif, cari yang paling dekat dengan titik tengah layar.
-    // Ini 100% akurat karena berbasis posisi render pixel, bukan estimasi offset.
-
-    int? bestPage;
-    double closestDistance = double.infinity;
-    final screenCenter = MediaQuery.of(context).size.height / 2;
-
-    // Bersihkan key yang sudah didispose (garbage collection manual)
-    _pageKeys.removeWhere((_, key) => key.currentContext == null);
-
-    for (final entry in _pageKeys.entries) {
-      final key = entry.value;
-      final context = key.currentContext;
-      if (context != null) {
-        final renderBox = context.findRenderObject() as RenderBox;
-        final position = renderBox.localToGlobal(Offset.zero);
-        final size = renderBox.size;
-
-        // Titik tengah item halaman ini
-        final itemCenter = position.dy + (size.height / 2);
-
-        // Jarak dari tengah layar (app bar diabaikan karena localToGlobal sudah global)
-        final distance = (itemCenter - screenCenter).abs();
-
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          bestPage = entry.key;
-        }
+    // 1️⃣ PHASE 1: CHECK IF ALREADY THERE (Precision check)
+    if (targetAyahId != null) {
+      final verseKey = _verseKeys[targetAyahId];
+      if (verseKey != null && verseKey.currentContext != null) {
+        print('🎯 JUMP_REFINE: Precision jump to VERSE $targetAyahId');
+        Scrollable.ensureVisible(verseKey.currentContext!, alignment: 0.0, duration: Duration.zero);
+        _finalizeJump(clampedPage);
+        return;
       }
     }
 
-    // ✅ PHASE 2: Silent Update
-    if (bestPage != null && bestPage != _currentVisiblePage) {
-      _currentVisiblePage = bestPage!;
+    // 2️⃣ PHASE 2: CHECK IF PAGE KEY IS VISIBLE
+    final pageKey = _pageKeys[clampedPage];
+    if (pageKey != null && pageKey.currentContext != null) {
+      print('🎯 JUMP_REFINE: Precision jump to PAGE $clampedPage');
+      Scrollable.ensureVisible(pageKey.currentContext!, alignment: 0.0, duration: Duration.zero);
+      _finalizeJump(clampedPage);
+      return;
+    }
 
-      // Panggil method baru yang ultra-cepat
+    // 3️⃣ PHASE 3: CALCULATE CORRECTIVE JUMP
+    // Find ANY visible page key to use as a beacon
+    int? beaconPage;
+    double? beaconPos;
+    for (int p in _pageKeys.keys) {
+      final key = _pageKeys[p];
+      final rBox = key?.currentContext?.findRenderObject() as RenderBox?;
+      if (rBox != null) {
+        beaconPage = p;
+        beaconPos = rBox.localToGlobal(Offset.zero).dy;
+        break; 
+      }
+    }
+
+    double nextOffset;
+    if (beaconPage != null && beaconPos != null) {
+      // We know where beaconPage is. Use it to find clampedPage.
+      final pageDelta = clampedPage - beaconPage;
+      final estimatedDelta = pageDelta * (screenHeight * _estimatedHeightFactor);
+      nextOffset = (currentPos + beaconPos + estimatedDelta).clamp(0, _scrollController.position.maxScrollExtent);
+      print('📍 SEEK_DELTA: Found Page $beaconPage at $beaconPos dy. Jumping ${estimatedDelta.round()} to reach $clampedPage');
+    } else {
+      // Total blackout. Use absolute estimate.
+      nextOffset = ((clampedPage - 1) * (screenHeight * _estimatedHeightFactor)).clamp(0, _scrollController.position.maxScrollExtent);
+      print('📍 SEEK_ESTIMATE: No beacon. Jumping to absolute $nextOffset');
+    }
+
+    _scrollController.jumpTo(nextOffset);
+
+    // 4️⃣ RECURSE: Wait for build then check again
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _jumpToPage(clampedPage, retryCount: retryCount + 1);
+    });
+  }
+
+  void _finalizeJump(int page) {
+    _isJumping = false;
+    _preloadPaused = false;
+    _startSmartPreload(page);
+  }
+
+  void _onScroll() {
+    if (!mounted || !_scrollController.hasClients || _isJumping) return;
+
+    // ✅ PHASE 1: Fast math estimate for zero-latency AppBar update
+    final bestPage = _calculateVisiblePage();
+
+    // ✅ PHASE 2: Silent Update to Controller
+    if (bestPage != _currentVisiblePage) {
+      _currentVisiblePage = bestPage;
+      
+      // Update AppBar notifier instantly
       context.read<SttController>().updateVisiblePageQuiet(_currentVisiblePage);
-
+      
       // Sync cache service
       context.read<QuranService>().updateCurrentPage(_currentVisiblePage);
     }
@@ -173,9 +210,42 @@ class _QuranListViewState extends State<QuranListView> {
       if (!mounted) return;
       _userScrolling = false;
       _preloadPaused = false;
+
+      // ✅ CONTEXT SYNC: Detect top verse when scroll stops
+      _detectTopVerseAndUpdateController();
+
       // Panggil smart preload
       _startSmartPreload(_currentVisiblePage);
     });
+  }
+
+  void _detectTopVerseAndUpdateController() {
+    if (!mounted) return;
+    
+    // Low-cost detection of the top verse once scrolling stops
+    final controller = context.read<SttController>();
+    for (int p in [_currentVisiblePage, _currentVisiblePage + 1, _currentVisiblePage - 1]) {
+      final pageLines = controller.pageCache[p];
+      if (pageLines == null) continue;
+
+      for (var line in pageLines) {
+        final segments = line.ayahSegments;
+        if (segments == null) continue;
+        
+        for (var ayah in segments) {
+          final key = _verseKeys[ayah.id];
+          final renderBox = key?.currentContext?.findRenderObject() as RenderBox?;
+          if (renderBox != null) {
+            final position = renderBox.localToGlobal(Offset.zero).dy;
+            // If the verse is at or above the viewport top (but not too far above)
+            if (position >= -100 && position <= 50) { 
+              controller.updateTopVerse(ayah.id, p);
+              return;
+            }
+          }
+        }
+      }
+    }
   }
 
   /// ✅ ULTIMATE: Smart preload (throttled, priority-based)
@@ -266,68 +336,60 @@ class _QuranListViewState extends State<QuranListView> {
     }
   }
 
-  /// ✅ NEW: Calculate which page is MOST visible (bukan estimasi offset)
+  /// ✅ NEW: Calculate which page is MOST visible using GlobalKeys (Beacon)
   int _calculateVisiblePage() {
     if (!mounted || !_scrollController.hasClients) return _currentVisiblePage;
 
-    final controller = context.read<SttController>();
-    final totalPages = controller.totalPages;
     final screenHeight = MediaQuery.of(context).size.height;
-
-    // ✅ Viewport boundaries
-    final viewportTop = _scrollController.offset;
-    final viewportBottom = viewportTop + screenHeight;
-
-    // ✅ Estimated page height (same as item builder)
-    final estimatedPageHeight = screenHeight * 0.75;
-
-    // ✅ Check pages within visible range (current ± 1)
-    final centerPage = (viewportTop / estimatedPageHeight).round() + 1;
-    final candidatePages = [
-      centerPage - 1,
-      centerPage,
-      centerPage + 1,
-    ].where((p) => p >= 1 && p <= totalPages).toList();
-
-    // ✅ Find page with largest visible portion
+    final viewportTop = _scrollController.offset; // Not strictly used for localToGlobal
+    
     int bestPage = _currentVisiblePage;
-    double maxVisibleHeight = 0;
+    double maxVisibleRatio = 0.0;
 
-    for (final pageNum in candidatePages) {
-      final pageTop = (pageNum - 1) * estimatedPageHeight;
-      final pageBottom = pageTop + estimatedPageHeight;
+    // Scan all registered page keys
+    for (final entry in _pageKeys.entries) {
+      final pageNum = entry.key;
+      final key = entry.value;
+      final context = key.currentContext;
+      
+      if (context != null) {
+        final renderBox = context.findRenderObject() as RenderBox?;
+        if (renderBox != null) {
+          // Get position relative to viewport
+          final offset = renderBox.localToGlobal(Offset.zero);
+          final top = offset.dy;
+          final bottom = top + renderBox.size.height;
 
-      // ✅ Calculate visible portion (intersection)
-      final visibleHeight = _calculateVisiblePortion(
-        pageTop,
-        pageBottom,
-        viewportTop,
-        viewportBottom,
-      );
+          // Check intersection with viewport (0 to screenHeight)
+          final visibleTop = top < 0 ? 0.0 : top;
+          final visibleBottom = bottom > screenHeight ? screenHeight : bottom;
+          final visibleHeight = visibleBottom - visibleTop;
 
-      if (visibleHeight > maxVisibleHeight) {
-        maxVisibleHeight = visibleHeight;
-        bestPage = pageNum;
+          if (visibleHeight > 0) {
+            final ratio = visibleHeight / screenHeight; // How much of screen does it take?
+            // Or absolute height if we prefer
+            
+            if (visibleHeight > maxVisibleRatio) {
+               maxVisibleRatio = visibleHeight;
+               bestPage = pageNum;
+            }
+          }
+        }
       }
     }
 
-    return bestPage.clamp(1, totalPages);
+    // Fallback if no keys found (e.g. very fast scroll or init) - use math estimate relative to known beacon if possible
+    // For now, if maxVisibleRatio is 0, keep current.
+    if (maxVisibleRatio == 0 && _pageKeys.isEmpty) {
+       // Only fallback to pure math if we have NO keys (unlikely in builder)
+       // logic from original can stay as extreme fallback, but usually we prefer current
+       return _currentVisiblePage; 
+    }
+
+    return bestPage.clamp(1, context.read<SttController>().totalPages);
   }
 
-  /// ✅ NEW: Calculate visible portion of a page
-  double _calculateVisiblePortion(
-    double pageTop,
-    double pageBottom,
-    double viewportTop,
-    double viewportBottom,
-  ) {
-    final visibleTop = pageTop > viewportTop ? pageTop : viewportTop;
-    final visibleBottom = pageBottom < viewportBottom
-        ? pageBottom
-        : viewportBottom;
 
-    return (visibleBottom - visibleTop).clamp(0.0, double.infinity);
-  }
 
   /// ✅ NEW: Start preload pipeline dengan prioritas (ALGORITMA BARU)
   Future<void> _startPreloadPipeline(int centerPage) async {
@@ -439,19 +501,11 @@ class _QuranListViewState extends State<QuranListView> {
       addRepaintBoundaries: true,
       physics: const BouncingScrollPhysics(),
       itemBuilder: (context, index) {
-        final pageNumber = index + 1;
-
-        // ✅ Pasang GlobalKey unik ke map registry
-        // Key hanya dibuat sekali per halaman
-        final pageKey = _pageKeys.putIfAbsent(pageNumber, () => GlobalKey());
-
-        return RepaintBoundary(
-          // Gunakan GlobalKey ini untuk tracking posisi
-          key: pageKey,
-          child: _VerticalPageWidget(
-            pageNumber: pageNumber,
-            currentPage: _currentVisiblePage,
-          ),
+        final pageNum = index + 1;
+        return _VerticalPageWidget(
+          key: _pageKeys[pageNum] ??= GlobalKey(debugLabel: 'page_$pageNum'),
+          pageNumber: pageNum,
+          verseKeys: _verseKeys, // ✅ Pass map to children
         );
       },
     );
@@ -461,11 +515,12 @@ class _QuranListViewState extends State<QuranListView> {
 /// Single vertical page widget - uses cached mushaf data ONLY
 class _VerticalPageWidget extends StatelessWidget {
   final int pageNumber;
-  final int currentPage;
+  final Map<int, GlobalKey> verseKeys; // ✅ NEW
 
   const _VerticalPageWidget({
+    super.key,
     required this.pageNumber,
-    required this.currentPage,
+    required this.verseKeys,
   });
 
   @override
@@ -477,12 +532,13 @@ class _VerticalPageWidget extends StatelessWidget {
       return _VerticalPageContent(
         pageNumber: pageNumber,
         pageLines: cachedLines,
+        verseKeys: verseKeys, // ✅ Pass down
       );
     }
 
     // ✅ Minimal loading placeholder
     final screenHeight = MediaQuery.of(context).size.height;
-    final distance = (pageNumber - currentPage).abs();
+    final distance = (pageNumber - controller.listViewCurrentPage).abs(); // Use controller's current page
 
     return SizedBox(
       height: screenHeight * 0.75,
@@ -526,10 +582,12 @@ class _VerticalPageWidget extends StatelessWidget {
 class _VerticalPageContent extends StatelessWidget {
   final int pageNumber;
   final List<MushafPageLine> pageLines;
+  final Map<int, GlobalKey> verseKeys; // ✅ NEW
 
   const _VerticalPageContent({
     required this.pageNumber,
     required this.pageLines,
+    required this.verseKeys,
   });
 
   @override
@@ -617,8 +675,9 @@ class _VerticalPageContent extends StatelessWidget {
 
                 widgets.add(
                   _CompleteAyahWidget(
+                    key: verseKeys[completeSegment.id] ??= GlobalKey(debugLabel: 'verse_${completeSegment.id}'),
                     segment: completeSegment,
-                    fontFamily: fontFamily, // ✅ Dynamic based on layout
+                    fontFamily: fontFamily,
                   ),
                 );
               }
@@ -627,7 +686,6 @@ class _VerticalPageContent extends StatelessWidget {
           break;
       }
     }
-
     return widgets;
   }
 
@@ -749,12 +807,15 @@ class _Basmallah extends StatelessWidget {
     );
   }
 }
-
 class _CompleteAyahWidget extends StatelessWidget {
   final AyahSegment segment;
   final String fontFamily;
 
-  const _CompleteAyahWidget({required this.segment, required this.fontFamily});
+  const _CompleteAyahWidget({
+    super.key,
+    required this.segment,
+    required this.fontFamily,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -879,9 +940,11 @@ class _CompleteAyahWidget extends StatelessWidget {
       if (wordStatus != null) {
         switch (wordStatus) {
           case WordStatus.matched:
+          case WordStatus.correct:
             wordBg = getCorrectColor(context).withValues(alpha: 0.4);
             break;
           case WordStatus.mismatched:
+          case WordStatus.incorrect:
           case WordStatus.skipped:
             wordBg = getErrorColor(context).withValues(alpha: 0.4);
             break;

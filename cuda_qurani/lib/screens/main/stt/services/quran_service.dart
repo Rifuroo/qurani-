@@ -903,6 +903,14 @@ class QuranService {
     return MushafPageData(pageNumber: pageNumber, lines: lines);
   }
 
+  Future<int> getPageForAyah(
+    int surahId,
+    int ayahNumber, {
+    bool isQuranMode = true,
+  }) async {
+    return _getPageForAyah(surahId, ayahNumber, isQuranMode: isQuranMode);
+  }
+
   Future<int> _getPageForAyah(
     int surahId,
     int ayahNumber, {

@@ -51,6 +51,8 @@ enum WordStatus {
   matched,
   mismatched,
   skipped,
+  correct,      // ✅ Alias for matched (used in UI)
+  incorrect,    // ❌ Alias for mismatched (used in UI)
 }
 
 // Status untuk evaluasi tartib (urutan ayat)

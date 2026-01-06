@@ -575,9 +575,11 @@ class _JustifiedAyahLine extends StatelessWidget {
         if (wordStatus != null && !hasArabicNumber) {
           switch (wordStatus) {
             case WordStatus.matched:
+            case WordStatus.correct:
               wordBg = getCorrectColor(context).withValues(alpha: 0.4);
               break;
             case WordStatus.mismatched:
+            case WordStatus.incorrect:
             case WordStatus.skipped:
               wordBg = getErrorColor(context).withValues(alpha: 0.4);
               break;

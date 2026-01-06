@@ -49,6 +49,16 @@ class SttController with ChangeNotifier {
   // ✅ TAMBAHKAN getter untuk total pages (dynamic based on layout)
   int get totalPages => _mushafLayout.totalPages;
 
+  int? _topVerseId; // ✅ NEW: Tracks the verse at the top of the viewport
+  int? _topVersePage;
+  int? get topVerseId => _topVerseId;
+
+  void updateTopVerse(int ayahId, int pageNumber) {
+    if (_topVerseId == ayahId) return;
+    _topVerseId = ayahId;
+    _topVersePage = pageNumber;
+  }
+
   SttController({
     this.suratId,
     this.pageId,
@@ -78,6 +88,13 @@ class SttController with ChangeNotifier {
     } catch (e, stack) {
       print('❌ SttController: _initializeWebSocket() FAILED: $e');
       print('Stack trace: $stack');
+    }
+
+    // ✅ NEW: Initialize synchronization anchors
+    if (highlightAyahId != null) {
+      _topVerseId = highlightAyahId;
+      _topVersePage = pageId;
+      print('📍 SttController: Initialized synchronization anchor to Verse $highlightAyahId');
     }
   }
 
@@ -115,12 +132,25 @@ class SttController with ChangeNotifier {
     _lastLoadedAyatsPage = null;
     _lastPreloadedPage = null;
 
-    // ✅ STEP 6: Adjust current page if exceeds new layout's max
-    if (_currentPage > newLayout.totalPages) {
-      _currentPage = newLayout.totalPages;
+    // ✅ STEP 6: Accurate Page Mapping (Verse-Centeric)
+    // Instead of just clamping, we find the page for the verse we were looking at
+    int? resumeAyahId = _topVerseId;
+    if (resumeAyahId == null && _currentPageAyats.isNotEmpty) {
+      resumeAyahId = _currentPageAyats.first.id;
     }
-    if (_listViewCurrentPage > newLayout.totalPages) {
-      _listViewCurrentPage = newLayout.totalPages;
+
+    if (resumeAyahId != null) {
+      final surahId = resumeAyahId ~/ 1000;
+      final ayahNumber = resumeAyahId % 1000;
+      final newPage = await _sqliteService.getPageForAyah(surahId, ayahNumber);
+      _currentPage = newPage;
+      _listViewCurrentPage = newPage;
+      _topVerseId = resumeAyahId; // ✅ Persist for initialization jump
+      print('[LAYOUT_SWITCH] 📍 Mapped context to Page $_currentPage (Ayah $surahId:$ayahNumber)');
+    } else {
+      // Fallback: Clamp if no verse context
+      if (_currentPage > newLayout.totalPages) _currentPage = newLayout.totalPages;
+      if (_listViewCurrentPage > newLayout.totalPages) _listViewCurrentPage = newLayout.totalPages;
     }
 
     // ✅ STEP 7: Reload current page data
@@ -176,6 +206,10 @@ class SttController with ChangeNotifier {
   String? _errorMessage = '';
   List<AyatData> _ayatList = [];
   int _currentAyatIndex = 0;
+
+  AyatData? get currentAyat => (_currentAyatIndex >= 0 && _currentAyatIndex < _ayatList.length)
+      ? _ayatList[_currentAyatIndex]
+      : null;
   String _suratNameSimple = '';
   String _suratVersesCount = '';
   DateTime? _sessionStartTime;
@@ -499,12 +533,21 @@ class SttController with ChangeNotifier {
       _sessionId = null;
       _errorMessage = '';
 
+      
       // ? NEW: AUTO-NAVIGATE TO TARGET PAGE (OPTIMIZED)
       print('?? Checking if navigation needed...');
-      final targetPage = await LocalDatabaseService.getPageNumber(
-        settings.startSurahId,
-        settings.startVerse,
-      );
+      int targetPage;
+      try {
+        // ✅ CORRECTED: Use getPageForAyah instance method
+        targetPage = await _sqliteService.getPageForAyah(
+          settings.startSurahId,
+          settings.startVerse,
+        );
+      } catch (e) {
+        print('[DB] Error getting page number: $e');
+        // Fallback: stay on current page if DB fails, don't force page 1
+        targetPage = _currentPage; 
+      }
 
       print('   Current page: $_currentPage');
       print(
@@ -550,7 +593,8 @@ class SttController with ChangeNotifier {
 
         // ? Check if verse is on different page
         try {
-          final targetPage = await LocalDatabaseService.getPageNumber(
+          // ✅ CORRECTED: Use getPageForAyah instance method
+          final targetPage = await _sqliteService.getPageForAyah(
             verse.surahId,
             verse.verseNumber,
           );
@@ -864,8 +908,16 @@ class SttController with ChangeNotifier {
       final surahNum = int.parse(parts[0]);
       final ayahNum = int.parse(parts[1]);
 
-      // Get page number for this ayah
-      final page = await LocalDatabaseService.getPageNumber(surahNum, ayahNum);
+      // Get page number for this ayah using instance service
+      // ✅ FIX: Use _sqliteService instead of static LocalDatabaseService
+      int page;
+      try {
+        page = await _sqliteService.getPageForAyah(surahNum, ayahNum);
+      } catch (e) {
+        print('[DB] Error getting page number (Juz $juzId): $e');
+        page = 1; // Fallback
+      }
+      
       appLogger.log(
         'NAV',
         'Juz $juzId starts at page $page (${surahNum}:${ayahNum})',
@@ -877,7 +929,15 @@ class SttController with ChangeNotifier {
       appLogger.log('NAV', 'Navigation from Surah $suratId');
 
       // Get first page of this surah
-      final page = await LocalDatabaseService.getPageNumber(suratId!, 1);
+      // ✅ FIX: Use _sqliteService instead of static LocalDatabaseService
+      int page;
+      try {
+        page = await _sqliteService.getPageForAyah(suratId!, 1);
+      } catch (e) {
+        print('[DB] Error getting page number (Surah $suratId): $e');
+        page = 1; // Fallback
+      }
+      
       appLogger.log('NAV', 'Surah $suratId starts at page $page');
       return page;
     }
@@ -1730,6 +1790,13 @@ class SttController with ChangeNotifier {
                 'SURAH_UPDATE',
                 'Updated to: $_suratNameSimple (Page $pageNumber) - FROM CACHE',
               );
+              // ✅ Update AppBar Notifier
+              final juzNum = _sqliteService.calculateJuzAccurate(surahId, 1);
+              appBarNotifier.value = PageDisplayData(
+                pageNumber: pageNumber,
+                surahName: _suratNameSimple,
+                juzNumber: juzNum,
+              );
               notifyListeners();
               return;
             }
@@ -1757,6 +1824,13 @@ class SttController with ChangeNotifier {
                 'SURAH_UPDATE',
                 'Updated to: $_suratNameSimple (Page $pageNumber) - FROM PAGE CACHE',
               );
+              // ✅ Update AppBar Notifier
+              final juzNum = _sqliteService.calculateJuzAccurate(surahId, firstSegment.ayahNumber);
+              appBarNotifier.value = PageDisplayData(
+                pageNumber: pageNumber,
+                surahName: _suratNameSimple,
+                juzNumber: juzNum,
+              );
               notifyListeners();
             }
             return;
@@ -1780,6 +1854,13 @@ class SttController with ChangeNotifier {
             'SURAH_UPDATE',
             'Updated to: $_suratNameSimple (from ayats)',
           );
+          // ✅ Update AppBar Notifier
+          final juzNum = _sqliteService.calculateJuzAccurate(surahId, firstAyat.ayah);
+          appBarNotifier.value = PageDisplayData(
+            pageNumber: pageNumber,
+            surahName: _suratNameSimple,
+            juzNumber: juzNum,
+          );
           notifyListeners();
         }
         return;
@@ -1801,6 +1882,13 @@ class SttController with ChangeNotifier {
           appLogger.log(
             'SURAH_UPDATE',
             'Updated to: $_suratNameSimple (loaded from DB)',
+          );
+          // ✅ Update AppBar Notifier
+          final juzNum = _sqliteService.calculateJuzAccurate(surahId, firstSegment.ayahNumber);
+          appBarNotifier.value = PageDisplayData(
+            pageNumber: pageNumber,
+            surahName: _suratNameSimple,
+            juzNumber: juzNum,
           );
           notifyListeners();
           return;
@@ -1835,11 +1923,66 @@ class SttController with ChangeNotifier {
     );
 
     // ? STEP 1: Preserve current position
-    final targetPage = _isQuranMode ? _currentPage : _listViewCurrentPage;
-    appLogger.log('MODE_TOGGLE', 'Target page after toggle: $targetPage');
+    int targetPage = _isQuranMode ? _currentPage : _listViewCurrentPage;
+    int? targetAyahId;
+
+    if (_isQuranMode) {
+      // Capture the first ayah of the current Mushaf page as the scroll target
+      final pageLines = pageCache[_currentPage];
+      if (pageLines != null && pageLines.isNotEmpty) {
+        // Find the first line that contains ayah segments
+        final firstAyahLine = pageLines.firstWhere(
+          (l) => l.lineType == 'ayah' && l.ayahSegments != null && l.ayahSegments!.isNotEmpty,
+          orElse: () => pageLines.first,
+        );
+        if (firstAyahLine.ayahSegments != null && firstAyahLine.ayahSegments!.isNotEmpty) {
+          targetAyahId = firstAyahLine.ayahSegments!.first.id;
+        }
+      }
+    } else {
+      // Going back to Mushaf
+      targetAyahId = _topVerseId;
+
+      // ✅ OPTIMIZATION: Use cached _topVersePage if available (Synchronous)
+      if (_topVersePage != null) {
+         targetPage = _topVersePage!;
+         appLogger.log('MODE_TOGGLE', 'Used cached _topVersePage: $targetPage');
+      } else if (targetAyahId != null) {
+        // Fallback: Calculate page from verse (only if cache missing)
+        final surahId = targetAyahId! ~/ 1000;
+        final ayahNumber = targetAyahId! % 1000;
+        // This await is the only potential delay, but it's rare now
+        final mappedPage = await _sqliteService.getPageForAyah(surahId, ayahNumber);
+        targetPage = mappedPage;
+      }
+    }
+
+    appLogger.log('MODE_TOGGLE', 'Target page after toggle: $targetPage, Target Ayah: $targetAyahId');
+
+    // ✅ Persist targetAyahId so the view can read it during initialization jump
+    _topVerseId = targetAyahId;
 
     // ? STEP 2: Toggle mode flag FIRST
     _isQuranMode = !_isQuranMode;
+
+    // ✅ SYNC: Ensure both variables are in sync for the new mode before first notify
+    _currentPage = targetPage;
+    _listViewCurrentPage = targetPage;
+
+    // ✅ SYNC: Ensure highlighting index matches the top verse ONLY if active
+    if (targetAyahId != null) {
+      final index = _ayatList.indexWhere((a) => a.id == targetAyahId);
+      if (index >= 0) {
+        // Only highlight if currently record/listen, otherwise keep reset
+        if (_isRecording || _isListeningMode) {
+          _currentAyatIndex = index;
+          appLogger.log('MODE_TOGGLE', 'Synced currentAyatIndex to $index');
+        } else {
+          _currentAyatIndex = -1;
+          appLogger.log('MODE_TOGGLE', 'Reset currentAyatIndex for silent mode');
+        }
+      }
+    }
 
     // ? IMMEDIATE: Notify UI of mode change (quick feedback)
     notifyListeners();
@@ -1855,7 +1998,8 @@ class SttController with ChangeNotifier {
       _currentPage = targetPage;
 
       // Update surah name for target page
-      await _updateSurahNameForPage(targetPage);
+      // ignore: unawaited_futures
+      _updateSurahNameForPage(targetPage);
 
       // Load page-specific data if switching to mushaf
       if (_isQuranMode) {
@@ -1869,6 +2013,8 @@ class SttController with ChangeNotifier {
           );
           final lines = await _sqliteService.getMushafPageLines(targetPage);
           pageCache[targetPage] = lines;
+          // Force UI refresh after cache load
+          notifyListeners();
         }
 
         // Preload adjacent pages

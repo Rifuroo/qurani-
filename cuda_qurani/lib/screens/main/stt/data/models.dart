@@ -27,6 +27,8 @@ class AyatData {
     required this.fullArabicText,
   });
 
+  int get id => surah_id * 1000 + ayah;
+
   String get arabic => words.map((w) => w.text).join(' ');
   String get noTashkeel => words.map((w) => w.text).join(' ');
   String get transliteration => '';
@@ -231,6 +233,8 @@ class AyahSegment {
     required this.isStartOfAyah,
     required this.isEndOfAyah,
   });
+
+  int get id => surahId * 1000 + ayahNumber;
 }
 
 class TextSegment {
