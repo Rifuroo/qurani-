@@ -30,9 +30,7 @@ class GoalWidgetProvider : HomeWidgetProvider() {
 
                 // Open App on Click
                 val pendingIntent = HomeWidgetLaunchIntent.getActivity(context, MainActivity::class.java)
-                setOnClickPendingIntent(R.id.widget_goal_title, pendingIntent)
-                setOnClickPendingIntent(R.id.widget_goal_text, pendingIntent)
-                setOnClickPendingIntent(R.id.widget_goal_progress, pendingIntent)
+                setOnClickPendingIntent(R.id.widget_goal_root, pendingIntent)
             }
             appWidgetManager.updateAppWidget(appWidgetId, views)
 

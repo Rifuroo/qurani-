@@ -50,8 +50,8 @@ dependencies {
 
 configurations.all {
     resolutionStrategy {
-        force("androidx.work:work-runtime:2.8.1")
-        force("androidx.work:work-runtime-ktx:2.8.1")
+        force("androidx.work:work-runtime:2.9.1")
+        force("androidx.work:work-runtime-ktx:2.9.1")
     }
 }
 

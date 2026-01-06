@@ -257,105 +257,107 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
   }
 
   Future<void> _navigateToAuth() async {
-    // ✅ Wait for splash animation to complete (2 seconds) AND AuthProvider ready
     final startTime = DateTime.now();
-    const minSplashDuration = Duration(
-      milliseconds: 2000,
-    ); // Match original splash timing
-
-    // Wait for AuthProvider to finish initialization
-    int attempts = 0;
-    const maxAttempts = 50; // 5 seconds max (50 * 100ms)
-
-    while (attempts < maxAttempts) {
-      try {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        if (!authProvider.isLoading) {
-          print('✅ AuthProvider ready');
-          break;
-        }
-      } catch (e) {
-        // Provider not ready yet
-      }
-
-      await Future.delayed(const Duration(milliseconds: 100));
-      attempts++;
-    }
-
-    // ✅ Ensure minimum splash duration for animation to complete
-    final elapsed = DateTime.now().difference(startTime);
-    if (elapsed < minSplashDuration) {
-      final remaining = minSplashDuration - elapsed;
-      print(
-        '⏱️ Waiting ${remaining.inMilliseconds}ms more for splash animation...',
-      );
-      await Future.delayed(remaining);
-    }
-
-    // ✅ TARTEEL-STYLE: Start preloading ALL pages in background
-    // This runs in parallel with navigation, user won't wait
-    _startTarteelStylePreload();
-
-    if (!mounted) return;
-
-    // ✅ CHECK FOR DEEP LINK FROM WIDGET
+    
+    // ✅ 1. CHECK FOR DEEP LINK IMMEDIATELY
     int? targetPage;
     int? deepLinkAyahNum;
-    
-    try {
-      // Check if DB is ready (max 3 seconds wait if needed)
-      if (!context.isDatabaseReady) {
-        int dbAttempts = 0;
-        while (!context.isDatabaseReady && dbAttempts < 30) {
-           await Future.delayed(const Duration(milliseconds: 100));
-           dbAttempts++;
-        }
-      }
+    bool isDeepLinkLaunch = false;
 
+    try {
       final Uri? widgetUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
       if (widgetUri != null && widgetUri.scheme == 'qurani' && widgetUri.host == 'ayah') {
-        final segments = widgetUri.pathSegments; // Expected: [surahId, ayahNum]
+        final segments = widgetUri.pathSegments;
         if (segments.length >= 2) {
           final surahId = int.tryParse(segments[0]);
           final ayahNum = int.tryParse(segments[1]);
           
           if (surahId != null && ayahNum != null) {
-            targetPage = await LocalDatabaseService.getPageNumber(surahId, ayahNum);
+            isDeepLinkLaunch = true;
             deepLinkAyahNum = ayahNum;
-            print('🔗 Deep Link Detected: Surah $surahId:$ayahNum -> Page $targetPage');
+            print('🔗 Early Deep Link Detect: Surah $surahId:$ayahNum');
+            
+            // We need DB to get page number, but we can wait for it while doing other things
           }
         }
       }
     } catch (e) {
-      print('⚠️ Deep Link Error: $e');
+      print('⚠️ Early Deep Link Error: $e');
     }
 
-    print('🚀 Navigating to AuthWrapper...');
-    // Navigate to AuthWrapper
+    // ✅ 2. Wait for AuthProvider to finish initialization
+    int attempts = 0;
+    const maxAttempts = 50; 
+
+    while (attempts < maxAttempts) {
+      try {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        if (!authProvider.isLoading) break;
+      } catch (e) {}
+      await Future.delayed(const Duration(milliseconds: 100));
+      attempts++;
+    }
+
+    // ✅ 3. If Deep Link, wait for DB now (needed for targetPage)
+    if (isDeepLinkLaunch) {
+      int dbAttempts = 0;
+      // Use polling to check for database readiness
+      while (!_isDatabaseInitialized && dbAttempts < 30) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        dbAttempts++;
+      }
+      
+      // Resolve page number now that DB is ready
+      try {
+        if (_isDatabaseInitialized && deepLinkAyahNum != null) {
+           // We need to retrieve the URI again to be sure, or store surahId
+           // Better to store surahId from the first check
+           final widgetUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
+           if (widgetUri != null) {
+              final surahId = int.tryParse(widgetUri.pathSegments[0]);
+              if (surahId != null) {
+                 targetPage = await LocalDatabaseService.getPageNumber(surahId, deepLinkAyahNum!);
+              }
+           }
+        }
+      } catch (e) {
+         print('Deep Link Page Calc Error: $e');
+      }
+    }
+
+    // ✅ 4. Duration logic
+    // If deep link, minimal delay only if not ready.
+    if (!isDeepLinkLaunch) {
+       final elapsed = DateTime.now().difference(startTime);
+       const minSplashDuration = Duration(milliseconds: 2000);
+       if (elapsed < minSplashDuration) {
+         await Future.delayed(minSplashDuration - elapsed);
+       }
+    }
+
+    _startTarteelStylePreload();
+
+    if (!mounted) return;
+
+    // ✅ 5. Navigation
+    print('🚀 Navigating... DeepLink=$isDeepLinkLaunch Page=$targetPage');
+    
+    // Pass deep link params directly to AuthWrapper for INSTANT render
     await Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const AuthWrapper(),
-        transitionDuration: const Duration(milliseconds: 300),
-        reverseTransitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) => AuthWrapper(
+          initialPageId: targetPage,
+          highlightAyahId: deepLinkAyahNum,
+        ),
+        transitionDuration: isDeepLinkLaunch ? Duration.zero : const Duration(milliseconds: 300), // Zero delay for deep link
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          if (isDeepLinkLaunch) return child; // No animation for deep link
           return FadeTransition(opacity: animation, child: child);
         },
       ),
     );
     
-    // ✅ NAVIGATE TO DEEP LINK TARGET IF EXISTS
-    if (targetPage != null && mounted) {
-      // Push SttPage on top of AuthWrapper
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => SttPage(
-            pageId: targetPage,
-            highlightAyahId: deepLinkAyahNum,
-          ),
-        ),
-      );
-    }
+    // ✅ 6. Final Deep Link Jump (Legacy/Backup removed as AuthWrapper handles it now)
   }
 
   /// ✅ TARTEEL-STYLE: Preload all 604 pages in background

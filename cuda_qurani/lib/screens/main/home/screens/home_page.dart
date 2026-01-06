@@ -86,52 +86,6 @@ class _HomePageState extends State<HomePage> {
     _loadHomePageData();
     // ✅ FIX: Load session immediately - premium check is in UI layer
     _loadLatestSession();
-    
-    // ✅ Check for widget launch
-    _checkForWidgetLaunch();
-  }
-
-  /// Listen for widget clicks to open specific Ayah
-  Future<void> _checkForWidgetLaunch() async {
-    // Check initiallyLaunched (app start)
-    try {
-      final launchedUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
-      if (launchedUri != null) {
-        _handleDeepLink(launchedUri);
-      }
-
-      // Listen for stream (app already running)
-      HomeWidget.widgetClicked.listen((Uri? uri) {
-        if (uri != null) {
-          _handleDeepLink(uri);
-        }
-      });
-    } catch (e) {
-      print('[HOME] Widget launch error: $e');
-    }
-  }
-
-  void _handleDeepLink(Uri uri) {
-    if (uri.scheme == 'qurani' && uri.authority == 'ayah') {
-      final segments = uri.pathSegments;
-      if (segments.length >= 2) {
-        final surahId = int.tryParse(segments[0]);
-        // final ayahNum = int.tryParse(segments[1]); // Not used for now, just open Surah
-
-        if (surahId != null) {
-          print('[HOME] Deep link to Surah $surahId');
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => SttPage(
-                suratId: surahId, 
-                // We could pass ayahNum to scroll there, 
-                // but SttPage constructor needs update or handle it inside
-              ),
-            ),
-          );
-        }
-      }
-    }
   }
 
   /// OPTIMIZED: Load ALL home page data in ONE call
@@ -232,6 +186,7 @@ class _HomePageState extends State<HomePage> {
           }
           
           WidgetService.updateGoalWidget(
+            context: context,
             current: _goalCurrent,
             target: _goalTarget,
             goalType: _goalType,

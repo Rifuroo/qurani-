@@ -895,6 +895,11 @@ class _CompleteAyahWidget extends StatelessWidget {
         }
       }
 
+      // ✅ NEW: DEEP LINK HIGHLIGHT - subtle background for current ayah
+      if (state.isCurrentAyat && wordBg == Colors.transparent) {
+        wordBg = AppColors.getPrimary(context).withValues(alpha: 0.1);
+      }
+
       if (state.hideUnreadAyat) {
         if (wordStatus != null && wordStatus != WordStatus.pending) {
           opacity = 1.0;

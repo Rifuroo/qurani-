@@ -3,8 +3,9 @@ import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
-import 'package:cuda_qurani/providers/theme_provider.dart';
+import 'package:cuda_qurani/services/widget_service.dart';
 import 'package:provider/provider.dart';
+import 'package:cuda_qurani/providers/theme_provider.dart'; // ✅ NEW
 
 /// ==================== THEME SETTINGS PAGE ====================
 /// Halaman untuk memilih tema aplikasi: Auto, Light, Dark
@@ -54,6 +55,9 @@ class _ThemePageState extends State<ThemePage> {
     
     themeProvider.setThemeMode(flutterMode);
     AppHaptics.selection();
+
+    // ✅ NEW: Trigger widget sync so background colors etc update
+    WidgetService.refreshAllWidgets(context);
   }
   
   CustomThemeMode _getCurrentThemeMode(ThemeProvider themeProvider) {

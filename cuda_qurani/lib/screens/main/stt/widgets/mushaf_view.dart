@@ -594,6 +594,11 @@ class _JustifiedAyahLine extends StatelessWidget {
           }
         }
 
+        // ✅ NEW: DEEP LINK HIGHLIGHT - subtle primary background for the entire current Ayah
+        if (isCurrentAyat && wordBg == Colors.transparent) {
+          wordBg = AppColors.getPrimary(context).withValues(alpha: 0.1);
+        }
+
         // ========== PRIORITAS 2: Logika Opacity (hideUnread) ==========
         if (controller.hideUnreadAyat) {
           if (wordStatus != null && wordStatus != WordStatus.pending) {

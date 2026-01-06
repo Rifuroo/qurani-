@@ -104,6 +104,7 @@ class _GoalDialogState extends State<GoalDialog> {
           }
 
           WidgetService.updateGoalWidget(
+            context: context,
             current: 0, 
             target: _targetValue,
             goalType: _selectedType,

@@ -37,6 +37,14 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
+            <!-- Widget Deep Link Filter -->
+            <intent-filter android:label="qurani_deep_link">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="qurani" android:host="ayah" />
+            </intent-filter>
+
         </activity>
 
         <!-- Flutter plugin loader -->
