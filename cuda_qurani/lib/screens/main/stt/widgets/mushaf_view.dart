@@ -21,7 +21,7 @@ class MushafRenderer {
   }
 
   static double lineHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height * 0.050; // ~5.5% screen height
+    return MediaQuery.of(context).size.height * 0.050; // Reverted to default 5.0%
   }
 
   static const double PAGE_PADDING =
@@ -37,10 +37,12 @@ class MushafRenderer {
     required double availableWidth,
     required BuildContext context,
     bool allowOverflow = false,
+    double? customLineHeight,
+    bool useFittedBox = false, // ✅ ADDED
   }) {
     if (wordSpans.isEmpty) return const SizedBox.shrink();
 
-    final lineH = lineHeight(context);
+    final lineH = customLineHeight ?? lineHeight(context); // ✅ USE CUSTOM OR DEFAULT
 
     if (isCentered) {
       return SizedBox(
@@ -65,6 +67,8 @@ class MushafRenderer {
         maxWidth: availableWidth,
         allowOverflow: allowOverflow,
         context: context,
+        customLineHeight: lineH, // ✅ PASS DOWN
+        useFittedBox: useFittedBox, // ✅ ADDED
       ),
     );
   }
@@ -74,23 +78,29 @@ class MushafRenderer {
     required double maxWidth,
     bool allowOverflow = false,
     required BuildContext context,
+    double? customLineHeight, // ✅ ADDED
+    required bool useFittedBox, // ✅ ADDED
   }) {
     if (wordSpans.isEmpty) return const SizedBox.shrink();
 
-    final lineH = lineHeight(context);
+    final lineH = customLineHeight ?? lineHeight(context); // ✅ USE CUSTOM OR DEFAULT
 
     // Single word case
     if (wordSpans.length == 1) {
-      return SizedBox(
+      final child = SizedBox(
         width: maxWidth,
         child: RichText(
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.justify,
           text: TextSpan(
             children: [wordSpans.first],
-          ), // âœ… UBAH: wrap dalam children
+          ), // ✅ UBAH: wrap dalam children
         ),
       );
+      
+      return useFittedBox 
+        ? FittedBox(fit: BoxFit.scaleDown, child: child)
+        : child;
     }
 
     // Calculate total text width WITHOUT spacing
@@ -101,7 +111,7 @@ class MushafRenderer {
       final textPainter = TextPainter(
         text: span is TextSpan
             ? span
-            : TextSpan(children: [span]), // âœ… UBAH: handle InlineSpan
+            : TextSpan(children: [span]), // ✅ UBAH: handle InlineSpan
         textDirection: TextDirection.rtl,
       );
       textPainter.layout();
@@ -111,9 +121,9 @@ class MushafRenderer {
     }
 
     // Build justified row with proper centering and tight spacing
-    return SizedBox(
+    final rowContent = SizedBox(
       width: maxWidth,
-      height: lineH,
+      height: useFittedBox ? null : lineH, // ✅ Remove height constraint for FittedBox
       child: Row(
         textDirection: TextDirection.rtl,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -126,18 +136,126 @@ class MushafRenderer {
               maxLines: 1,
               text: TextSpan(
                 children: [wordSpans[i]],
-              ), // âœ… UBAH: wrap dalam children, hapus casting
+              ), // ✅ UBAH: wrap dalam children, hapus casting
             ),
             if (i < wordSpans.length - 1) const SizedBox(width: 0.0),
           ],
         ],
       ),
     );
+
+    return useFittedBox
+        ? SizedBox(
+            width: maxWidth,
+            height: lineH,
+            child: FittedBox(
+               fit: BoxFit.scaleDown,
+               child: SizedBox(
+                 width: maxWidth,
+                 child: rowContent,
+               )
+            )
+          )
+        : rowContent;
+  }
+
+  // ✅ NEW: Centralized layout configuration for consistency
+  static MushafLayoutConfig calculateLayoutConfig(
+    BuildContext context,
+    int pageNumber,
+    bool isIndopak,
+  ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    double horizontalPadding = 0.0;
+    double fontSizeMultiplier = 0.055; // Default declaration
+    double scaleX = 1.0;
+    double scaleY = 1.0;
+    double targetLineHeight = lineHeight(context); // Default
+    bool useFittedBox = false; // Default
+
+    // 1. Determine Padding & Scale based on layout/page
+    if (isIndopak) {
+      if (pageNumber == 1 || pageNumber == 2) {
+         // Page 1 & 2: Replicating "Relaxed Density" (Step 60)
+         horizontalPadding = screenWidth * 0.05;
+         fontSizeMultiplier = 0.070; // Good balance
+         scaleY = 1.0;
+         scaleX = 1.0;
+         targetLineHeight = screenHeight * 0.060; // "Golden" Value
+         useFittedBox = false; // Disable to trust natural layout
+      } else {
+        // Normal pages: Tighter layout (Reverted)
+        horizontalPadding = 0.0;
+        fontSizeMultiplier = 0.0630; // Standard font
+        scaleY = 1.150;
+        scaleX = 0.98;
+        targetLineHeight = screenHeight * 0.050; // Standard line
+        useFittedBox = false;
+      }
+    } else {
+      // QPC / Standard
+      if (pageNumber == 1 || pageNumber == 2) {
+        horizontalPadding = screenWidth * 0.05;
+        fontSizeMultiplier = 0.090; // Good balance
+        targetLineHeight = screenHeight * 0.060; // "Golden" Value
+        useFittedBox = false; // Disable
+      } else {
+        horizontalPadding = 0.0;
+        fontSizeMultiplier = 0.0690;
+      }
+    }
+
+    final availableWidth = screenWidth - (horizontalPadding * 2);
+
+    // 2. Calculate Responsive Font Size
+    // Removed strict height constraint to restore original behavior for normal pages
+    double calculatedFontSize = screenWidth * fontSizeMultiplier;
+    
+    // ✅ RESTORED: Constraint enabled ONLY for normal pages (without FittedBox)
+    // This ensures Page 3+ don't have overflowing text, restoring original look.
+    if (!useFittedBox) {
+      final maxFontSizeByHeight = targetLineHeight * 0.85; 
+      if (calculatedFontSize > maxFontSizeByHeight) {
+        calculatedFontSize = maxFontSizeByHeight;
+      }
+    }
+
+    return MushafLayoutConfig(
+      horizontalPadding: horizontalPadding,
+      availableWidth: availableWidth,
+      fontSize: calculatedFontSize,
+      scaleX: scaleX,
+      scaleY: scaleY,
+      lineHeight: targetLineHeight,
+      useFittedBox: useFittedBox, // ✅ ADDED
+    );
   }
 }
 
+class MushafLayoutConfig {
+  final double horizontalPadding;
+  final double availableWidth;
+  final double fontSize;
+  final double scaleX;
+  final double scaleY;
+  final double lineHeight;
+  final bool useFittedBox; // ✅ ADDED
+
+  MushafLayoutConfig({
+    required this.horizontalPadding,
+    required this.availableWidth,
+    required this.fontSize,
+    required this.scaleX,
+    required this.scaleY,
+    required this.lineHeight,
+    required this.useFittedBox, // ✅ ADDED
+  });
+}
+
 class MushafDisplay extends StatefulWidget {
-  const MushafDisplay({Key? key}) : super(key: key); // âœ… Already OK
+  const MushafDisplay({Key? key}) : super(key: key); // ✅ Already OK
 
   @override
   State<MushafDisplay> createState() => _MushafDisplayState();
@@ -350,6 +468,9 @@ class MushafPageContent extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
 
     Widget lineWidget;
+    
+    // ✅ Calculate config once
+    final layoutConfig = MushafRenderer.calculateLayoutConfig(context, pageNumber, isIndopak);
 
     switch (line.lineType) {
       case 'surah_name':
@@ -361,25 +482,28 @@ class MushafPageContent extends StatelessWidget {
         break;
 
       case 'ayah':
-        lineWidget = _JustifiedAyahLine(line: line, pageNumber: pageNumber);
+        // ✅ Pass config to line
+        lineWidget = _JustifiedAyahLine(
+            line: line, 
+            pageNumber: pageNumber,
+            layoutConfig: layoutConfig,
+        );
 
-        // âœ… Wrap dengan Transform jika Indopak
-        if (isIndopak) {
+        // ✅ Apply Scale if needed (Indopak)
+        if (layoutConfig.scaleX != 1.0 || layoutConfig.scaleY != 1.0) {
           lineWidget = Transform.scale(
-            scaleX: 0.98,
-            scaleY: 1.150,
+            scaleX: layoutConfig.scaleX,
+            scaleY: layoutConfig.scaleY,
             alignment: Alignment.center,
             child: lineWidget,
           );
         }
 
-        // âœ… TAMBAH: Padding khusus untuk Indopak halaman 1 & 2
-        if (isIndopak && (pageNumber == 1 || pageNumber == 2)) {
-          lineWidget = Padding(
+        // ✅ Apply Padding if needed
+        if (layoutConfig.horizontalPadding > 0) {
+           lineWidget = Padding(
             padding: EdgeInsets.symmetric(
-              horizontal:
-                  screenWidth *
-                  0.120, // âœ… Padding hanya untuk Indopak page 1-2
+              horizontal: layoutConfig.horizontalPadding,
             ),
             child: lineWidget,
           );
@@ -498,28 +622,22 @@ class _BasmallahLine extends StatelessWidget {
 
 class _JustifiedAyahLine extends StatelessWidget {
   final MushafPageLine line;
-  final int pageNumber; // TAMBAH ini
+  final int pageNumber;
+  final MushafLayoutConfig layoutConfig; // ✅ Use Config
 
   const _JustifiedAyahLine({
     required this.line,
-    required this.pageNumber, // TAMBAH ini
+    required this.pageNumber,
+    required this.layoutConfig,
   });
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
     final controller = context.watch<SttController>();
     final isIndopak = controller.mushafLayout == MushafLayout.indopak;
 
-    // Font size berbeda untuk QPC vs IndoPak
-    final fontSizeMultiplier = isIndopak
-        ? ((pageNumber == 1 || pageNumber == 2) ? 0.0690 : 0.0630)
-        : ((pageNumber == 1 || pageNumber == 2)
-              ? 0.080
-              : 0.0690); // QPC: page 1-2 lebih besar
-
-    final baseFontSize = screenWidth * fontSizeMultiplier;
+    // ✅ Use Calculated Font Size
+    final baseFontSize = layoutConfig.fontSize;
     final lastWordFontMultiplier = 0.850;
 
     if (line.ayahSegments == null || line.ayahSegments!.isEmpty) {
@@ -543,22 +661,13 @@ class _JustifiedAyahLine extends StatelessWidget {
         final word = segment.words[i];
         final wordIndex = word.wordNumber - 1;
 
-        // âœ… CRITICAL FIX: Use ACTUAL surah:ayah from segment, not hardcoded
+        // ✅ CRITICAL FIX: Use ACTUAL surah:ayah from segment, not hardcoded
         final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
         final wordStatus = controller.wordStatusMap[wordStatusKey]?[wordIndex];
 
-        // ðŸŽ¥ DEBUG: Only log if listening mode is active
+        // 🎥 DEBUG: Only log if listening mode is active
         if (controller.isListeningMode && isCurrentAyat) {
-          print(
-            '🎨 UI RENDER: Ayah ${segment.surahId}:${segment.ayahNumber}, Word[$wordIndex] (loop $i) = $wordStatus (Layout: ${controller.mushafLayout.displayName})',
-          );
-          print(
-            '   Full wordStatusMap[$wordStatusKey] = ${controller.wordStatusMap[wordStatusKey]}',
-          );
-          print('   Total words in segment: ${segment.words.length}');
-          print(
-            '   Full wordStatusMap[$wordStatusKey] = ${controller.wordStatusMap[wordStatusKey]}',
-          );
+          // print('🎨 UI RENDER: ...'); 
         }
 
         final wordSegments = controller.segmentText(word.text);
@@ -631,11 +740,15 @@ class _JustifiedAyahLine extends StatelessWidget {
                 ).withValues(alpha: wordOpacity),
                 backgroundColor: wordBg,
                 fontWeight: FontWeight.w400,
-                height: isIndopak ? 1.9 : 1.8,
-                // âœ… SOLUSI: Letterspace yang lebih negatif untuk "gepengin" text
-                letterSpacing: isIndopak
-                    ? -0.420 // âœ… Lebih negatif = lebih gepeng (coba -1.5 sampai -3.0)
-                    : -5,
+                // ✅ Conditional Style for P1/P2 vs Others
+                // APPLIES TO BOTH INDOPAK AND QPC
+                // Step 60 Metrics: Height 1.5, Spacing 0.0
+                height: (pageNumber == 1 || pageNumber == 2) 
+                    ? 1.5 
+                    : (isIndopak ? 1.9 : 1.8), 
+                letterSpacing: (pageNumber == 1 || pageNumber == 2)
+                    ? 0.0 
+                    : (isIndopak ? -0.420 : -5),
                 decoration: (controller.hideUnreadAyat && !isLastWord)
                     ? TextDecoration.underline
                     : null,
@@ -650,16 +763,19 @@ class _JustifiedAyahLine extends StatelessWidget {
       }
     }
 
-    // âœ… Build line widget
+    // ✅ Build line widget with CORRECT Available Width
+    // We must pass the width that accounts for the padding!
     final lineWidget = MushafRenderer.renderJustifiedLine(
       wordSpans: spans,
       isCentered: line.isCentered,
-      availableWidth: MediaQuery.of(context).size.width,
+      availableWidth: layoutConfig.availableWidth,
       context: context,
       allowOverflow: false,
+      customLineHeight: layoutConfig.lineHeight,
+      useFittedBox: layoutConfig.useFittedBox, // ✅ PASS FLAG
     );
 
-    return lineWidget;
+    return lineWidget; // Return directly, Padding is handled in parent
   }
 }
 
