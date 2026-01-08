@@ -368,7 +368,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
   ) {
     final isListening = controller.isListeningMode;
     final isRecording = controller.isRecording;
-    final isPaused = controller.listeningAudioService?.isPaused ?? false;
+    final isPaused = controller.isPaused;
 
     // ✅ Calculate new position first
     double newPosition = _dragPosition + (delta / maxWidth);
@@ -401,7 +401,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
     final dragPos = _dragPosition;
     final isListening = controller.isListeningMode;
     final isRecording = controller.isRecording;
-    final isPaused = controller.listeningAudioService?.isPaused ?? false;
+    final isPaused = controller.isPaused;
 
     // ✅ Reset drag state immediately
     if (mounted) {
@@ -525,13 +525,12 @@ class _QuranBottomBarState extends State<QuranBottomBar>
     }
 
     if (controller.isListeningMode) {
-      final audioService = controller.listeningAudioService;
-      if (audioService != null) {
-        if (audioService.isPaused) {
-          await controller.resumeListening();
-        } else {
-          await controller.pauseListening();
-        }
+      // ✅ RELIABLE TOGGLE using controller's getter
+      // Fixed: Pause button wasn't working because service was accessed directly
+      if (controller.isPaused) {
+        await controller.resumeListening();
+      } else {
+        await controller.pauseListening();
       }
     } else if (controller.isRecording) {
       await controller.stopRecording();
@@ -548,8 +547,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
     String keyState;
 
     if (isListening) {
-      final audioService = controller.listeningAudioService;
-      final isPaused = audioService?.isPaused ?? false;
+      final isPaused = controller.isPaused;
       icon = isPaused ? Icons.play_arrow : Icons.pause;
       keyState = 'listen_${isPaused ? 'paused' : 'playing'}';
     } else if (isRecording) {

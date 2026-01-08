@@ -633,8 +633,32 @@ class _JustifiedAyahLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<SttController>();
-    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
+    // ✅ OPTIMIZATION: Use granular selects to avoid full page rebuilds
+    final mushafLayout = context.select<SttController, MushafLayout>((c) => c.mushafLayout);
+    final isIndopak = mushafLayout == MushafLayout.indopak;
+    final currentAyatIndex = context.select<SttController, int>((c) => c.currentAyatIndex);
+    final isListeningMode = context.select<SttController, bool>((c) => c.isListeningMode);
+    final isRecording = context.select<SttController, bool>((c) => c.isRecording);
+    final hideUnreadAyat = context.select<SttController, bool>((c) => c.hideUnreadAyat);
+    
+    // Select ONLY the word status for the current active highlight if it belongs to this line
+    final lineAyahKeys = line.ayahSegments?.map((s) => '${s.surahId}:${s.ayahNumber}').toSet() ?? {};
+    
+    // ⚡️ ULTIMATE OPTIMIZATION: Rebuild ONLY if the active highlight is on THIS line
+    // This selection returns a stable string that only changes when the active word on this line moves.
+    final lineHighlightState = context.select<SttController, String>((c) {
+      if (c.currentHighlightKey == null || !lineAyahKeys.contains(c.currentHighlightKey)) {
+        // Check if ANY word in this line still has a non-pending status (from previous match)
+        // This is rare but needed for correctness during transitions.
+        final hasAnyActive = lineAyahKeys.any((key) => 
+          c.wordStatusMap[key]?.values.any((s) => s != WordStatus.pending) ?? false
+        );
+        return hasAnyActive ? 'has_status' : 'none';
+      }
+      return '${c.currentHighlightKey}:${c.currentHighlightWordIdx}';
+    });
+
+    final controller = context.read<SttController>();
 
     // ✅ Use Calculated Font Size
     final baseFontSize = layoutConfig.fontSize;
@@ -646,16 +670,18 @@ class _JustifiedAyahLine extends StatelessWidget {
 
     List<InlineSpan> spans = [];
 
-    final fontFamily = controller.mushafLayout.isGlyphBased
+    final fontFamily = mushafLayout.isGlyphBased
         ? 'p$pageNumber' // QPC: p1, p2, p3, etc.
         : 'IndoPak-Nastaleeq'; // IndoPak: single font for all pages
+
+    final wordStatusMap = controller.wordStatusMap;
 
     for (final segment in line.ayahSegments!) {
       final ayatIndex = controller.ayatList.indexWhere(
         (a) => a.surah_id == segment.surahId && a.ayah == segment.ayahNumber,
       );
       final isCurrentAyat =
-          ayatIndex >= 0 && ayatIndex == controller.currentAyatIndex;
+          ayatIndex >= 0 && ayatIndex == currentAyatIndex;
 
       for (int i = 0; i < segment.words.length; i++) {
         final word = segment.words[i];
@@ -663,10 +689,10 @@ class _JustifiedAyahLine extends StatelessWidget {
 
         // ✅ CRITICAL FIX: Use ACTUAL surah:ayah from segment, not hardcoded
         final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
-        final wordStatus = controller.wordStatusMap[wordStatusKey]?[wordIndex];
+        final wordStatus = wordStatusMap[wordStatusKey]?[wordIndex];
 
         // 🎥 DEBUG: Only log if listening mode is active
-        if (controller.isListeningMode && isCurrentAyat) {
+        if (isListeningMode && isCurrentAyat) {
           // print('🎨 UI RENDER: ...'); 
         }
 
@@ -685,16 +711,16 @@ class _JustifiedAyahLine extends StatelessWidget {
           switch (wordStatus) {
             case WordStatus.matched:
             case WordStatus.correct:
-              wordBg = getCorrectColor(context).withValues(alpha: 0.4);
+              wordBg = getCorrectColor(context).withValues(alpha: 0.6);
               break;
             case WordStatus.mismatched:
             case WordStatus.incorrect:
             case WordStatus.skipped:
-              wordBg = getErrorColor(context).withValues(alpha: 0.4);
+              wordBg = getErrorColor(context).withValues(alpha: 0.6);
               break;
             case WordStatus.processing:
-              if (controller.isRecording || controller.isListeningMode) {
-                wordBg = AppColors.getInfo(context).withValues(alpha: 0.4);
+              if (isRecording || isListeningMode) {
+                wordBg = AppColors.getInfo(context).withValues(alpha: 0.6);
               } else {
                 wordBg = Colors.transparent;
               }
@@ -705,13 +731,21 @@ class _JustifiedAyahLine extends StatelessWidget {
           }
         }
 
-        // ✅ NEW: DEEP LINK HIGHLIGHT - subtle primary background for the entire current Ayah
-        if (isCurrentAyat && wordBg == Colors.transparent) {
+        // ✅ FIX: Only show "current ayah" highlight when there's ACTIVE word highlighting
+        // This prevents "estimasi" highlight on NEXT ayah before audio starts (User Report)
+        // Check if this ayah has any word currently being processed
+        final hasActiveHighlight = wordStatusMap[wordStatusKey]?.values
+            .any((s) => s == WordStatus.processing) ?? false;
+        
+        if (isCurrentAyat && 
+            wordBg == Colors.transparent && 
+            hasActiveHighlight &&  // ✅ Only if there's active highlighting
+            (isListeningMode || isRecording)) {
           wordBg = AppColors.getPrimary(context).withValues(alpha: 0.1);
         }
 
         // ========== PRIORITAS 2: Logika Opacity (hideUnread) ==========
-        if (controller.hideUnreadAyat) {
+        if (hideUnreadAyat) {
           if (wordStatus != null && wordStatus != WordStatus.pending) {
             wordOpacity = 1.0;
           } else if (isCurrentAyat) {

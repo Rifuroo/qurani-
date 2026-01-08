@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:cuda_qurani/services/audio_download_services.dart';
 import 'package:cuda_qurani/services/global_ayat_services.dart';
 import 'package:cuda_qurani/services/reciter_manager_services.dart';
@@ -14,7 +15,7 @@ class ListeningAudioService {
   bool _isPaused = false;
 
   StreamController<VerseReference>? _currentVerseController;
-  StreamController<int>? _wordHighlightController;
+  StreamController<WordHighlight>? _wordHighlightController;
 
   PlaybackSettings? _currentSettings;
   String? _reciterIdentifier;
@@ -28,7 +29,7 @@ class ListeningAudioService {
   bool get isPaused => _isPaused;
   Stream<VerseReference>? get currentVerseStream =>
       _currentVerseController?.stream;
-  Stream<int>? get wordHighlightStream => _wordHighlightController?.stream;
+  Stream<WordHighlight>? get wordHighlightStream => _wordHighlightController?.stream;
   AudioPlayer get player => _player;
 
   // Get current active track info
@@ -61,7 +62,7 @@ class ListeningAudioService {
 
     // Create stream controllers
     _currentVerseController = StreamController<VerseReference>.broadcast();
-    _wordHighlightController = StreamController<int>.broadcast();
+    _wordHighlightController = StreamController<WordHighlight>.broadcast();
 
     // Set playback speed
     await _player.setSpeed(settings.speed);
@@ -177,9 +178,9 @@ Future<void> _playNextTrack() async {
   final surahNum = currentAudio['surah_number'] as int;
   final ayahNum = currentAudio['ayah_number'] as int;
 
- // Ã¢Å“â€¦ FIX: Reset highlight SEBELUM notifikasi ayat baru
-_wordHighlightController?.add(-1);
-print('Ã°Å¸"â€ž Reset word highlight before starting new ayah');
+ // Ã¢Å“â€¦  // ✅ REFINE: Removed aggressive reset between ayahs (prevents flicker)
+  // _wordHighlightController?.add(WordHighlight(-1, 0));
+  // print('🧹 Reset word highlight before starting new ayah');
 
 // Ã¢Å“â€¦ CRITICAL: Notify verse change FIRST, give UI time to update
 _currentVerseController?.add(
@@ -240,37 +241,67 @@ print('Ã¢Å¡Â¡ Verse change processed, starting word highlighting...');
       }
     }
 
-    // Ã¢Å“â€¦ FIX: Start word highlighting SEBELUM play
-    StreamSubscription? positionSubscription;
+    // ✅ FIX: Timer MUST start AFTER audio plays
+    Timer? highlightTimer;
+    int currentHighlightedWord = -1;
 
+    // ✅ NOW start the Timer (Round 8: Universal Normalization)
     if (segments.isNotEmpty) {
-      int currentHighlightedWord = -1;
+      // Pre-calculate min/max for universal normalization
+      final minWordIdx = segments.map((s) => s['word_index'] as int).reduce(min);
+      final maxWordIdx = segments.map((s) => s['word_index'] as int).reduce(max);
 
-      positionSubscription = _player.positionStream.listen((position) {
-        final positionMs = position.inMilliseconds;
+      // ✅ CRITICAL: Emit first word WITH normalization context
+      final firstWordIndex = segments[0]['word_index'] as int;
+      currentHighlightedWord = firstWordIndex;
+      _wordHighlightController?.add(
+        WordHighlight(firstWordIndex, maxWordIdx, min: minWordIdx),
+      );
+      print('🎯 Emitted first word $firstWordIndex BEFORE audio starts (Range: $minWordIdx-$maxWordIdx)');
 
-        // Find which word is currently playing
-        for (int i = 0; i < segments.length; i++) {
-          final segment = segments[i];
-          final startMs = segment['start_ms'] as int;
-          final endMs = segment['end_ms'] as int;
+      void checkPosition() {
+        if (!_isPlaying || _isPaused) return;
 
-          if (positionMs >= startMs && positionMs <= endMs) {
-            final wordIndex = segment['word_index'] as int;
+        // ✅ BALANCED OFFSET (Round 9): 150ms look-ahead (refined for short ayahs)
+        final rawPos = _player.position.inMilliseconds;
+        final positionWithLookahead = rawPos + 150;
+        final durationMs = _player.duration?.inMilliseconds ?? 0;
 
-            // Only emit if word changed (avoid spam)
-            if (wordIndex != currentHighlightedWord) {
-              currentHighlightedWord = wordIndex;
-              _wordHighlightController?.add(wordIndex);
-              print('Ã¢Å“Â¨ Highlighting word $wordIndex at ${positionMs}ms (Surah $surahNum:$ayahNum)');
+        int foundSegmentIdx = -1;
+
+        // ✅ PROACTIVE END: Based on RAW position to avoid double-lookahead bias
+        if (durationMs > 0 && rawPos >= durationMs - 100) {
+          foundSegmentIdx = segments.length - 1;
+        } else {
+          // ROBUST SEARCH: Find latest started segment using look-ahead
+          for (int i = 0; i < segments.length; i++) {
+            if (positionWithLookahead >= (segments[i]['start_ms'] as int)) {
+              foundSegmentIdx = i;
+            } else {
+              break;
             }
-            break;
           }
         }
-      });
+
+        if (foundSegmentIdx != -1) {
+          final segment = segments[foundSegmentIdx];
+          final wordIndex = segment['word_index'] as int;
+
+          if (wordIndex != currentHighlightedWord) {
+            currentHighlightedWord = wordIndex;
+            _wordHighlightController?.add(
+              WordHighlight(wordIndex, maxWordIdx, min: minWordIdx),
+            );
+          }
+        }
+      }
+
+      // Initial check
+      checkPosition();
+      highlightTimer = Timer.periodic(const Duration(milliseconds: 10), (_) => checkPosition());
     }
 
-    // Start playback
+    // Start playback AFTER starting timer and emitting first word
     await _player.play();
 
     // Wait for audio to finish
@@ -278,10 +309,26 @@ print('Ã¢Å¡Â¡ Verse change processed, starting word highlighting...');
       (state) => state.processingState == ProcessingState.completed,
     );
 
-    // Ã¢Å“â€¦ Cancel position subscription
-    await positionSubscription?.cancel();
+    // ✅ FIX: ALWAYS emit LAST word when audio completes (no condition)
+    // This ensures words like "لِلْمُتَّقِينَ" and "يُوقِنُونَ" are always highlighted
+    if (segments.isNotEmpty) {
+      final lastWordIndex = segments.last['word_index'] as int;
+      final minWordIdx = segments.map((s) => s['word_index'] as int).reduce(min);
+      final maxWordIdx = segments.map((s) => s['word_index'] as int).reduce(max);
+      
+      print('🏁 Audio completed - forcing last word emit: $lastWordIndex (was: $currentHighlightedWord)');
+      currentHighlightedWord = lastWordIndex;
+      _wordHighlightController?.add(WordHighlight(lastWordIndex, maxWordIdx, min: minWordIdx));
+    }
+
+    // ✅ Cancel timer
+    highlightTimer?.cancel();
 
     print('Ã¢Å“â€¦ Ayah $surahNum:$ayahNum completed');
+
+    // ✅ CRITICAL: Delay before moving to next ayah
+    // Increased to 600ms for better visibility of the last word
+    await Future.delayed(const Duration(milliseconds: 600));
 
     // Check verse repeat
     if (_shouldRepeatVerse()) {
@@ -347,4 +394,11 @@ print('Ã¢Å¡Â¡ Verse change processed, starting word highlighting...');
     _currentVerseController?.close();
     _wordHighlightController?.close();
   }
+}
+
+class WordHighlight {
+  final int index;
+  final int total;
+  final int min;
+  WordHighlight(this.index, this.total, {this.min = 0});
 }

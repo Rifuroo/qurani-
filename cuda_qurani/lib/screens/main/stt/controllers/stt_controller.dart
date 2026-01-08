@@ -315,59 +315,46 @@ class SttController with ChangeNotifier {
   /// 🆕 NEW: Map audio segment word_index (QPC-based) to actual layout word_index
   int _mapAudioIndexToLayoutIndex(
     int audioWordIndex,
+    int audioTotal,
     int surahId,
-    int ayahNumber,
-  ) {
-    // For QPC layout, no mapping needed (1:1)
-    if (_mushafLayout == MushafLayout.qpc) {
-      return audioWordIndex;
+    int ayahNumber, {
+    int minWordIndex = 0,
+  }) {
+    // Universal Ratio Calculation (Round 10)
+    // ratio = (current - min) / (max - min)
+    double ratio = 0.0;
+    if (audioTotal > minWordIndex) {
+      ratio = (audioWordIndex - minWordIndex) /
+          (audioTotal - minWordIndex).toDouble();
+    } else {
+      // ✅ FIX Round 10: If only 1 audio word, stay at ratio 0.0 (first word)
+      // This prevents jumping to the end-of-ayah symbol in QPC
+      ratio = 0.0; 
     }
 
-    // ✅ CRITICAL FIX: For IndoPak, use _currentPageAyats (most reliable source)
-    // _ayatList might be filtered or incomplete, but _currentPageAyats has full page data
+    // Find the ayah in current page data
     final ayat = _currentPageAyats.firstWhere(
       (a) => a.surah_id == surahId && a.ayah == ayahNumber,
-      orElse: () {
-        print(
-          '⚠️ MAPPING FALLBACK: Ayah $surahId:$ayahNumber not in _currentPageAyats, trying _ayatList',
-        );
-        return _ayatList.firstWhere(
-          (a) => a.surah_id == surahId && a.ayah == ayahNumber,
-          orElse: () {
-            print(
-              '❌ MAPPING ERROR: Ayah $surahId:$ayahNumber not found anywhere!',
-            );
-            return _ayatList.isNotEmpty
-                ? _ayatList.first
-                : _currentPageAyats.first;
-          },
-        );
-      },
+      orElse: () => _ayatList.firstWhere(
+        (a) => a.surah_id == surahId && a.ayah == ayahNumber,
+        orElse: () =>
+            _ayatList.isNotEmpty ? _ayatList.first : _currentPageAyats.first,
+      ),
     );
 
-    final indopakWordCount = ayat.words.length;
-
-    // ✅ STRATEGY: Proportional mapping based on word count ratio
-    // Since we don't have QPC word count in memory, we'll use a heuristic:
-    // If audio index exceeds IndoPak count, it means QPC has more words
-
-    if (audioWordIndex < indopakWordCount) {
-      // Direct mapping possible (same or audio has fewer words)
-      print(
-        '🗺️ MAPPING: Direct map $audioWordIndex → $audioWordIndex (within bounds)',
-      );
-      return audioWordIndex;
+    // ✅ CRITICAL FIX Round 10: In QPC layout, the LAST word element is the Ayah Number symbol.
+    // We MUST exclude it from the highlightable range.
+    int layoutWordCount = ayat.words.length;
+    if (_mushafLayout == MushafLayout.qpc && layoutWordCount > 1) {
+      layoutWordCount -= 1; // Filter out the Ayah Number symbol
     }
 
-    // Audio index exceeds IndoPak count - need proportional mapping
-    // Estimate QPC word count from audio index + safety margin
-    final estimatedQpcCount = audioWordIndex + 1;
-    final ratio = indopakWordCount / estimatedQpcCount.toDouble();
-    final mappedIndex = (audioWordIndex * ratio).floor();
-    final clampedIndex = mappedIndex.clamp(0, indopakWordCount - 1);
+    final mappedIndex = (ratio * layoutWordCount).floor();
+    final clampedIndex = mappedIndex.clamp(0, layoutWordCount - 1);
 
+    final logTag = _mushafLayout == MushafLayout.qpc ? 'QPC' : 'STT';
     print(
-      '🗺️ MAPPING: Proportional $audioWordIndex → $clampedIndex (IndoPak: $indopakWordCount words, estimated QPC: $estimatedQpcCount)',
+      '📍 MAPPING (Round 10 - $logTag): Audio $audioWordIndex [$minWordIndex-$audioTotal] -> Ratio ${ratio.toStringAsFixed(2)} -> Layout $clampedIndex/$layoutWordCount (Ayah $surahId:$ayahNumber)',
     );
 
     return clampedIndex;
@@ -439,6 +426,16 @@ class SttController with ChangeNotifier {
   bool get isListeningMode => _isListeningMode;
   PlaybackSettings? get playbackSettings => _playbackSettings;
   ListeningAudioService? get listeningAudioService => _listeningAudioService;
+  bool get isPaused => _listeningAudioService?.isPaused ?? false; // ✅ RELIABLE getter for UI
+
+  // Word Status Tracking (O(1) optimization)
+  final Map<String, int> _lastHighlightedIdx = {};
+  String? _currentHighlightKey;
+  int? _currentHighlightWordIdx;
+
+  String? get currentHighlightKey => _currentHighlightKey;
+  int? get currentHighlightWordIdx => _currentHighlightWordIdx;
+
   // ===== INITIALIZATION =====
   Future<void> initializeApp() async {
     appLogger.log('APP_INIT', 'Starting OPTIMIZED page-based initialization');
@@ -612,12 +609,13 @@ class SttController with ChangeNotifier {
           );
         }
 
-        // ? CRITICAL: Clear ALL highlights before updating index
-        final allKeys = _wordStatusMap.keys.toList();
-        for (final key in allKeys) {
-          _wordStatusMap[key]?.clear();
-        }
-        print('   ?? Cleared all highlights (${allKeys.length} ayahs)');
+        // ✅ REFINE: Don't clear highlights on verse change, wait for next highlight
+        // This prevents the "blink" between ayahs
+        // final allKeys = _wordStatusMap.keys.toList();
+        // for (final key in allKeys) {
+        //   _wordStatusMap[key]?.clear();
+        // }
+        // print('   🧹 Removed aggressive clear highlights (${allKeys.length} ayahs)');
 
         // ? CRITICAL: Update _currentAyatIndex using _currentPageAyats
         final ayatIndex = _currentPageAyats.indexWhere(
@@ -653,13 +651,13 @@ class SttController with ChangeNotifier {
         }
       });
 
-      // ?? Subscribe to word highlights
       _wordHighlightSubscription = _listeningAudioService!.wordHighlightStream?.listen((
-        audioWordIndex, // 🔴 RENAMED: ini dari audio segments (QPC-based)
+        event, // 🔴 UPDATED: WordHighlight event
       ) {
-        print(
-          '🎧 Word highlight event received (audio index): $audioWordIndex',
-        );
+        final audioWordIndex = event.index;
+        final audioTotal = event.total;
+        // 🔇 Reduced verbose logging
+        // print('🎧 Word highlight event received (audio index): $audioWordIndex');
 
         // ? Handle reset signal (-1)
         if (audioWordIndex == -1) {
@@ -682,9 +680,9 @@ class SttController with ChangeNotifier {
         if (_currentAyatIndex >= 0 &&
             _currentAyatIndex < _currentPageAyats.length) {
           currentAyat = _currentPageAyats[_currentAyatIndex];
-          print(
+          /* print(
             '   Current ayat: ${currentAyat.surah_id}:${currentAyat.ayah} (${currentAyat.words.length} words)',
-          );
+          ); */
         } else {
           print(
             '❌ Invalid _currentAyatIndex: $_currentAyatIndex (pageAyats: ${_currentPageAyats.length})',
@@ -693,16 +691,19 @@ class SttController with ChangeNotifier {
         }
 
         if (currentAyat != null) {
-          // 🆕 MAP audio word index to layout-specific word index
+          // 🆕 MAP audio word index to layout-specific word index (Round 7: Universal)
           final layoutWordIndex = _mapAudioIndexToLayoutIndex(
-            audioWordIndex,
+            event.index,
+            event.total,
             currentAyat.surah_id,
             currentAyat.ayah,
+            minWordIndex: event.min,
           );
 
           final currentKey = _wordKey(currentAyat.surah_id, currentAyat.ayah);
 
-          // ✅ ADD: Enhanced debugging untuk tracking mapping
+          // 🔇 Reduced verbose mapping logs
+          /* 
           print(
             '🗺️ WORD INDEX MAPPING: audio=$audioWordIndex → layout=$layoutWordIndex (${_mushafLayout.displayName})',
           );
@@ -712,46 +713,54 @@ class SttController with ChangeNotifier {
           print(
             '   Current _wordStatusMap[$currentKey] before update: ${_wordStatusMap[currentKey]}',
           );
-
-          print(
-            '🗺️ WORD INDEX MAPPING: audio=$audioWordIndex → layout=$layoutWordIndex (${_mushafLayout.displayName})',
-          );
+          */
           final words = currentAyat.words;
 
-          // ? CRITICAL: Validate layoutWordIndex before accessing array
+          // ✅ CRITICAL: Validate layoutWordIndex before accessing array
           if (layoutWordIndex < 0 || layoutWordIndex >= words.length) {
             print(
               '❌ Invalid layoutWordIndex: $layoutWordIndex for ayat ${currentAyat.surah_id}:${currentAyat.ayah} (has ${words.length} words)',
             );
-            return; // ? EXIT early if invalid word index
+            return; // ✅ EXIT early if invalid word index
           }
 
           if (!_wordStatusMap.containsKey(currentKey)) {
             _wordStatusMap[currentKey] = {};
+            // ✅ Initialize all words as pending ONLY on first access
+            for (int i = 0; i < words.length; i++) {
+              _wordStatusMap[currentKey]![i] = WordStatus.pending;
+            }
           }
 
-          // ? CRITICAL: Clear ALL other ayahs' highlights first (prevent stuck colors)
-          final allKeys = _wordStatusMap.keys
-              .where((k) => k != currentKey)
-              .toList();
-          for (final key in allKeys) {
-            _wordStatusMap[key]?.clear();
-          }
+          // ✅ O(1) OPTIMIZATION: Clear ONLY the previous processing word directly
+          final lastIdx = _lastHighlightedIdx[currentKey];
 
-          // Update word status for UI - highlight ONLY current word
-          // ✅ CRITICAL FIX: Update word status using layoutWordIndex (not loop variable i)
-          // Initialize all words as pending first
-          for (int i = 0; i < words.length; i++) {
-            _wordStatusMap[currentKey]![i] = WordStatus.pending;
-          }
+          // ⚡️ PERFORMANCE: Early exit if we are STILL on the same layout word
+          // This prevents redundant notifyListeners() and Mushaf rebuilds
+          if (lastIdx == layoutWordIndex) return;
 
-          // Then set ONLY the mapped word as processing
+          if (lastIdx != null) {
+            _wordStatusMap[currentKey]![lastIdx] = WordStatus.pending;
+          }
+          _lastHighlightedIdx[currentKey] = layoutWordIndex;
+
+          // ✅ CLEAR PREVIOUS AYAH if we just transitioned to a new one
+          // This replaces the expensive allKeys.forEach loop
+          _wordStatusMap.forEach((key, statusMap) {
+            if (key != currentKey && statusMap.isNotEmpty) {
+              statusMap.clear();
+            }
+          });
+
+          // Set current word as processing
           if (layoutWordIndex >= 0 && layoutWordIndex < words.length) {
             _wordStatusMap[currentKey]![layoutWordIndex] =
                 WordStatus.processing;
-            print(
+            _currentHighlightKey = currentKey;
+            _currentHighlightWordIdx = layoutWordIndex;
+            /* print(
               '   ✨ Highlighted word $layoutWordIndex in ${currentAyat.surah_id}:${currentAyat.ayah}',
-            );
+            ); */
           } else {
             print(
               '   ⚠️ Cannot highlight: layoutWordIndex $layoutWordIndex out of bounds (0-${words.length - 1})',
@@ -816,11 +825,18 @@ class SttController with ChangeNotifier {
     }
   }
 
-  /// ? NEW: Handle listening mode completion
+  /// ✅ NEW: Handle listening mode completion
   Future<void> _handleListeningCompletion() async {
-    print('?? Listening session completed');
+    print('🎵 Listening session completed');
 
     try {
+      // ✅ CRITICAL FIX: Delay BEFORE resetting isListeningMode
+      // This ensures the last word highlight (e.g., "لِلْمُتَّقِينَ") is visible
+      // Without this, the UI renders transparent because isListeningMode is already false
+      print('⏳ Waiting 500ms for last word highlight to be visible...');
+      notifyListeners(); // Trigger UI update for the last highlight
+      await Future.delayed(const Duration(milliseconds: 500));
+
       // Stop audio playback (if not already stopped)
       await _listeningAudioService?.stopPlayback();
 
@@ -832,7 +848,7 @@ class SttController with ChangeNotifier {
       _listeningAudioService?.dispose();
       _listeningAudioService = null;
 
-      // ? CRITICAL: Reset all state flags
+      // ✅ CRITICAL: Reset all state flags AFTER delay
       _isListeningMode = false;
       _isRecording = false;
       _playbackSettings = null;
@@ -840,6 +856,7 @@ class SttController with ChangeNotifier {
       // Clear visual states
       _tartibStatus.clear();
       _wordStatusMap.clear();
+      _lastHighlightedIdx.clear();
 
       appLogger.log('LISTENING', 'Completed and reset');
       print('? All listening state reset');
