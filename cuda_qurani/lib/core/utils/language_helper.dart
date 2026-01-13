@@ -53,6 +53,23 @@ class LanguageHelper {
     final provider = Provider.of<LanguageProvider>(context, listen: false);
     return provider.currentLanguageCode;
   }
+
+  /// Convert numbers to Arabic-Indic digits (٠-٩)
+  static String toIndoPakDigits(int number) {
+    const western = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    final chars = number.toString().split('');
+    final buffer = StringBuffer();
+    for (var c in chars) {
+      final index = western.indexOf(c);
+      if (index != -1) {
+        buffer.write(arabic[index]);
+      } else {
+        buffer.write(c);
+      }
+    }
+    return buffer.toString();
+  }
 }
 
 /// Extension untuk memudahkan akses translations di BuildContext

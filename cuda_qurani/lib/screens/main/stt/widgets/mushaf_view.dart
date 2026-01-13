@@ -108,14 +108,29 @@ class MushafRenderer {
     final List<double> wordWidths = [];
 
     for (final span in wordSpans) {
-      final textPainter = TextPainter(
-        text: span is TextSpan
-            ? span
-            : TextSpan(children: [span]), // ✅ UBAH: handle InlineSpan
-        textDirection: TextDirection.rtl,
-      );
-      textPainter.layout();
-      final width = textPainter.width;
+      double width = 0;
+      if (span is WidgetSpan && span.child is Container) {
+        // ✅ HANDLE WIDGETSPAN (AYAH MARKER) directly
+        // TextPainter cannot measure WidgetSpan without context/placeholders
+        final container = span.child as Container;
+        // Access width if explicitly set in Container
+        width = container.constraints?.minWidth ?? 0;
+        // If constructed with explicit width property, Container stores it in constraints.tight(width)
+        // Checks strict value:
+        if (width == 0 && container.constraints != null && container.constraints!.hasTightWidth) {
+           width = container.constraints!.maxWidth;
+        }
+      } else {
+        // Normal Text Measurement
+        final textPainter = TextPainter(
+          text: span is TextSpan
+              ? span
+              : TextSpan(children: [span]),
+          textDirection: TextDirection.rtl,
+        );
+        textPainter.layout();
+        width = textPainter.width;
+      }
       wordWidths.add(width);
       totalTextWidth += width;
     }
@@ -526,7 +541,7 @@ class _SurahNameLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    final headerSize = screenHeight * 0.060;
+    final headerSize = screenHeight * 0.055;
     final surahNameSize = screenHeight * 0.050;
 
     final controller = context.watch<SttController>();
@@ -538,7 +553,7 @@ class _SurahNameLine extends StatelessWidget {
     final ornamentOffset = isIndopak
         ? -screenWidth *
               0.005 // indopak
-        : -screenWidth * 0.005; // qpc
+        : -screenWidth * 0.004; // qpc
 
     print(
       '🎨 SurahNameLine - Layout: ${isIndopak ? "IndoPak" : "QPC"}, Offset: $ornamentOffset',
@@ -762,37 +777,87 @@ class _JustifiedAyahLine extends StatelessWidget {
             : baseFontSize;
 
         for (final textSegment in segments) {
-          spans.add(
-            TextSpan(
-              text: textSegment.text,
-              style: TextStyle(
-                fontSize: effectiveFontSize,
-                fontFamily: fontFamily,
-                color: _getWordColor(
-                  isCurrentAyat,
-                  context,
-                ).withValues(alpha: wordOpacity),
-                backgroundColor: wordBg,
-                fontWeight: FontWeight.w400,
-                // ✅ Conditional Style for P1/P2 vs Others
-                // APPLIES TO BOTH INDOPAK AND QPC
-                // Step 60 Metrics: Height 1.5, Spacing 0.0
-                height: (pageNumber == 1 || pageNumber == 2) 
-                    ? 1.5 
-                    : (isIndopak ? 1.9 : 1.8), 
-                letterSpacing: (pageNumber == 1 || pageNumber == 2)
-                    ? 0.0 
-                    : (isIndopak ? -0.420 : -5),
-                decoration: (controller.hideUnreadAyat && !isLastWord)
-                    ? TextDecoration.underline
-                    : null,
-                decorationColor: AppColors.getTextPrimary(
-                  context,
-                ).withValues(alpha: 0.15),
-                decorationThickness: 0.3,
+          String displayText = textSegment.text;
+          String displayFont = fontFamily;
+          // Apply standard spacing rules first
+          double displayLetterSpacing = (pageNumber == 1 || pageNumber == 2)
+              ? 0.0
+              : (isIndopak ? -0.420 : -5);
+
+          // ✅ FORCE INDOPAK STYLE FOR AYAH MARKER WITH STACK
+          if (isLastWord) {
+             spans.add(
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Container(
+                  width: effectiveFontSize * 1.5, // Lebar fixed agar tidak numpuk
+                  height: effectiveFontSize * 1.5,
+                  alignment: Alignment.center,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // 1. Lingkaran (Ayah End Marker)
+                      Text(
+                        '\u06DD', // Standard Arabic End of Ayah Mark
+                        style: TextStyle(
+                          fontSize: effectiveFontSize * 1.3, // Sedikit lebih besar
+                          fontFamily: 'IndoPak-Nastaleeq',
+                          color: _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity),
+                          height: 1.0, // Tight height
+                        ),
+                        textDirection: TextDirection.rtl,
+                      ),
+                      
+                      // 2. Nomor Ayat (Centered)
+                      Padding(
+                         padding: EdgeInsets.only(top: effectiveFontSize * 0.1), // Sedikit center adjustment
+                         child: Text(
+                          LanguageHelper.toIndoPakDigits(segment.ayahNumber),
+                          style: TextStyle(
+                            fontSize: effectiveFontSize * 0.45, // Slightly smaller to fit safely
+                            fontFamily: 'Quran-Common', // ✅ Use standard font for digits
+                            color: _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity),
+                            fontWeight: FontWeight.w600,
+                             height: 1.5, // Standard height for numbers
+                          ),
+                          textAlign: TextAlign.center,
+                          textDirection: TextDirection.rtl,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          );
+            );
+          } else {
+             // Normal text word
+             spans.add(
+              TextSpan(
+                text: displayText,
+                style: TextStyle(
+                  fontSize: effectiveFontSize,
+                  fontFamily: displayFont,
+                  color: _getWordColor(
+                    isCurrentAyat,
+                    context,
+                  ).withValues(alpha: wordOpacity),
+                  backgroundColor: wordBg,
+                  fontWeight: FontWeight.w400,
+                  height: (pageNumber == 1 || pageNumber == 2)
+                      ? 1.5
+                      : (isIndopak ? 1.9 : 1.8),
+                  letterSpacing: displayLetterSpacing,
+                  decoration: (controller.hideUnreadAyat && !isLastWord)
+                      ? TextDecoration.underline
+                      : null,
+                  decorationColor: AppColors.getTextPrimary(
+                    context,
+                  ).withValues(alpha: 0.15),
+                  decorationThickness: 0.3,
+                ),
+              ),
+            );
+          }
         }
       }
     }

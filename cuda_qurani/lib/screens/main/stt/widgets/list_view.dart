@@ -8,6 +8,7 @@ import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
+import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'dart:async';
 
 /// Optimized vertical Quran reading mode with aggressive background preloading
@@ -973,36 +974,90 @@ class _CompleteAyahWidget extends StatelessWidget {
         }
       }
 
-      return Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: screenWidth * 0.005,
-          vertical: screenHeight * 0.00125,
-        ),
-        decoration: BoxDecoration(
-          color: wordBg,
-          borderRadius: BorderRadius.circular(3),
-          border: (state.hideUnreadAyat && !isLastWordInAyah)
-              ? Border(
-                  bottom: BorderSide(
-                    color: AppColors.getTextPrimary(
-                      context,
-                    ).withValues(alpha: 0.15),
-                    width: 0.3,
+      // If it is the last word (Ayah Marker), we render a special Stack
+      // Otherwise we render the normal text
+      if (isLastWordInAyah) {
+         // Special Stack for Ayah Marker
+         return Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: screenWidth * 0.005,
+              vertical: screenHeight * 0.00125,
+            ),
+             child: Container(
+                  width: screenWidth * 0.09, // Agak besar
+                  height: screenWidth * 0.09,
+                  alignment: Alignment.center,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // 1. Lingkaran Marker
+                      Text(
+                        '\u06DD',
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.09, 
+                          fontFamily: 'IndoPak-Nastaleeq',
+                          color: state.isCurrentAyat
+                              ? AppColors.getInfo(context)
+                              : AppColors.getTextPrimary(context),
+                           height: 1.0,
+                        ),
+                        textDirection: TextDirection.rtl,
+                      ),
+                      // 2. Angka
+                       Padding(
+                         padding: EdgeInsets.only(top: screenWidth * 0.005), 
+                         child: Text(
+                          LanguageHelper.toIndoPakDigits(segment.ayahNumber),
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.030, // Adjusted size
+                            fontFamily: 'Quran-Common', // ✅ Standard font
+                            color: state.isCurrentAyat
+                                ? AppColors.getInfo(context)
+                                : AppColors.getTextPrimary(context),
+                            fontWeight: FontWeight.w600,
+                             height: 1.5,
+                          ),
+                          textAlign: TextAlign.center,
+                          textDirection: TextDirection.rtl,
+                        ),
+                       ),
+                    ],
                   ),
-                )
-              : null,
-        ),
-        child: Opacity(
-          opacity: opacity,
-          child: _buildWordText(
-            context,
-            word.text,
-            fontFamily,
-            state.isCurrentAyat,
-            screenWidth,
+            )
+         );
+      } else {
+        // Normal Word
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: screenWidth * 0.005,
+            vertical: screenHeight * 0.00125,
           ),
-        ),
-      );
+          decoration: BoxDecoration(
+            color: wordBg,
+            borderRadius: BorderRadius.circular(3),
+            border: (state.hideUnreadAyat && !isLastWordInAyah)
+                ? Border(
+                    bottom: BorderSide(
+                      color: AppColors.getTextPrimary(
+                        context,
+                      ).withValues(alpha: 0.15),
+                      width: 0.3,
+                    ),
+                  )
+                : null,
+          ),
+          child: Opacity(
+            opacity: opacity,
+            child: _buildWordText(
+              context,
+              word.text,
+              fontFamily,
+              state.isCurrentAyat,
+              screenWidth,
+            ),
+          ),
+        );
+      }
     }).toList();
   }
 
@@ -1014,12 +1069,14 @@ class _CompleteAyahWidget extends StatelessWidget {
     double screenWidth,
   ) {
     final controller = context.read<SttController>();
-    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
+    final isIndopakLayout = controller.mushafLayout == MushafLayout.indopak;
+    final isIndopakFont = fontFamily == 'IndoPak-Nastaleeq';
+    final effectiveIsIndopak = isIndopakLayout || isIndopakFont;
 
     return Text(
       text,
       style: TextStyle(
-        fontSize: isIndopak
+        fontSize: effectiveIsIndopak
             ? screenWidth *
                   0.0625 // IndoPak lebih besar
             : screenWidth * 0.0625, // QPC
@@ -1028,8 +1085,8 @@ class _CompleteAyahWidget extends StatelessWidget {
             ? AppColors.getInfo(context)
             : AppColors.getTextPrimary(context),
         fontWeight: FontWeight.w400,
-        height: isIndopak ? 1.8 : 1.7,
-        letterSpacing: isIndopak ? 0 : -5,
+        height: effectiveIsIndopak ? 1.8 : 1.7,
+        letterSpacing: effectiveIsIndopak ? 0 : -5,
       ),
       textDirection: TextDirection.rtl,
     );
