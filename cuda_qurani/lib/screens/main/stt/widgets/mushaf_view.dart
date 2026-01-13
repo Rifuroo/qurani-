@@ -790,35 +790,40 @@ class _JustifiedAyahLine extends StatelessWidget {
               WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
                 child: Container(
-                  width: effectiveFontSize * 1.5, // Lebar fixed agar tidak numpuk
-                  height: effectiveFontSize * 1.5,
+                  width: effectiveFontSize, // ✅ Reduced width (was 1.5) to remove spacing
+                  height: effectiveFontSize,
                   alignment: Alignment.center,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       // 1. Lingkaran (Ayah End Marker)
-                      Text(
-                        '\u06DD', // Standard Arabic End of Ayah Mark
-                        style: TextStyle(
-                          fontSize: effectiveFontSize * 1.3, // Sedikit lebih besar
-                          fontFamily: 'IndoPak-Nastaleeq',
-                          color: _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity),
-                          height: 1.0, // Tight height
+                      Transform.translate(
+                        offset: Offset(0, -effectiveFontSize * 0.15), // ✅ Move UP
+                        child: Transform.scale(
+                          scale: (pageNumber == 1 || pageNumber == 2) ? 1.3 : 1.8,
+                          child: Text(
+                            '\u06DD', 
+                            style: TextStyle(
+                              fontSize: effectiveFontSize,
+                              fontFamily: 'IndoPak-Nastaleeq',
+                              color: _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity),
+                              height: 1.0,
+                            ),
+                            textDirection: TextDirection.rtl,
+                          ),
                         ),
-                        textDirection: TextDirection.rtl,
                       ),
                       
                       // 2. Nomor Ayat (Centered)
-                      Padding(
-                         padding: EdgeInsets.only(top: effectiveFontSize * 0.1), // Sedikit center adjustment
+                      Center(
                          child: Text(
                           LanguageHelper.toIndoPakDigits(segment.ayahNumber),
                           style: TextStyle(
-                            fontSize: effectiveFontSize * 0.45, // Slightly smaller to fit safely
-                            fontFamily: 'Quran-Common', // ✅ Use standard font for digits
+                            fontSize: effectiveFontSize * 0.60, // Adjusted for tight fit
+                            fontFamily: 'Quran-Common',
                             color: _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity),
-                            fontWeight: FontWeight.w600,
-                             height: 1.5, // Standard height for numbers
+                            fontWeight: FontWeight.w800,
+                            height: 1.0, // Neutral height for centering
                           ),
                           textAlign: TextAlign.center,
                           textDirection: TextDirection.rtl,

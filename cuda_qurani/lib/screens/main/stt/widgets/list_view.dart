@@ -978,44 +978,52 @@ class _CompleteAyahWidget extends StatelessWidget {
       // Otherwise we render the normal text
       if (isLastWordInAyah) {
          // Special Stack for Ayah Marker
+         final baseFontSize = screenWidth * 0.0625; // Base font size used in list view
+         
          return Container(
             padding: EdgeInsets.symmetric(
-              horizontal: screenWidth * 0.005,
+              horizontal: 0, 
               vertical: screenHeight * 0.00125,
             ),
              child: Container(
-                  width: screenWidth * 0.09, // Agak besar
-                  height: screenWidth * 0.09,
+                  width: baseFontSize, // Match base font size (tight fit)
+                  height: baseFontSize,
                   alignment: Alignment.center,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // 1. Lingkaran Marker
-                      Text(
-                        '\u06DD',
-                        style: TextStyle(
-                          fontSize: screenWidth * 0.09, 
-                          fontFamily: 'IndoPak-Nastaleeq',
-                          color: state.isCurrentAyat
-                              ? AppColors.getInfo(context)
-                              : AppColors.getTextPrimary(context),
-                           height: 1.0,
-                        ),
-                        textDirection: TextDirection.rtl,
+                      // 1. Lingkaran Marker (Scaled & Translated)
+                      Transform.translate(
+                         offset: Offset(0, -baseFontSize * 0.15),
+                         child: Transform.scale(
+                           scale: 1.3, // Standard scale for list view (matches Mushaf non-p1/p2)
+                           child: Text(
+                             '\u06DD',
+                             style: TextStyle(
+                               fontSize: baseFontSize, 
+                               fontFamily: 'IndoPak-Nastaleeq',
+                               color: state.isCurrentAyat
+                                   ? AppColors.getInfo(context)
+                                   : AppColors.getTextPrimary(context),
+                                height: 1.0,
+                             ),
+                             textDirection: TextDirection.rtl,
+                           ),
+                         ),
                       ),
+                      
                       // 2. Angka
-                       Padding(
-                         padding: EdgeInsets.only(top: screenWidth * 0.005), 
+                       Center(
                          child: Text(
                           LanguageHelper.toIndoPakDigits(segment.ayahNumber),
                           style: TextStyle(
-                            fontSize: screenWidth * 0.030, // Adjusted size
-                            fontFamily: 'Quran-Common', // ✅ Standard font
+                            fontSize: baseFontSize * 0.60, 
+                            fontFamily: 'Quran-Common', 
                             color: state.isCurrentAyat
                                 ? AppColors.getInfo(context)
                                 : AppColors.getTextPrimary(context),
-                            fontWeight: FontWeight.w600,
-                             height: 1.5,
+                            fontWeight: FontWeight.w800,
+                             height: 1.0,
                           ),
                           textAlign: TextAlign.center,
                           textDirection: TextDirection.rtl,
