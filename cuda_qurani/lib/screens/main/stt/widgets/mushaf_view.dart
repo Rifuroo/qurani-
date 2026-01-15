@@ -135,43 +135,33 @@ class MushafRenderer {
       totalTextWidth += width;
     }
 
-    // Build justified row with proper centering and tight spacing
-    final rowContent = SizedBox(
+    // ✅ ROBUST FALLBACK: Use a single unified Row with SpaceBetween
+    // and wrap the entire thing in a FittedBox with scaleDown.
+    // This provides "Lurus" (straight) edges whenever possible
+    // and invisible scaling for tiny overflows (like 1.7px).
+    return SizedBox(
       width: maxWidth,
-      height: useFittedBox ? null : lineH, // ✅ Remove height constraint for FittedBox
-      child: Row(
-        textDirection: TextDirection.rtl,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          for (int i = 0; i < wordSpans.length; i++) ...[
-            RichText(
-              textDirection: TextDirection.rtl,
-              overflow: TextOverflow.visible,
-              maxLines: 1,
-              text: TextSpan(
-                children: [wordSpans[i]],
-              ), // ✅ UBAH: wrap dalam children, hapus casting
-            ),
-            if (i < wordSpans.length - 1) const SizedBox(width: 0.0),
-          ],
-        ],
+      height: lineH,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.center,
+        child: SizedBox(
+          width: maxWidth,
+          child: Row(
+            textDirection: TextDirection.rtl,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              for (int i = 0; i < wordSpans.length; i++) 
+                RichText(
+                  textDirection: TextDirection.rtl,
+                  text: TextSpan(children: [wordSpans[i]]),
+                ),
+            ],
+          ),
+        ),
       ),
     );
-
-    return useFittedBox
-        ? SizedBox(
-            width: maxWidth,
-            height: lineH,
-            child: FittedBox(
-               fit: BoxFit.scaleDown,
-               child: SizedBox(
-                 width: maxWidth,
-                 child: rowContent,
-               )
-            )
-          )
-        : rowContent;
   }
 
   // ✅ NEW: Centralized layout configuration for consistency
@@ -213,16 +203,17 @@ class MushafRenderer {
       // QPC / Standard
       if (pageNumber == 1 || pageNumber == 2) {
         horizontalPadding = screenWidth * 0.05;
-        fontSizeMultiplier = 0.090; // Good balance
+        fontSizeMultiplier = 0.062; // Good balance
         targetLineHeight = screenHeight * 0.060; // "Golden" Value
         useFittedBox = false; // Disable
       } else {
         horizontalPadding = 0.0;
-        fontSizeMultiplier = 0.0690;
+        fontSizeMultiplier = 0.060;
       }
     }
 
-    final availableWidth = screenWidth - (horizontalPadding * 2);
+    // ✅ SAFETY: Subtract 2 pixels total for rounding safety
+    final availableWidth = screenWidth - (horizontalPadding * 2) - 2.0;
 
     // 2. Calculate Responsive Font Size
     // Removed strict height constraint to restore original behavior for normal pages
@@ -541,13 +532,13 @@ class _SurahNameLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    final headerSize = screenHeight * 0.055;
-    final surahNameSize = screenHeight * 0.050;
+    final headerSize = screenHeight * 0.060;
+    final surahNameSize = screenHeight * 0.045; // 👈 Ubah angka ini untuk mengatur besar Nama Surah (0.050 -> 0.040)
 
     final controller = context.watch<SttController>();
     final isIndopak = controller.mushafLayout == MushafLayout.indopak;
     final surahGlyphCode = line.surahNumber != null
-        ? controller.formatSurahIdForGlyph(line.surahNumber!)
+        ? controller.formatSurahIdForGlyph(line.surahNumber!) + (isIndopak ? '' : ' surah-icon')
         : '';
 
     final ornamentOffset = isIndopak
@@ -565,43 +556,58 @@ class _SurahNameLine extends StatelessWidget {
         'surah_ornament_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}',
       ),
       alignment: Alignment.center,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Transform.translate(
-            // ✅ FIX: Tambahkan key pada Transform juga
-            key: ValueKey(
-              'ornament_transform_${isIndopak ? "indopak" : "qpc"}',
-            ),
-            offset: Offset(ornamentOffset, 0),
-            child: Text(
-              'header',
-              key: ValueKey(
-                'ornament_text_${isIndopak ? "indopak" : "qpc"}',
-              ), // ✅ Key pada Text
-              style: TextStyle(
-                fontSize: headerSize - 1.5,
-                fontFamily: 'Quran-Common',
-                color: AppColors.getTextPrimary(context),
-                height: screenHeight * 0.0010,
+      child: SizedBox(
+        width: screenWidth - (isIndopak ? screenWidth * 0.1 : 0), // Match column width
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Transform.translate(
+                key: ValueKey(
+                  'ornament_transform_${isIndopak ? "indopak" : "qpc"}',
+                ),
+                offset: Offset(ornamentOffset, 0),
+                child: Text(
+                  'header',
+                  key: ValueKey(
+                    'ornament_text_${isIndopak ? "indopak" : "qpc"}',
+                  ), 
+                  style: TextStyle(
+                    fontSize: headerSize - 1.5,
+                    fontFamily: 'Quran-Common',
+                    foreground: Paint()
+                      ..color = AppColors.getTextPrimary(context)
+                      ..colorFilter = ColorFilter.mode(
+                        AppColors.getTextPrimary(context),
+                        BlendMode.srcIn,
+                      ),
+                    height: screenHeight * 0.0010,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
+              Text(
+                surahGlyphCode,
+                key: ValueKey(
+                  'surah_name_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}',
+                ), 
+                style: TextStyle(
+                  fontSize: surahNameSize - 1,
+                  fontFamily: isIndopak ? 'surah-name-v2' : 'surah-name-v4', // ✅ Isolate IndoPak from QPC
+                  foreground: Paint()
+                    ..color = AppColors.getTextPrimary(context)
+                    ..colorFilter = ColorFilter.mode(
+                      AppColors.getTextPrimary(context),
+                      BlendMode.srcIn,
+                    ),
+                ),
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+              ),
+            ],
           ),
-          Text(
-            surahGlyphCode,
-            key: ValueKey(
-              'surah_name_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}',
-            ), // ✅ Key pada nama surah
-            style: TextStyle(
-              fontSize: surahNameSize - 1,
-              fontFamily: 'surah-name-v2',
-              color: AppColors.getTextPrimary(context),
-            ),
-            textAlign: TextAlign.center,
-            textDirection: TextDirection.rtl,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -626,8 +632,12 @@ class _BasmallahLine extends StatelessWidget {
           fontFamily: isIndopakFontFamily
               ? 'IndoPak-Nastaleeq'
               : 'Quran-Common',
-          color: AppColors.getTextPrimary(context),
-          fontWeight: FontWeight.normal,
+          foreground: Paint()
+            ..color = AppColors.getTextPrimary(context)
+            ..colorFilter = ColorFilter.mode(
+              AppColors.getTextPrimary(context),
+              BlendMode.srcIn,
+            ),
         ),
         textAlign: TextAlign.center,
       ),
@@ -782,7 +792,7 @@ class _JustifiedAyahLine extends StatelessWidget {
           // Apply standard spacing rules first
           double displayLetterSpacing = (pageNumber == 1 || pageNumber == 2)
               ? 0.0
-              : (isIndopak ? -0.420 : -5);
+              : (isIndopak ? 0.0 : 0.0); // ✅ IndoPak: Must be 0.0 for standard look
 
           // ✅ FORCE INDOPAK STYLE FOR AYAH MARKER WITH STACK
           if (isLastWord) {
@@ -790,43 +800,58 @@ class _JustifiedAyahLine extends StatelessWidget {
               WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
                 child: Container(
-                  width: effectiveFontSize, // ✅ Reduced width (was 1.5) to remove spacing
+                  width: effectiveFontSize * 1.2, // ✅ Balanced width for 3 digits and 1.9x scale
                   height: effectiveFontSize,
                   alignment: Alignment.center,
                   child: Stack(
+                    clipBehavior: Clip.none, // ✅ Allow scale to visual exceed if needed
                     alignment: Alignment.center,
                     children: [
                       // 1. Lingkaran (Ayah End Marker)
                       Transform.translate(
-                        offset: Offset(0, -effectiveFontSize * 0.15), // ✅ Move UP
+                        offset: Offset(0, -effectiveFontSize * 0.15),
                         child: Transform.scale(
-                          scale: (pageNumber == 1 || pageNumber == 2) ? 1.3 : 1.8,
+                          scale: (pageNumber == 1 || pageNumber == 2) ? 1.6 : 1.9, // ✅ Reduced scale for better fit
                           child: Text(
                             '\u06DD', 
                             style: TextStyle(
                               fontSize: effectiveFontSize,
                               fontFamily: 'IndoPak-Nastaleeq',
-                              color: _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity),
-                              height: 1.0,
+                              foreground: Paint()
+                                ..color = AppColors.getAyahNumber(context).withValues(alpha: wordOpacity)
+                                ..colorFilter = ColorFilter.mode(
+                                  AppColors.getAyahNumber(context).withValues(alpha: wordOpacity),
+                                  BlendMode.srcIn,
+                                ),
+                              height: 0.1, // ✅ User preference
                             ),
                             textDirection: TextDirection.rtl,
+                            softWrap: false, // ✅ Prevent wrap
+                            overflow: TextOverflow.visible,
                           ),
                         ),
                       ),
                       
-                      // 2. Nomor Ayat (Centered)
+                      // 2. Nomor Ayat (Centered inside ornament)
                       Center(
                          child: Text(
                           LanguageHelper.toIndoPakDigits(segment.ayahNumber),
                           style: TextStyle(
-                            fontSize: effectiveFontSize * 0.60, // Adjusted for tight fit
+                            fontSize: effectiveFontSize * 0.55, // ✅ Balanced for 3 digits
                             fontFamily: 'Quran-Common',
-                            color: _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity),
+                            foreground: Paint()
+                              ..color = AppColors.getAyahNumber(context).withValues(alpha: wordOpacity)
+                              ..colorFilter = ColorFilter.mode(
+                                AppColors.getAyahNumber(context).withValues(alpha: wordOpacity),
+                                BlendMode.srcIn,
+                              ),
                             fontWeight: FontWeight.w800,
-                            height: 1.0, // Neutral height for centering
+                            height: 1.0,
                           ),
                           textAlign: TextAlign.center,
                           textDirection: TextDirection.rtl,
+                          softWrap: false, // ✅ NO WRAPPING
+                          overflow: TextOverflow.visible,
                         ),
                       ),
                     ],
@@ -842,16 +867,27 @@ class _JustifiedAyahLine extends StatelessWidget {
                 style: TextStyle(
                   fontSize: effectiveFontSize,
                   fontFamily: displayFont,
-                  color: _getWordColor(
-                    isCurrentAyat,
-                    context,
-                  ).withValues(alpha: wordOpacity),
+                  color: isIndopak ? _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity) : null,
+                  foreground: isIndopak ? null : (Paint()
+                    ..color = _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity)
+                    ..colorFilter = ColorFilter.mode(
+                      _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity),
+                      BlendMode.srcIn,
+                    )),
                   backgroundColor: wordBg,
-                  fontWeight: FontWeight.w400,
+                  fontWeight: isIndopak ? FontWeight.normal : FontWeight.w600, // ✅ QPC ONLY: Bold
                   height: (pageNumber == 1 || pageNumber == 2)
                       ? 1.5
-                      : (isIndopak ? 1.9 : 1.8),
+                      : (isIndopak ? 1.6 : 1.8), // ✅ IndoPak: 1.6 (Original), QPC: 1.8
                   letterSpacing: displayLetterSpacing,
+                  shadows: isIndopak ? null : [
+                    // ✅ QPC ONLY: Cleaner Bolding
+                    Shadow(
+                      color: _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity * 0.7),
+                      offset: const Offset(0.0, 0.0),
+                      blurRadius: 0.2,
+                    ),
+                  ],
                   decoration: (controller.hideUnreadAyat && !isLastWord)
                       ? TextDecoration.underline
                       : null,
@@ -885,9 +921,7 @@ class _JustifiedAyahLine extends StatelessWidget {
 
 // Methods tetap sama
 Color _getWordColor(bool isCurrentWord, BuildContext context) {
-  return isCurrentWord
-      ? getListeningColor(context)
-      : AppColors.getTextPrimary(context);
+  return AppColors.getTextPrimary(context);
 }
 
 class MushafPageHeader extends StatefulWidget {

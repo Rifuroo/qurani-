@@ -61,8 +61,8 @@ class LocalDatabaseService {
 
     switch (layout) {
       case MushafLayout.qpc:
-        dbFileName = 'qpc-v1-15-lines.db';
-        assetPath = 'assets/data/qpc-v1-15-lines.db';
+        dbFileName = 'qpc-v4-tajweed-15-lines.db';
+        assetPath = 'assets/kfgqpc/qpc-v4-tajweed-15-lines.db';
         break;
       case MushafLayout.indopak:
         dbFileName = 'qudratullah-indopak-15-lines.db';
@@ -107,7 +107,7 @@ class LocalDatabaseService {
       final String dbFileName;
       switch (layout) {
         case MushafLayout.qpc:
-          dbFileName = 'qpc-v1-15-lines.db';
+          dbFileName = 'qpc-v4-tajweed-15-lines.db';
           break;
         case MushafLayout.indopak:
           dbFileName = 'qudratullah-indopak-15-lines.db';
@@ -547,7 +547,7 @@ class LocalDatabaseService {
 
     try {
       final databasesPath = await getDatabasesPath();
-      final pagesPath = join(databasesPath, 'qpc-v1-15-lines.db');
+      final pagesPath = join(databasesPath, 'qpc-v4-tajweed-15-lines.db');
 
       final pagesDb = await openDatabase(pagesPath, readOnly: true);
 
@@ -629,7 +629,7 @@ class LocalDatabaseService {
     try {
       // Close pages database yang mungkin masih open
       final databasesPath = await getDatabasesPath();
-      final qpcPath = join(databasesPath, 'qpc-v1-15-lines.db');
+      final qpcPath = join(databasesPath, 'qpc-v4-tajweed-15-lines.db');
       final indopakPath = join(
         databasesPath,
         'qudratullah-indopak-15-lines.db',
@@ -661,7 +661,7 @@ class LocalDatabaseService {
       final String dbFileName;
       switch (layout) {
         case MushafLayout.qpc:
-          dbFileName = 'qpc-v1-15-lines.db';
+          dbFileName = 'qpc-v4-tajweed-15-lines.db';
           break;
         case MushafLayout.indopak:
           dbFileName = 'qudratullah-indopak-15-lines.db';
@@ -676,7 +676,7 @@ class LocalDatabaseService {
         final String assetPath;
         switch (layout) {
           case MushafLayout.qpc:
-            assetPath = 'assets/data/qpc-v1-15-lines.db';
+            assetPath = 'assets/kfgqpc/qpc-v4-tajweed-15-lines.db';
             break;
           case MushafLayout.indopak:
             assetPath = 'assets/indopak/qudratullah-indopak-15-lines.db';

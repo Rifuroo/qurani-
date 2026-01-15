@@ -749,6 +749,8 @@ class _SurahHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = context.watch<SttController>();
+    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
     final surahId = line.surahNumber ?? 1;
     final surahGlyphCode = _formatSurahGlyph(surahId);
     final screenHeight = MediaQuery.of(context).size.height;
@@ -768,10 +770,10 @@ class _SurahHeader extends StatelessWidget {
             ),
           ),
           Text(
-            surahGlyphCode,
+            surahGlyphCode + (isIndopak ? '' : ' surah-icon'),
             style: TextStyle(
-              fontSize: screenHeight * 0.0475,
-              fontFamily: 'surah-name-v2',
+              fontSize: screenHeight * 0.040, // 👈 Samakan ke 0.040 supaya fit
+              fontFamily: isIndopak ? 'surah-name-v2' : 'surah-name-v4', // ✅ Update to V4 font
               color: AppColors.getTextPrimary(context),
             ),
             textDirection: TextDirection.rtl,
@@ -782,9 +784,16 @@ class _SurahHeader extends StatelessWidget {
   }
 
   String _formatSurahGlyph(int surahId) {
-    if (surahId <= 9) return 'surah00$surahId';
-    if (surahId <= 99) return 'surah0$surahId';
-    return 'surah$surahId';
+    String idStr;
+    if (surahId <= 9) {
+      idStr = 'surah00$surahId';
+    } else if (surahId <= 99) {
+      idStr = 'surah0$surahId';
+    } else {
+      idStr = 'surah$surahId';
+    }
+    // ✅ FIX: Swap order for V4 Font so 'surah-icon' appears on the right
+    return '$idStr surah-icon';
   }
 }
 
@@ -986,28 +995,34 @@ class _CompleteAyahWidget extends StatelessWidget {
               vertical: screenHeight * 0.00125,
             ),
              child: Container(
-                  width: baseFontSize, // Match base font size (tight fit)
+                  width: baseFontSize * 1.2, // ✅ Wider for 3 digits
                   height: baseFontSize,
                   alignment: Alignment.center,
                   child: Stack(
+                    clipBehavior: Clip.none,
                     alignment: Alignment.center,
                     children: [
                       // 1. Lingkaran Marker (Scaled & Translated)
                       Transform.translate(
                          offset: Offset(0, -baseFontSize * 0.15),
                          child: Transform.scale(
-                           scale: 1.3, // Standard scale for list view (matches Mushaf non-p1/p2)
+                           scale: 1.2, // ✅ Balanced scale
                            child: Text(
                              '\u06DD',
                              style: TextStyle(
                                fontSize: baseFontSize, 
                                fontFamily: 'IndoPak-Nastaleeq',
-                               color: state.isCurrentAyat
-                                   ? AppColors.getInfo(context)
-                                   : AppColors.getTextPrimary(context),
+                               foreground: Paint()
+                                 ..color = AppColors.getAyahNumber(context)
+                                 ..colorFilter = ColorFilter.mode(
+                                   AppColors.getAyahNumber(context),
+                                   BlendMode.srcIn,
+                                 ),
                                 height: 1.0,
                              ),
                              textDirection: TextDirection.rtl,
+                             softWrap: false,
+                             overflow: TextOverflow.visible,
                            ),
                          ),
                       ),
@@ -1016,17 +1031,22 @@ class _CompleteAyahWidget extends StatelessWidget {
                        Center(
                          child: Text(
                           LanguageHelper.toIndoPakDigits(segment.ayahNumber),
-                          style: TextStyle(
-                            fontSize: baseFontSize * 0.60, 
-                            fontFamily: 'Quran-Common', 
-                            color: state.isCurrentAyat
-                                ? AppColors.getInfo(context)
-                                : AppColors.getTextPrimary(context),
-                            fontWeight: FontWeight.w800,
-                             height: 1.0,
-                          ),
+                           style: TextStyle(
+                             fontSize: baseFontSize * 0.45, // ✅ Adjusted for fit
+                             fontFamily: 'Quran-Common', 
+                             foreground: Paint()
+                               ..color = AppColors.getAyahNumber(context)
+                               ..colorFilter = ColorFilter.mode(
+                                 AppColors.getAyahNumber(context),
+                                 BlendMode.srcIn,
+                               ),
+                             fontWeight: FontWeight.w800,
+                              height: 1.0,
+                           ),
                           textAlign: TextAlign.center,
                           textDirection: TextDirection.rtl,
+                          softWrap: false,
+                          overflow: TextOverflow.visible,
                         ),
                        ),
                     ],
@@ -1089,12 +1109,23 @@ class _CompleteAyahWidget extends StatelessWidget {
                   0.0625 // IndoPak lebih besar
             : screenWidth * 0.0625, // QPC
         fontFamily: fontFamily,
-        color: isCurrentAyat
-            ? AppColors.getInfo(context)
-            : AppColors.getTextPrimary(context),
-        fontWeight: FontWeight.w400,
-        height: effectiveIsIndopak ? 1.8 : 1.7,
-        letterSpacing: effectiveIsIndopak ? 0 : -5,
+        color: effectiveIsIndopak ? AppColors.getTextPrimary(context) : null,
+        foreground: effectiveIsIndopak ? null : (Paint()
+          ..color = AppColors.getTextPrimary(context)
+          ..colorFilter = ColorFilter.mode(
+            AppColors.getTextPrimary(context),
+            BlendMode.srcIn,
+          )),
+        fontWeight: effectiveIsIndopak ? FontWeight.normal : FontWeight.w600, // ✅ QPC ONLY: Bold
+        height: effectiveIsIndopak ? 1.6 : 1.7, // ✅ IndoPak: 1.6 (Original)
+        letterSpacing: effectiveIsIndopak ? 0 : 0.0,
+        shadows: effectiveIsIndopak ? null : [
+          Shadow(
+            color: AppColors.getTextPrimary(context).withValues(alpha: 0.7),
+            offset: const Offset(0.0, 0.0),
+            blurRadius: 0.2,
+          ),
+        ],
       ),
       textDirection: TextDirection.rtl,
     );

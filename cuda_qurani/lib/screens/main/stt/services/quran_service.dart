@@ -46,7 +46,7 @@ class QuranService {
   Future<Database> _getLinesDB() async {
     switch (_currentLayout) {
       case MushafLayout.qpc:
-        return await DBHelper.ensureOpen(DBType.qpc_v1_15);
+        return await DBHelper.ensureOpen(DBType.qpc_v4_15);
       case MushafLayout.indopak:
         return await DBHelper.ensureOpen(DBType.indopak_15);
     }
@@ -55,7 +55,7 @@ class QuranService {
   Future<Database> _getWBWDB() async {
     switch (_currentLayout) {
       case MushafLayout.qpc:
-        return await DBHelper.ensureOpen(DBType.qpc_v1_wbw);
+        return await DBHelper.ensureOpen(DBType.qpc_v4_wbw);
       case MushafLayout.indopak:
         return await DBHelper.ensureOpen(DBType.indopak_wbw);
     }
@@ -88,11 +88,11 @@ class QuranService {
   }
 
   Future<Database> _getQpcV1WBW() async {
-    return await DBHelper.ensureOpen(DBType.qpc_v1_wbw);
+    return await DBHelper.ensureOpen(DBType.qpc_v4_wbw);
   }
 
   Future<Database> _getUthmaniLinesDB() async {
-    return await DBHelper.ensureOpen(DBType.qpc_v1_15);
+    return await DBHelper.ensureOpen(DBType.qpc_v4_15);
   }
 
   Future<Database> _getUthmaniWords() async {
