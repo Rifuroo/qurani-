@@ -2135,6 +2135,11 @@ class SttController with ChangeNotifier {
     return 'surah$surahId';
   }
 
+  String formatSurahHeaderName(int surahId) {
+    final base = formatSurahIdForGlyph(surahId);
+    return _mushafLayout == MushafLayout.indopak ? base : '$base surah-icon';
+  }
+
   int calculateJuz(int surahId, int ayahNumber) {
     return _sqliteService.calculateJuzAccurate(surahId, ayahNumber);
   }

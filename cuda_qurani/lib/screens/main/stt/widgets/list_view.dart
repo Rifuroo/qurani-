@@ -9,6 +9,7 @@ import '../services/quran_service.dart';
 import '../utils/constants.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
+import 'package:cuda_qurani/screens/main/stt/widgets/mushaf_paper_background.dart';
 import 'dart:async';
 
 /// Optimized vertical Quran reading mode with aggressive background preloading
@@ -510,6 +511,7 @@ class _QuranListViewState extends State<QuranListView> {
         );
       },
     );
+
   }
 }
 
@@ -752,48 +754,45 @@ class _SurahHeader extends StatelessWidget {
     final controller = context.watch<SttController>();
     final isIndopak = controller.mushafLayout == MushafLayout.indopak;
     final surahId = line.surahNumber ?? 1;
-    final surahGlyphCode = _formatSurahGlyph(surahId);
+    final surahGlyphCode = controller.formatSurahHeaderName(surahId);
     final screenHeight = MediaQuery.of(context).size.height;
+    final headerSize = screenHeight * 0.060;
+    final surahNameSize = screenHeight * 0.045;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    return Container(
-      alignment: Alignment.center,
-      margin: EdgeInsets.symmetric(vertical: screenHeight * 0.015),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Text(
-            'header',
-            style: TextStyle(
-              fontSize: screenHeight * 0.055,
-              fontFamily: 'Quran-Common',
-              color: AppColors.getTextPrimary(context),
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.005),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // PNG Header Frame - SCALES DIRECTLY WITH headerSize
+            Image.asset(
+              'assets/surah-header/chapter_hdr.png',
+              height: headerSize * 1.5, // Control this via headerSize
+              fit: BoxFit.contain,
+              color: AppColors.getAyahNumber(context),
+              colorBlendMode: BlendMode.srcIn,
             ),
-          ),
-          Text(
-            surahGlyphCode + (isIndopak ? '' : ' surah-icon'),
-            style: TextStyle(
-              fontSize: screenHeight * 0.040, // 👈 Samakan ke 0.040 supaya fit
-              fontFamily: isIndopak ? 'surah-name-v2' : 'surah-name-v4', // ✅ Update to V4 font
-              color: AppColors.getTextPrimary(context),
+            // Surah Name Text - Theme Default
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2.0),
+              child: Text(
+                surahGlyphCode,
+                style: TextStyle(
+                  fontSize: surahNameSize - 1,
+                  fontFamily: isIndopak ? 'surah-name-v2' : 'surah-name-v4',
+                  color: AppColors.getTextPrimary(context),
+                  height: 1.0,
+                ),
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+              ),
             ),
-            textDirection: TextDirection.rtl,
-          ),
-        ],
+          ],
+        ),
       ),
     );
-  }
-
-  String _formatSurahGlyph(int surahId) {
-    String idStr;
-    if (surahId <= 9) {
-      idStr = 'surah00$surahId';
-    } else if (surahId <= 99) {
-      idStr = 'surah0$surahId';
-    } else {
-      idStr = 'surah$surahId';
-    }
-    // ✅ FIX: Swap order for V4 Font so 'surah-icon' appears on the right
-    return '$idStr surah-icon';
   }
 }
 

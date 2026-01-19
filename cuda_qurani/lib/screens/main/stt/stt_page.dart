@@ -9,6 +9,7 @@ import 'utils/constants.dart';
 import 'widgets/quran_widgets.dart';
 import 'widgets/mushaf_view.dart';
 import 'widgets/list_view.dart';
+import 'widgets/mushaf_paper_background.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/widgets/achievement_popup.dart';
@@ -180,12 +181,14 @@ class _SttPageState extends State<SttPage> {
                   )
                 : GestureDetector(
                     onTap: controller.toggleUIVisibility,
-                    child: Column(
-                      children: [
-                        Expanded(child: _buildMainContent()),
-                        if (controller.showLogs && controller.isUIVisible)
-                          const QuranLogsPanel(),
-                      ],
+                    child: MushafPaperBackground(
+                      child: Column(
+                        children: [
+                          Expanded(child: _buildMainContent()),
+                          if (controller.showLogs && controller.isUIVisible)
+                            const QuranLogsPanel(),
+                        ],
+                      ),
                     ),
                   ),
           );
@@ -301,10 +304,6 @@ class _SttPageState extends State<SttPage> {
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: padding),
-      decoration: BoxDecoration(
-        color: AppColors.getSurface(context),
-        borderRadius: BorderRadius.circular(8),
-      ),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
         switchInCurve: Curves.easeInOut,

@@ -14,6 +14,7 @@ import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
+import 'package:cuda_qurani/screens/main/stt/widgets/mushaf_paper_background.dart';
 
 class MushafRenderer {
   static double pageHeight(BuildContext context) {
@@ -440,6 +441,15 @@ class MushafPageContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final appBarHeight = kToolbarHeight * 0.95;
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSpecialPage = pageNumber == 1 || pageNumber == 2;
+
+    final linesContent = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: pageLines
+          .map((line) => _buildMushafLine(line, context))
+          .toList(),
+    );
 
     return Column(
       children: [
@@ -449,20 +459,18 @@ class MushafPageContent extends StatelessWidget {
           child: const MushafPageHeader(),
         ),
 
+        // ✅ KHUSUS HALAMAN 1 & 2: Tambahkan ruang kosong di atas Surah Header
+        if (isSpecialPage)
+          SizedBox(height: screenHeight * 0.15),
+
         const SizedBox(height: 0),
 
         // Page lines dengan padding horizontal yang bisa diatur terpisah
         Padding(
           padding: EdgeInsets.symmetric(
-            horizontal:
-                screenWidth *
-                0.00, // âœ… UBAH nilai ini untuk adjust padding pageLines
+            horizontal: screenWidth * 0.0,
           ),
-          child: Column(
-            children: pageLines
-                .map((line) => _buildMushafLine(line, context))
-                .toList(),
-          ),
+          child: linesContent,
         ),
       ],
     );
@@ -481,6 +489,13 @@ class MushafPageContent extends StatelessWidget {
     switch (line.lineType) {
       case 'surah_name':
         lineWidget = _SurahNameLine(line: line);
+        // ✅ KHUSUS HALAMAN 1 & 2: Tambahkan padding bawah sedikit biar nggak kedeketan sama Basmallah/Ayat
+        if (pageNumber == 1 || pageNumber == 2) {
+          lineWidget = Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.04),
+            child: lineWidget,
+          );
+        }
         break;
 
       case 'basmallah':
@@ -532,13 +547,13 @@ class _SurahNameLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    final headerSize = screenHeight * 0.060;
+    final headerSize = screenHeight * 0.040;
     final surahNameSize = screenHeight * 0.045; // 👈 Ubah angka ini untuk mengatur besar Nama Surah (0.050 -> 0.040)
 
     final controller = context.watch<SttController>();
     final isIndopak = controller.mushafLayout == MushafLayout.indopak;
     final surahGlyphCode = line.surahNumber != null
-        ? controller.formatSurahIdForGlyph(line.surahNumber!) + (isIndopak ? '' : ' surah-icon')
+        ? controller.formatSurahHeaderName(line.surahNumber!)
         : '';
 
     final ornamentOffset = isIndopak
@@ -550,63 +565,42 @@ class _SurahNameLine extends StatelessWidget {
       '🎨 SurahNameLine - Layout: ${isIndopak ? "IndoPak" : "QPC"}, Offset: $ornamentOffset',
     );
 
-    return Container(
-      // ✅ FIX: Tambahkan key unik per layout
+    return Center(
       key: ValueKey(
         'surah_ornament_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}',
       ),
-      alignment: Alignment.center,
-      child: SizedBox(
-        width: screenWidth - (isIndopak ? screenWidth * 0.1 : 0), // Match column width
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Transform.translate(
-                key: ValueKey(
-                  'ornament_transform_${isIndopak ? "indopak" : "qpc"}',
-                ),
-                offset: Offset(ornamentOffset, 0),
-                child: Text(
-                  'header',
-                  key: ValueKey(
-                    'ornament_text_${isIndopak ? "indopak" : "qpc"}',
-                  ), 
-                  style: TextStyle(
-                    fontSize: headerSize - 1.5,
-                    fontFamily: 'Quran-Common',
-                    foreground: Paint()
-                      ..color = AppColors.getTextPrimary(context)
-                      ..colorFilter = ColorFilter.mode(
-                        AppColors.getTextPrimary(context),
-                        BlendMode.srcIn,
-                      ),
-                    height: screenHeight * 0.0010,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              Text(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.005),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // PNG Header Frame - SCALES DIRECTLY WITH headerSize
+            Image.asset(
+              'assets/surah-header/chapter_hdr.png',
+              height: headerSize * 1.5, // Control this via headerSize
+              fit: BoxFit.contain,
+              color: AppColors.getAyahNumber(context),
+              colorBlendMode: BlendMode.srcIn,
+            ),
+            // Surah Name Text
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2.0),
+              child: Text(
                 surahGlyphCode,
                 key: ValueKey(
                   'surah_name_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}',
-                ), 
+                ),
                 style: TextStyle(
                   fontSize: surahNameSize - 1,
-                  fontFamily: isIndopak ? 'surah-name-v2' : 'surah-name-v4', // ✅ Isolate IndoPak from QPC
-                  foreground: Paint()
-                    ..color = AppColors.getTextPrimary(context)
-                    ..colorFilter = ColorFilter.mode(
-                      AppColors.getTextPrimary(context),
-                      BlendMode.srcIn,
-                    ),
+                  fontFamily: isIndopak ? 'surah-name-v2' : 'surah-name-v4',
+                  color: AppColors.getTextPrimary(context),
+                  height: 1.0,
                 ),
                 textAlign: TextAlign.center,
                 textDirection: TextDirection.rtl,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -701,7 +695,14 @@ class _JustifiedAyahLine extends StatelessWidget {
 
     final wordStatusMap = controller.wordStatusMap;
 
-    for (final segment in line.ayahSegments!) {
+    // ✅ CRITICAL: Ensure segments are sorted by reading order (Surah/Ayah)
+    final sortedSegments = List<AyahSegment>.from(line.ayahSegments ?? []);
+    sortedSegments.sort((a, b) {
+      if (a.surahId != b.surahId) return a.surahId.compareTo(b.surahId);
+      return a.ayahNumber.compareTo(b.ayahNumber);
+    });
+
+    for (final segment in sortedSegments) {
       final ayatIndex = controller.ayatList.indexWhere(
         (a) => a.surah_id == segment.surahId && a.ayah == segment.ayahNumber,
       );

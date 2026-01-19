@@ -129,7 +129,8 @@ flutter:
     - assets/lang/en/home/
     - assets/lang/en/profile/
     - assets/lang/en/settings/
-
+    - assets/surah-header/
+    - assets/background/
     - assets/images/qurani-white-text.png
     - assets/images/qurani-icon-green.png
     - assets/images/sliderbutton_guide.jpeg
@@ -212,6 +213,14 @@ flutter:
     - family: surah-name-v4
       fonts:
         - asset: assets/fonts/surah-name-v4.ttf
+
+    - family: surah-header
+      fonts:
+        - asset: assets/fonts/QCF_SurahHeader_COLOR-Regular.ttf
+
+    - family: surah-header-kfgqpc
+      fonts:
+        - asset: assets/fonts/KFGQPCNastaleeq-Regular.ttf
 
     - family: p1
       fonts:

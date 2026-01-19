@@ -725,19 +725,44 @@ class QuranService {
         case 'ayah':
           if (layout.firstWordId == null || layout.lastWordId == null) continue;
           // ✅ Get words from pre-loaded map (NO query!)
+          // ✅ Explicitly sort words by ID and group them into segments
           final List<WordData> lineWords = [];
           for (int id = layout.firstWordId!; id <= layout.lastWordId!; id++) {
             if (allWordsMap.containsKey(id)) {
               lineWords.add(allWordsMap[id]!);
             }
           }
-          if (lineWords.isEmpty) continue;
+          
+          // Ensure lineWords are strictly in ID order (reading order)
+          lineWords.sort((a, b) => a.id.compareTo(b.id));
 
-          Map<String, List<WordData>> ayahSegments = {};
+          final Map<String, List<WordData>> ayahSegmentsMap = {};
           for (final word in lineWords) {
             final key = '${word.surah}:${word.ayah}';
-            ayahSegments.putIfAbsent(key, () => []).add(word);
+            ayahSegmentsMap.putIfAbsent(key, () => []).add(word);
           }
+
+          // Convert map to sorted list of segments
+          final sortedSegments = ayahSegmentsMap.entries.map((entry) {
+            final parts = entry.key.split(':');
+            final surahId = int.parse(parts[0]);
+            final ayahNum = int.parse(parts[1]);
+            final totalWords = maxWordPerAyah[entry.key] ?? entry.value.last.wordNumber;
+
+            return AyahSegment(
+              surahId: surahId,
+              ayahNumber: ayahNum,
+              words: entry.value..sort((a, b) => a.id.compareTo(b.id)), // Ensure words are sorted
+              isStartOfAyah: entry.value.first.wordNumber == 1,
+              isEndOfAyah: entry.value.last.wordNumber == totalWords,
+            );
+          }).toList();
+
+          // ✅ CRITICAL: Explicitly sort segments by Surah and Ayah to guarantee RTL reading order
+          sortedSegments.sort((a, b) {
+            if (a.surahId != b.surahId) return a.surahId.compareTo(b.surahId);
+            return a.ayahNumber.compareTo(b.ayahNumber);
+          });
 
           line = MushafPageLine(
             lineNumber: layout.lineNumber,
@@ -745,21 +770,7 @@ class QuranService {
             isCentered: layout.isCentered,
             firstWordId: layout.firstWordId,
             lastWordId: layout.lastWordId,
-            ayahSegments: ayahSegments.entries.map((entry) {
-              final parts = entry.key.split(':');
-              final surahId = int.parse(parts[0]);
-              final ayahNum = int.parse(parts[1]);
-              final totalWords =
-                  maxWordPerAyah[entry.key] ?? entry.value.last.wordNumber;
-
-              return AyahSegment(
-                surahId: surahId,
-                ayahNumber: ayahNum,
-                words: entry.value,
-                isStartOfAyah: entry.value.first.wordNumber == 1,
-                isEndOfAyah: entry.value.last.wordNumber == totalWords,
-              );
-            }).toList(),
+            ayahSegments: sortedSegments,
           );
           break;
       }
