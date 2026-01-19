@@ -275,75 +275,39 @@ class _MushafDisplayState extends State<MushafDisplay> {
 
   @override
   Widget build(BuildContext context) {
+    // âœ… OPTIMIZATION: Read controller once
     final controller = context.read<SttController>();
+    
+    // âœ… Listen to currentPage just to update PageView controller if needed
+    // (Optional: if we want to support programmatic jumps from outside)
+    // But PageView itself handles internal state.
 
-    return GestureDetector(
-      behavior: HitTestBehavior
-          .translucent, // âœ… FIX: Ganti dari opaque ke translucent
-      onHorizontalDragStart: (details) {
-        if (!mounted) return; // âœ… FIX: Check mounted state
-        _dragStartPosition = details.globalPosition.dx;
-        _isSwipeInProgress = false;
-      },
-      onHorizontalDragUpdate: (details) {
-        if (!mounted) return; // âœ… FIX: Check mounted state
-        // Detect significant horizontal movement
-        final dragDistance = (details.globalPosition.dx - _dragStartPosition)
-            .abs();
-        if (dragDistance > 50 && !_isSwipeInProgress) {
-          _isSwipeInProgress = true;
+    return PageView.builder(
+      controller: PageController(initialPage: controller.currentPage),
+      itemCount: 604 + 1,
+      reverse: true, // Arabic direction
+      physics: const BouncingScrollPhysics(),
+      onPageChanged: (newPage) {
+        // Debounce or only update if changed
+        if (newPage != controller.currentPage) {
+          controller.navigateToPage(newPage);
         }
       },
-      onHorizontalDragEnd: (details) {
-        if (!mounted || !_isSwipeInProgress)
-          return; // âœ… FIX: Check mounted state
-
-        final velocity = details.primaryVelocity ?? 0;
-
-        // Swipe threshold: 500 pixels per second
-        if (velocity > 500) {
-          // Swipe RIGHT = go to NEXT page (Arabic reading direction)
-          controller.navigateToPage(controller.currentPage + 1);
-        } else if (velocity < -500) {
-          // Swipe LEFT = go to PREVIOUS page
-          controller.navigateToPage(controller.currentPage - 1);
-        }
-
-        // Reset swipe state dengan safety check dan debouncing
-        if (!_isUpdating) {
-          _isUpdating = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _isSwipeInProgress = false;
-                _isUpdating = false;
-              });
-            }
-          });
-        }
+      itemBuilder: (context, index) {
+        // âœ… CRITICAL: Pass index as pageNumber
+        return _buildMushafPageOptimized(context, index); 
       },
-      child: SizedBox.expand(
-        // âœ… Fill entire screen for gesture detection
-        child: SingleChildScrollView(
-          // âœ… Allow scrolling if content exceeds screen
-          physics:
-              const NeverScrollableScrollPhysics(), // âœ… Disable scroll (only swipe)
-          child: RepaintBoundary(
-            // âœ… FIX: Isolate repaints to prevent MouseTracker conflicts
-            child: _buildMushafPageOptimized(context),
-          ),
-        ),
-      ),
     );
   }
 
   // âœ… CRITICAL: Track emergency loads to prevent duplicates
   static final Set<int> _emergencyLoadingPages = {};
 
-  Widget _buildMushafPageOptimized(BuildContext context) {
-    final controller = context.watch<SttController>();
-    final pageNumber = controller.currentPage;
-    var cachedLines = controller.pageCache[pageNumber];
+  Widget _buildMushafPageOptimized(BuildContext context, int pageNumber) {
+    //  ✅ OPTIMIZATION: Use granular selects for cache
+    // We only care if the cache for THIS SPECIFIC page updates.
+    var cachedLines = context.select<SttController, List<MushafPageLine>?>((c) => c.pageCache[pageNumber]);
+    final controller = context.read<SttController>(); 
 
     // âœ… CRITICAL: Also check QuranService cache (shared singleton)
     if (cachedLines == null || cachedLines.isEmpty) {
@@ -367,6 +331,8 @@ class _MushafDisplayState extends State<MushafDisplay> {
         ),
       );
     }
+
+
 
     // âš ï¸ FALLBACK: Emergency load only if not already loading
     if (!_emergencyLoadingPages.contains(pageNumber)) {
