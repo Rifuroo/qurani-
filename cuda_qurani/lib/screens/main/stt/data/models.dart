@@ -225,6 +225,8 @@ class AyahSegment {
   final List<WordData> words;
   bool isStartOfAyah;
   bool isEndOfAyah;
+  final String? ayahGlyphText; // NEW: Concatenated glyphs from ABA database
+  final dynamic charMap; // NEW: AyahCharMap for this ayah (if available)
 
   AyahSegment({
     required this.surahId,
@@ -232,9 +234,12 @@ class AyahSegment {
     required this.words,
     required this.isStartOfAyah,
     required this.isEndOfAyah,
+    this.ayahGlyphText, // Optional for backward compatibility
+    this.charMap, // Optional char mapping
   });
 
   int get id => surahId * 1000 + ayahNumber;
+  String get verseKey => '$surahId:$ayahNumber';
 }
 
 class TextSegment {

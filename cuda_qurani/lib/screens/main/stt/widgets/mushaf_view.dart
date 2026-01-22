@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
+import '../utils/ayah_char_mapper.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/mushaf_paper_background.dart';
 
@@ -39,11 +40,11 @@ class MushafRenderer {
     required BuildContext context,
     bool allowOverflow = false,
     double? customLineHeight,
-    bool useFittedBox = false, // ✅ ADDED
+    bool useFittedBox = false,
   }) {
     if (wordSpans.isEmpty) return const SizedBox.shrink();
 
-    final lineH = customLineHeight ?? lineHeight(context); // ✅ USE CUSTOM OR DEFAULT
+    final lineH = customLineHeight ?? lineHeight(context);
 
     if (isCentered) {
       return SizedBox(
@@ -60,109 +61,30 @@ class MushafRenderer {
       );
     }
 
-    return SizedBox(
-      height: lineH,
+    // ✅ NATIVE JUSTIFICATION: Use a single RichText for the entire line
+    // This provides perfect RTL justification for Arabic text.
+    final child = SizedBox(
       width: availableWidth,
-      child: _usText(
-        wordSpans: wordSpans,
-        maxWidth: availableWidth,
-        allowOverflow: allowOverflow,
-        context: context,
-        customLineHeight: lineH, // ✅ PASS DOWN
-        useFittedBox: useFittedBox, // ✅ ADDED
+      height: lineH,
+      child: RichText(
+        textAlign: TextAlign.justify,
+        textDirection: TextDirection.rtl,
+        softWrap: true, // Allow justification to work
+        text: TextSpan(
+          children: wordSpans,
+        ),
       ),
     );
-  }
 
-  static Widget _usText({
-    required List<InlineSpan> wordSpans,
-    required double maxWidth,
-    bool allowOverflow = false,
-    required BuildContext context,
-    double? customLineHeight, // ✅ ADDED
-    required bool useFittedBox, // ✅ ADDED
-  }) {
-    if (wordSpans.isEmpty) return const SizedBox.shrink();
-
-    final lineH = customLineHeight ?? lineHeight(context); // ✅ USE CUSTOM OR DEFAULT
-
-    // Single word case
-    if (wordSpans.length == 1) {
-      final child = SizedBox(
-        width: maxWidth,
-        child: RichText(
-          textDirection: TextDirection.rtl,
-          textAlign: TextAlign.justify,
-          text: TextSpan(
-            children: [wordSpans.first],
-          ), // ✅ UBAH: wrap dalam children
-        ),
-      );
-      
-      return useFittedBox 
-        ? FittedBox(fit: BoxFit.scaleDown, child: child)
-        : child;
-    }
-
-    // Calculate total text width WITHOUT spacing
-    double totalTextWidth = 0;
-    final List<double> wordWidths = [];
-
-    for (final span in wordSpans) {
-      double width = 0;
-      if (span is WidgetSpan && span.child is Container) {
-        // ✅ HANDLE WIDGETSPAN (AYAH MARKER) directly
-        // TextPainter cannot measure WidgetSpan without context/placeholders
-        final container = span.child as Container;
-        // Access width if explicitly set in Container
-        width = container.constraints?.minWidth ?? 0;
-        // If constructed with explicit width property, Container stores it in constraints.tight(width)
-        // Checks strict value:
-        if (width == 0 && container.constraints != null && container.constraints!.hasTightWidth) {
-           width = container.constraints!.maxWidth;
-        }
-      } else {
-        // Normal Text Measurement
-        final textPainter = TextPainter(
-          text: span is TextSpan
-              ? span
-              : TextSpan(children: [span]),
-          textDirection: TextDirection.rtl,
-        );
-        textPainter.layout();
-        width = textPainter.width;
-      }
-      wordWidths.add(width);
-      totalTextWidth += width;
-    }
-
-    // ✅ ROBUST FALLBACK: Use a single unified Row with SpaceBetween
-    // and wrap the entire thing in a FittedBox with scaleDown.
-    // This provides "Lurus" (straight) edges whenever possible
-    // and invisible scaling for tiny overflows (like 1.7px).
-    return SizedBox(
-      width: maxWidth,
-      height: lineH,
-      child: FittedBox(
+    if (useFittedBox) {
+      return FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.center,
-        child: SizedBox(
-          width: maxWidth,
-          child: Row(
-            textDirection: TextDirection.rtl,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              for (int i = 0; i < wordSpans.length; i++) 
-                RichText(
-                  textDirection: TextDirection.rtl,
-                  text: TextSpan(children: [wordSpans[i]]),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
+        child: child,
+      );
+    }
+    
+    return child;
   }
 
   // ✅ NEW: Centralized layout configuration for consistency
@@ -558,7 +480,7 @@ class _SurahNameLine extends StatelessWidget {
                 ),
                 style: TextStyle(
                   fontSize: surahNameSize - 1,
-                  fontFamily: isIndopak ? 'surah-name-v2' : 'surah-name-v4',
+                  fontFamily: 'surah-name-v2', // ✅ Use V2 for all (V4 removed)
                   color: AppColors.getTextPrimary(context),
                   height: 1.0,
                 ),
@@ -628,6 +550,7 @@ class _JustifiedAyahLine extends StatelessWidget {
     
     // Select ONLY the word status for the current active highlight if it belongs to this line
     final lineAyahKeys = line.ayahSegments?.map((s) => '${s.surahId}:${s.ayahNumber}').toSet() ?? {};
+    final isSpecialPage = pageNumber == 1 || pageNumber == 2;
     
     // ⚡️ ULTIMATE OPTIMIZATION: Rebuild ONLY if the active highlight is on THIS line
     // This selection returns a stable string that only changes when the active word on this line moves.
@@ -675,6 +598,236 @@ class _JustifiedAyahLine extends StatelessWidget {
       final isCurrentAyat =
           ayatIndex >= 0 && ayatIndex == currentAyatIndex;
 
+      // ✅ TRUE AYAH-BY-AYAH: Use AyahCharMap for clean text and char ranges
+      if (segment.charMap != null && segment.words.isNotEmpty) {
+        final charMap = segment.charMap as AyahCharMap;
+        String cleanText = charMap.cleanText;
+        
+        // 🛠 QPC NORMALIZATION: Ensure whitespaces are standard for RichText justification
+        // Replace non-breaking spaces and RTL marks that might break justification
+        cleanText = cleanText.replaceAll('\u00A0', ' ').replaceAll('\u200F', '');
+
+        final firstWordNum = segment.words.first.wordNumber;
+        final lastWordNum = segment.words.last.wordNumber;
+        final (startChar, endChar) = charMap.getSegmentRange(firstWordNum, lastWordNum);
+        
+        final wordStatKey = '${segment.surahId}:${segment.ayahNumber}';
+        final ayahStatusMap = wordStatusMap[wordStatKey];
+        
+        // Logical flags
+        final isHighlightingOn = isListeningMode && isCurrentAyat && controller.currentHighlightWordIdx != null;
+
+        // ✅ STRATEGY: Select rendering mode
+        if (!hideUnreadAyat && !isHighlightingOn && (ayahStatusMap == null || ayahStatusMap.isEmpty)) {
+          // MODE 1: Static - Zero Overhead (Single Span)
+          spans.add(
+            TextSpan(
+              text: cleanText.substring(startChar, endChar),
+              style: TextStyle(
+                fontSize: baseFontSize,
+                fontFamily: fontFamily,
+                color: Colors.black,
+                fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
+                height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
+                letterSpacing: 0.0,
+              ),
+            ),
+          );
+        } else if (!hideUnreadAyat && isHighlightingOn) {
+          // MODE 2: Highlight Only - Extreme Optimization (Max 3 Spans)
+          final activeWordIdx = controller.currentHighlightWordIdx!;
+          final activeWordNum = activeWordIdx + 1;
+          
+          // Find if the active word is in THIS segment
+          final hasActiveWord = segment.words.any((w) => w.wordNumber == activeWordNum);
+          
+          if (!hasActiveWord) {
+            // Whole segment is "After" or "Before" - single span
+            spans.add(
+              TextSpan(
+                text: cleanText.substring(startChar, endChar),
+                style: TextStyle(
+                  fontSize: baseFontSize,
+                  fontFamily: fontFamily,
+                  color: Colors.black,
+                  fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
+                  height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
+                ),
+              ),
+            );
+          } else {
+            // Split into Before, Active, After
+            final (wStart, wEnd) = charMap.getSegmentRange(activeWordNum, activeWordNum);
+            
+            // 1. Before span
+            if (wStart > startChar) {
+              spans.add(TextSpan(
+                text: cleanText.substring(startChar, wStart),
+                style: TextStyle(
+                  fontSize: baseFontSize, fontFamily: fontFamily, color: Colors.black,
+                  fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
+                  height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
+                ),
+              ));
+            }
+            
+            // 2. Active span (with background)
+            spans.add(TextSpan(
+              text: cleanText.substring(wStart, wEnd),
+              style: TextStyle(
+                fontSize: baseFontSize, fontFamily: fontFamily, color: Colors.black,
+                backgroundColor: AppColors.getInfo(context).withValues(alpha: 0.4),
+                fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
+                height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
+              ),
+            ));
+            
+            // 3. After span
+            if (wEnd < endChar) {
+              spans.add(TextSpan(
+                text: cleanText.substring(wEnd, endChar),
+                style: TextStyle(
+                  fontSize: baseFontSize, fontFamily: fontFamily, color: Colors.black,
+                  fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
+                  height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
+                ),
+              ));
+            }
+          }
+        } else {
+          // MODE 3: Hybrid (Hide Unread or complex status) - Word loop (only when needed)
+          for (final word in segment.words) {
+            final wordIdx = word.wordNumber - 1;
+            final wordStatus = ayahStatusMap?[wordIdx];
+            final (wStart, wEnd) = charMap.getSegmentRange(word.wordNumber, word.wordNumber);
+            
+            // 1. Calculate Opacity (Hide/Show)
+            double opacity = 1.0;
+            if (hideUnreadAyat) {
+              if (wordStatus != null && wordStatus != WordStatus.pending) {
+                opacity = 1.0;
+              } else if (isCurrentAyat) {
+                opacity = 0.0; // Keep current ayah hidden until read
+              } else {
+                opacity = 0.0;
+              }
+            }
+
+            // 2. Calculate Highlight Color
+            Color? highlightColor;
+            if (wordStatus != null) {
+              switch (wordStatus) {
+                case WordStatus.matched:
+                case WordStatus.correct:
+                  highlightColor = getCorrectColor(context).withValues(alpha: 0.6);
+                  break;
+                case WordStatus.processing:
+                  highlightColor = AppColors.getInfo(context).withValues(alpha: 0.6);
+                  break;
+                case WordStatus.incorrect:
+                case WordStatus.mismatched:
+                  highlightColor = getErrorColor(context).withValues(alpha: 0.6);
+                  break;
+                default:
+                  break;
+              }
+            }
+
+            // 3. Slice word text including its trailing space (if any)
+            // We use the word range but expand to cover the space to maintain justification
+            int wordDisplayEnd = wEnd;
+            if (wordDisplayEnd < endChar && cleanText[wordDisplayEnd] == ' ') {
+              wordDisplayEnd++;
+            }
+
+            final wordText = cleanText.substring(
+              wStart.clamp(0, cleanText.length),
+              wordDisplayEnd.clamp(0, cleanText.length),
+            );
+
+            spans.add(
+              TextSpan(
+                text: wordText,
+                style: TextStyle(
+                  fontSize: baseFontSize,
+                  fontFamily: fontFamily,
+                  color: Colors.black.withOpacity(opacity),
+                  backgroundColor: highlightColor,
+                  fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
+                  height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
+                  letterSpacing: 0.0,
+                ),
+              ),
+            );
+          }
+        }
+
+        // ✅ CUSTOM AYAH MARKER (Uses ACTUAL ayah metadata)
+        if (segment.isEndOfAyah) {
+          final effectiveFontSize = baseFontSize * lastWordFontMultiplier;
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Container(
+                width: effectiveFontSize * 1.2,
+                height: effectiveFontSize,
+                alignment: Alignment.center,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    // Ornament circle
+                    Transform.translate(
+                      offset: Offset(0, -effectiveFontSize * 0.15),
+                      child: Transform.scale(
+                        scale: (pageNumber == 1 || pageNumber == 2) ? 1.6 : 1.9,
+                        child: Text(
+                          '\u06DD',
+                          style: TextStyle(
+                            fontSize: effectiveFontSize,
+                            fontFamily: 'IndoPak-Nastaleeq',
+                            foreground: Paint()
+                              ..color = const Color(0xFF2D5A4A) // ✅ Hijau Madinah
+                              ..colorFilter = const ColorFilter.mode(
+                                Color(0xFF2D5A4A),
+                                BlendMode.srcIn,
+                              ),
+                            height: 0.1,
+                          ),
+                          textDirection: TextDirection.rtl,
+                          softWrap: false,
+                          overflow: TextOverflow.visible,
+                        ),
+                      ),
+                    ),
+                    // Ayah number (custom, not from glyph)
+                    Center(
+                      child: Text(
+                        LanguageHelper.toIndoPakDigits(segment.ayahNumber),
+                        style: TextStyle(
+                          fontSize: effectiveFontSize * 0.55,
+                          fontFamily: 'Quran-Common',
+                          color: Colors.black, // ✅ STRICT BLACK for number
+                          fontWeight: FontWeight.w800,
+                          height: 1.0,
+                        ),
+                        textAlign: TextAlign.center,
+                        textDirection: TextDirection.rtl,
+                        softWrap: false,
+                        overflow: TextOverflow.visible,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        
+        continue; // Skip word-by-word loop
+      }
+
+      // ✅ FALLBACK: Word-by-word for IndoPak or if no ayahGlyphText
       for (int i = 0; i < segment.words.length; i++) {
         final word = segment.words[i];
         final wordIndex = word.wordNumber - 1;
@@ -889,6 +1042,14 @@ class _JustifiedAyahLine extends StatelessWidget {
 // Methods tetap sama
 Color _getWordColor(bool isCurrentWord, BuildContext context) {
   return AppColors.getTextPrimary(context);
+}
+
+Color getCorrectColor(BuildContext context) {
+  return AppColors.getCorrect(context);
+}
+
+Color getErrorColor(BuildContext context) {
+  return AppColors.getIncorrect(context);
 }
 
 class MushafPageHeader extends StatefulWidget {

@@ -7,9 +7,9 @@ import 'package:sqflite/sqflite.dart';
 
 enum DBType {
   metadata,
-  qpc_v4_15,
-  qpc_v4_wbw,
-  qpc_v1_aba,
+  qpc_v2_aba,
+  qpc_v2_wbw,
+  qpc_v2_layout, // NEW: For page layout
   uthmani,
   indopak_15,
   indopak_wbw,
@@ -36,13 +36,17 @@ class DBHelper {
         "asset": "assets/data/quran-metadata-surah-name.sqlite",
         "name": "quran-metadata-surah-name.sqlite",
       },
-      DBType.qpc_v4_15: {
-        "asset": "assets/kfgqpc/qpc-v4-tajweed-15-lines.db",
-        "name": "qpc-v4-tajweed-15-lines.db",
+      DBType.qpc_v2_aba: {
+        "asset": "assets/QPCv2/qpc-v2-ayah-by-ayah-glyphs.db",
+        "name": "qpc-v2-ayah-by-ayah-glyphs.db",
       },
-      DBType.qpc_v4_wbw: {
-        "asset": "assets/kfgqpc/qpc-v4.db",
-        "name": "qpc-v4.db",
+      DBType.qpc_v2_wbw: {
+        "asset": "assets/QPCv2/qpc-v2.db",
+        "name": "qpc-v2.db",
+      },
+      DBType.qpc_v2_layout: {
+        "asset": "assets/QPCv2/qpc-v2-15-lines.db",
+        "name": "qpc-v2-15-lines.db",
       },
       DBType.uthmani: {"asset": "assets/data/uthmani.db", "name": "uthmani.db"},
       DBType.indopak_15: {
@@ -105,8 +109,9 @@ class DBHelper {
     // Open semua database parallel
     await Future.wait([
       ensureOpen(DBType.metadata),
-      ensureOpen(DBType.qpc_v4_15),
-      ensureOpen(DBType.qpc_v4_wbw),
+      ensureOpen(DBType.qpc_v2_aba),
+      ensureOpen(DBType.qpc_v2_wbw),
+      ensureOpen(DBType.qpc_v2_layout),
       ensureOpen(DBType.uthmani),
       ensureOpen(DBType.indopak_15),
       ensureOpen(DBType.indopak_wbw),
@@ -140,8 +145,9 @@ class DBHelper {
 
     final dbConfig = {
       DBType.metadata: "quran-metadata-surah-name.sqlite",
-      DBType.qpc_v4_15: "qpc-v4-tajweed-15-lines.db",
-      DBType.qpc_v4_wbw: "qpc-v4.db",
+      DBType.qpc_v2_aba: "qpc-v2-ayah-by-ayah-glyphs.db",
+      DBType.qpc_v2_wbw: "qpc-v2.db",
+      DBType.qpc_v2_layout: "qpc-v2-15-lines.db",
       DBType.uthmani: "uthmani.db",
     };
 

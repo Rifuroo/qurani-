@@ -7,6 +7,7 @@ import '../data/models.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../utils/constants.dart';
+import '../utils/ayah_char_mapper.dart'; // ✅ NEW: Character mapping utility
 
 class QuranService {
   static final QuranService _instance = QuranService._internal();
@@ -39,14 +40,28 @@ class QuranService {
   final Map<int, Future<List<MushafPageLine>>> _loadingFutures =
       {}; // Share loading futures
 
+  // ✅ NEW: Per-page character map cache
+  final Map<int, PageCharMapCache> _pageCharMapCache = {}; // pageNumber -> PageCharMapCache
+
   MushafLayout _currentLayout = MushafLayout.qpc;
   MushafLayout get currentLayout => _currentLayout;
+  
+  /// ✅ Get char map cache for a specific page
+  PageCharMapCache? getPageCharMapCache(int pageNumber) {
+    return _pageCharMapCache[pageNumber];
+  }
+  
+  /// ✅ Clear char map cache for a specific page
+  void clearPageCharMapCache(int pageNumber) {
+    _pageCharMapCache[pageNumber]?.clear();
+    _pageCharMapCache.remove(pageNumber);
+  }
 
   // ✅ TAMBAHKAN method untuk get database berdasarkan layout
   Future<Database> _getLinesDB() async {
     switch (_currentLayout) {
       case MushafLayout.qpc:
-        return await DBHelper.ensureOpen(DBType.qpc_v4_15);
+        return await DBHelper.ensureOpen(DBType.qpc_v2_layout);
       case MushafLayout.indopak:
         return await DBHelper.ensureOpen(DBType.indopak_15);
     }
@@ -55,7 +70,7 @@ class QuranService {
   Future<Database> _getWBWDB() async {
     switch (_currentLayout) {
       case MushafLayout.qpc:
-        return await DBHelper.ensureOpen(DBType.qpc_v4_wbw);
+        return await DBHelper.ensureOpen(DBType.qpc_v2_wbw);
       case MushafLayout.indopak:
         return await DBHelper.ensureOpen(DBType.indopak_wbw);
     }
@@ -87,16 +102,26 @@ class QuranService {
     return await DBHelper.ensureOpen(DBType.metadata);
   }
 
-  Future<Database> _getQpcV1WBW() async {
-    return await DBHelper.ensureOpen(DBType.qpc_v4_wbw);
+  Future<Database> _getABADatabase() async {
+    return await DBHelper.ensureOpen(DBType.qpc_v2_aba);
   }
 
-  Future<Database> _getUthmaniLinesDB() async {
-    return await DBHelper.ensureOpen(DBType.qpc_v4_15);
+  Future<String?> getAyahGlyphs(String verseKey) async {
+    final db = await _getABADatabase();
+    final result = await db.query(
+      'verses',
+      columns: ['text'],
+      where: 'verse_key = ?',
+      whereArgs: [verseKey],
+    );
+    if (result.isNotEmpty) {
+      return result.first['text'] as String?;
+    }
+    return null;
   }
 
   Future<Database> _getUthmaniWords() async {
-    return await DBHelper.ensureOpen(DBType.uthmani);
+    return await DBHelper.ensureOpen(DBType.qpc_v2_wbw);
   }
 
   // ✅ FIX: Helper method untuk memilih database berdasarkan mode DAN layout
@@ -755,6 +780,7 @@ class QuranService {
               words: entry.value..sort((a, b) => a.id.compareTo(b.id)), // Ensure words are sorted
               isStartOfAyah: entry.value.first.wordNumber == 1,
               isEndOfAyah: entry.value.last.wordNumber == totalWords,
+              // ayahGlyphText will be added in next step
             );
           }).toList();
 
@@ -763,6 +789,70 @@ class QuranService {
             if (a.surahId != b.surahId) return a.surahId.compareTo(b.surahId);
             return a.ayahNumber.compareTo(b.ayahNumber);
           });
+
+          // ✅ NEW: Batch fetch Ayah glyphs from ABA database for QPC layout
+          if (_currentLayout == MushafLayout.qpc && sortedSegments.isNotEmpty) {
+            final abaDB = await _getABADatabase();
+            final verseKeys = sortedSegments.map((s) => s.verseKey).toSet().toList();
+            
+            // Batch query for all verse glyphs on this line
+            final placeholders = verseKeys.map((_) => '?').join(',');
+            final glyphResults = await abaDB.rawQuery(
+              'SELECT verse_key, text FROM verses WHERE verse_key IN ($placeholders)',
+              verseKeys,
+            );
+            
+            // Create map for O(1) lookup
+            final glyphMap = <String, String>{};
+            for (final row in glyphResults) {
+              glyphMap[row['verse_key'] as String] = row['text'] as String;
+            }
+            
+            // ✅ NEW: Build char maps for each ayah and store in page cache
+            final pageCache = PageCharMapCache();
+            for (final verseKey in verseKeys) {
+              final glyphText = glyphMap[verseKey];
+              if (glyphText != null) {
+                // Find all words for this ayah
+                final ayahWords = allWordsMap.values
+                    .where((w) => '${w.surah}:${w.ayah}' == verseKey)
+                    .toList()
+                  ..sort((a, b) => a.wordNumber.compareTo(b.wordNumber));
+                
+                if (ayahWords.isNotEmpty) {
+                  // ✅ Build char map with marker stripping
+                  final charMap = AyahCharMapper.buildCharMap(
+                    verseKey: verseKey,
+                    ayahGlyphText: glyphText,
+                    words: ayahWords,
+                  );
+                  pageCache.addAyahMap(verseKey, charMap);
+                }
+              }
+            }
+            
+            // ✅ Store page cache for this page
+            _pageCharMapCache[layout.pageNumber] = pageCache;
+            
+            // Attach glyphs and char maps to segments
+            for (int i = 0; i < sortedSegments.length; i++) {
+              final segment = sortedSegments[i];
+              final glyphText = glyphMap[segment.verseKey];
+              final charMap = pageCache.getAyahMap(segment.verseKey);
+              if (glyphText != null) {
+                // Create new segment with glyph text and char map
+                sortedSegments[i] = AyahSegment(
+                  surahId: segment.surahId,
+                  ayahNumber: segment.ayahNumber,
+                  words: segment.words,
+                  isStartOfAyah: segment.isStartOfAyah,
+                  isEndOfAyah: segment.isEndOfAyah,
+                  ayahGlyphText: glyphText,
+                  charMap: charMap, // Attach char map from page cache
+                );
+              }
+            }
+          }
 
           line = MushafPageLine(
             lineNumber: layout.lineNumber,

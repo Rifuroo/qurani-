@@ -16,6 +16,7 @@ import 'screens/main/home/services/juz_service.dart';
 import 'package:cuda_qurani/screens/auth_wrapper.dart';
 import 'package:cuda_qurani/providers/auth_provider.dart';
 import 'package:cuda_qurani/screens/main/stt/services/quran_service.dart'; // ✅ TARTEEL: For preload
+// import 'package:cuda_qurani/screens/main/stt/services/mushaf_preloader.dart'; // ✅ Background page preloader - DISABLED
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cuda_qurani/config/app_config.dart';
@@ -52,7 +53,7 @@ void callbackDispatcher() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
   await Firebase.initializeApp();
 
@@ -81,6 +82,12 @@ void main() async {
 Future<void> _initializeServicesInBackground() async {
   try {
     print('[STARTUP] 🚀 Starting background initialization...');
+
+    // ✅ Start Mushaf preloader (render all 604 pages in background) - DISABLED
+    // Future.delayed(const Duration(seconds: 2), () {
+    //   print('[STARTUP] 📚 Starting Mushaf preloader...');
+    //   MushafPreloader().startPreloading(prioritizeCommon: true);
+    // });
 
     // Initialize Workmanager in background
     Workmanager().initialize(
@@ -258,7 +265,7 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
 
   Future<void> _navigateToAuth() async {
     final startTime = DateTime.now();
-    
+
     // ✅ 1. CHECK FOR DEEP LINK IMMEDIATELY
     int? targetPage;
     int? deepLinkAyahNum;
@@ -271,12 +278,12 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
         if (segments.length >= 2) {
           final surahId = int.tryParse(segments[0]);
           final ayahNum = int.tryParse(segments[1]);
-          
+
           if (surahId != null && ayahNum != null) {
             isDeepLinkLaunch = true;
             deepLinkAyahNum = ayahNum;
             print('🔗 Early Deep Link Detect: Surah $surahId:$ayahNum');
-            
+
             // We need DB to get page number, but we can wait for it while doing other things
           }
         }
@@ -287,7 +294,7 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
 
     // ✅ 2. Wait for AuthProvider to finish initialization
     int attempts = 0;
-    const maxAttempts = 50; 
+    const maxAttempts = 50;
 
     while (attempts < maxAttempts) {
       try {
@@ -306,7 +313,7 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
         await Future.delayed(const Duration(milliseconds: 100));
         dbAttempts++;
       }
-      
+
       // Resolve page number now that DB is ready
       try {
         if (_isDatabaseInitialized && deepLinkAyahNum != null) {
@@ -341,7 +348,7 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
 
     // ✅ 5. Navigation
     print('🚀 Navigating... DeepLink=$isDeepLinkLaunch Page=$targetPage');
-    
+
     // Pass deep link params directly to AuthWrapper for INSTANT render
     await Navigator.of(context).pushReplacement(
       PageRouteBuilder(
@@ -356,7 +363,7 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
         },
       ),
     );
-    
+
     // ✅ 6. Final Deep Link Jump (Legacy/Backup removed as AuthWrapper handles it now)
   }
 
