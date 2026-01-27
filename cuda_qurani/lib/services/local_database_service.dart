@@ -61,8 +61,8 @@ class LocalDatabaseService {
 
     switch (layout) {
       case MushafLayout.qpc:
-        dbFileName = 'qpc-v4-tajweed-15-lines.db';
-        assetPath = 'assets/kfgqpc/qpc-v4-tajweed-15-lines.db';
+        dbFileName = 'qpc-v2-15-lines.db';
+        assetPath = 'assets/QPCv2/qpc-v2-15-lines.db';
         break;
       case MushafLayout.indopak:
         dbFileName = 'qudratullah-indopak-15-lines.db';
@@ -107,7 +107,7 @@ class LocalDatabaseService {
       final String dbFileName;
       switch (layout) {
         case MushafLayout.qpc:
-          dbFileName = 'qpc-v4-tajweed-15-lines.db';
+          dbFileName = 'qpc-v2-15-lines.db';
           break;
         case MushafLayout.indopak:
           dbFileName = 'qudratullah-indopak-15-lines.db';
@@ -116,8 +116,8 @@ class LocalDatabaseService {
 
       final pagesPath = join(databasesPath, dbFileName);
 
-      // 1. Open pages database
-      final pagesDb = await openDatabase(pagesPath, readOnly: true);
+      // 1. Get cached pages database connection
+      final pagesDb = await _getPagesDb(layout);
 
       // 2. Get all ayah lines on this page
       final pageLines = await pagesDb.query(
@@ -127,7 +127,7 @@ class LocalDatabaseService {
         orderBy: 'line_number ASC',
       );
 
-      await pagesDb.close();
+      // ✅ DO NOT close() here, connection is cached in _getPagesDb
 
       if (pageLines.isEmpty) {
         print('[LocalDB] No ayah lines found on page $pageNumber');
@@ -546,10 +546,9 @@ class LocalDatabaseService {
     await _ensureInitialized();
 
     try {
-      final databasesPath = await getDatabasesPath();
-      final pagesPath = join(databasesPath, 'qpc-v4-tajweed-15-lines.db');
-
-      final pagesDb = await openDatabase(pagesPath, readOnly: true);
+      // ✅ Use cached pages database connection
+      final currentLayout = await MushafSettingsService().getMushafLayout();
+      final pagesDb = await _getPagesDb(currentLayout);
 
       final pageResult = await pagesDb.query(
         'pages',
@@ -560,12 +559,11 @@ class LocalDatabaseService {
       );
 
       if (pageResult.isEmpty) {
-        await pagesDb.close();
         return {'surah': 1, 'ayah': 1};
       }
 
       final firstWordId = pageResult.first['first_word_id'];
-      await pagesDb.close();
+      // ✅ DO NOT close() here
 
       if (firstWordId == null || firstWordId == '') {
         return {'surah': 1, 'ayah': 1};
@@ -661,7 +659,7 @@ class LocalDatabaseService {
       final String dbFileName;
       switch (layout) {
         case MushafLayout.qpc:
-          dbFileName = 'qpc-v4-tajweed-15-lines.db';
+          dbFileName = 'qpc-v2-15-lines.db';
           break;
         case MushafLayout.indopak:
           dbFileName = 'qudratullah-indopak-15-lines.db';
@@ -675,8 +673,8 @@ class LocalDatabaseService {
 
         final String assetPath;
         switch (layout) {
-          case MushafLayout.qpc:
-            assetPath = 'assets/kfgqpc/qpc-v4-tajweed-15-lines.db';
+        case MushafLayout.qpc:
+            assetPath = 'assets/QPCv2/qpc-v2-15-lines.db';
             break;
           case MushafLayout.indopak:
             assetPath = 'assets/indopak/qudratullah-indopak-15-lines.db';

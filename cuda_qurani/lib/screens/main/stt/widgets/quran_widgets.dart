@@ -814,6 +814,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                                 (context, animation, secondaryAnimation) =>
                                     PlaybackSettingsPage(
                                       currentPage: controller.currentPage,
+                                      initialSurahId: controller.activeSurahId,
+                                      initialVerse: controller.activeAyahNumber,
                                     ),
                             transitionsBuilder:
                                 (

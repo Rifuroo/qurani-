@@ -16,7 +16,17 @@ import 'package:cuda_qurani/core/providers/language_provider.dart';
 
 class PlaybackSettingsPage extends StatefulWidget {
   final int? currentPage;
-  const PlaybackSettingsPage({Key? key, this.currentPage}) : super(key: key);
+  final PlaybackSettings? initialSettings; // ✅ NEW: Initial settings object
+  final int? initialSurahId; // ✅ NEW: Pre-select surah
+  final int? initialVerse; // ✅ NEW: Pre-select verse
+
+  const PlaybackSettingsPage({
+    Key? key,
+    this.currentPage,
+    this.initialSettings,
+    this.initialSurahId,
+    this.initialVerse,
+  }) : super(key: key);
 
   @override
   State<PlaybackSettingsPage> createState() => _PlaybackSettingsPageState();
@@ -92,11 +102,11 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
 
   // ✅ JANGAN format angka di sini
   List<String> get _repetitions => [
-    '1 $timeText',
-    '2 $timesText',
-    '3 $timesText',
-    '$loopText',
-  ];
+        '1 $timeText',
+        '2 $timesText',
+        '3 $timesText',
+        '$loopText',
+      ];
 
   // ✅ Variable biasa, bukan getter
   String _eachVerseRepeat = '1 time';
@@ -109,7 +119,45 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
     _loadReciters();
     _loadTranslations();
 
-    // ✅ NEW: Auto-fill range if currentPage is provided
+    _applyInitialSettings();
+  }
+
+  void _applyInitialSettings() {
+    // ✅ Priority 1: Use full PlaybackSettings object
+    if (widget.initialSettings != null) {
+      print('📍 AUTO-FILL (Full Settings): Applying initial settings');
+      setState(() {
+        _startSurahId = widget.initialSettings!.startSurahId;
+        _startVerse = widget.initialSettings!.startVerse;
+        _endSurahId = widget.initialSettings!.endSurahId;
+        _endVerse = widget.initialSettings!.endVerse;
+        _selectedReciterId = widget.initialSettings!.reciter;
+        _selectedSpeed = '${widget.initialSettings!.speed}x';
+        _eachVerseRepeat = widget.initialSettings!.eachVerseRepeat == -1
+            ? loopText
+            : '${widget.initialSettings!.eachVerseRepeat} ${widget.initialSettings!.eachVerseRepeat == 1 ? timeText : timesText}';
+        _rangeRepeat = widget.initialSettings!.rangeRepeat == -1
+            ? loopText
+            : '${widget.initialSettings!.rangeRepeat} ${widget.initialSettings!.rangeRepeat == 1 ? timeText : timesText}';
+      });
+      return;
+    }
+
+    // ✅ Priority 2: Use Explicit Initial Verse (Granular Detection)
+    if (widget.initialSurahId != null && widget.initialVerse != null) {
+      print(
+        '📍 AUTO-FILL (Granular): Using initial ${widget.initialSurahId}:${widget.initialVerse}',
+      );
+      setState(() {
+        _startSurahId = widget.initialSurahId!;
+        _startVerse = widget.initialVerse!;
+        _endSurahId = widget.initialSurahId!;
+        _endVerse = widget.initialVerse!;
+      });
+      return;
+    }
+
+    // ✅ Priority 3: Use Current Page (Fallback)
     if (widget.currentPage != null) {
       _autoFillRangeFromPage(widget.currentPage!);
     }
@@ -135,6 +183,19 @@ class _PlaybackSettingsPageState extends State<PlaybackSettingsPage> {
         _selectedReciter = defaultReciter.name;
         _selectedReciterId = defaultReciter.identifier;
         print('✅ Selected: $_selectedReciter'); // ✅ Debug
+
+        // If initialSettings provided a reciter, override the default
+        if (widget.initialSettings != null &&
+            widget.initialSettings!.reciter.isNotEmpty) {
+          final initialReciterId = widget.initialSettings!.reciter;
+          final initialReciter = _reciters.firstWhere(
+            (r) => r.identifier == initialReciterId,
+            orElse: () => defaultReciter, // Fallback to default if not found
+          );
+          _selectedReciter = initialReciter.name;
+          _selectedReciterId = initialReciter.identifier;
+          print('✅ Overridden reciter from initial settings: $_selectedReciter');
+        }
       } else {
         print('⚠️ Reciters list is empty!'); // ✅ Debug
       }

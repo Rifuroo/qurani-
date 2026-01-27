@@ -55,6 +55,12 @@ class SttController extends ChangeNotifier {
   // ✅ NEW: Highlight specific ayah (from deep link)
   final int? highlightAyahId;
 
+  // ✅ Granular Context State
+  int? _activeSurahId;
+  int? _activeAyahNumber;
+  int? get activeSurahId => _activeSurahId;
+  int? get activeAyahNumber => _activeAyahNumber;
+
   // ✅ TAMBAHKAN getter untuk total pages (dynamic based on layout)
   int get totalPages => _mushafLayout.totalPages;
 
@@ -66,6 +72,56 @@ class SttController extends ChangeNotifier {
     if (_topVerseId == ayahId) return;
     _topVerseId = ayahId;
     _topVersePage = pageNumber;
+
+    // ✅ Track top verse only in List View (Mushaf View handles it via page)
+    if (_isQuranMode) return; 
+
+    // ✅ OPTIMIZATION: Instant Surah/Juz detection from global ayah ID (O(1))
+    final context = GlobalAyatService.fromGlobalAyat(ayahId);
+    final surahId = context['surah_id']!;
+    final ayahNum = context['ayah_number']!;
+
+    _activeSurahId = surahId;
+    _activeAyahNumber = ayahNum;
+
+    // ✅ UI THROTTLING: Update AppBar only IF surah or juz CHANGES
+    // This prevents expensive rebuilds of the UI overlay every time a single verse scrolls.
+    final currentData = appBarNotifier.value;
+    final juzNum = _sqliteService.calculateJuzAccurate(surahId, ayahNum);
+
+    if (currentData.surahName == 'Surah' || // Initial state
+        _determinedSurahId != surahId ||
+        currentData.juzNumber != juzNum ||
+        currentData.pageNumber != pageNumber) {
+      
+      _determinedSurahId = surahId;
+      
+      // Load Surah metadata for AppBar (priority: Cache -> Background DB)
+      final surahMeta = _metadataCache.getSurah(surahId);
+      if (surahMeta != null) {
+        _suratNameSimple = surahMeta['name_simple'] as String;
+        _suratVersesCount = surahMeta['verses_count'].toString();
+        
+        appBarNotifier.value = PageDisplayData(
+          pageNumber: pageNumber,
+          surahName: _suratNameSimple,
+          juzNumber: juzNum,
+          isArabic: false, // Could be enhanced later
+        );
+      } else {
+        // Fallback for metadata (unlikely if preloaded)
+        _sqliteService.getChapterInfo(surahId).then((chapter) {
+          _suratNameSimple = chapter.nameSimple;
+          _suratVersesCount = chapter.versesCount.toString();
+          
+          appBarNotifier.value = PageDisplayData(
+            pageNumber: pageNumber,
+            surahName: _suratNameSimple,
+            juzNumber: juzNum,
+          );
+        });
+      }
+    }
   }
 
 
@@ -3533,21 +3589,29 @@ class SttController extends ChangeNotifier {
     int juzNum = 1; // Default fallback
 
     try {
-      // Priority: Metadata Cache (Instant)
-      final surahIds = _metadataCache.getSurahIdsForPage(pageNumber);
-      if (surahIds.isNotEmpty) {
-        final surahId = surahIds.first;
-        final surahMeta = _metadataCache.getSurah(surahId);
+      // ✅ Granular Optimization: If we already have a topVerseId on this page, use it.
+      if (_topVersePage == pageNumber && _activeSurahId != null) {
+        final surahMeta = _metadataCache.getSurah(_activeSurahId!);
         if (surahMeta != null) {
           surahName = surahMeta['name_simple'] ?? surahName;
         }
-
-        // Calculate Juz accurately without AyatData
-        // (Menggunakan helper service atau logic estimasi juz yang ada)
-        // Disini kita gunakan existing method jika memungkinkan, atau fallback ke
-        // metadata mapping jika JuzService support getJuzByPage (ideal)
-        // Untuk sekarang kita gunakan calculation dari SQLite service yang cached
-        juzNum = _sqliteService.calculateJuzAccurate(surahId, 1);
+        juzNum = _sqliteService.calculateJuzAccurate(_activeSurahId!, _activeAyahNumber ?? 1);
+      } else {
+        // Priority: Metadata Cache (Instant fallback by page)
+        final surahIds = _metadataCache.getSurahIdsForPage(pageNumber);
+        if (surahIds.isNotEmpty) {
+          final surahId = surahIds.first;
+          
+          // ✅ SYNC Granular Context (so PlaybackSettings can use it instantly)
+          _activeSurahId = surahId;
+          _activeAyahNumber = 1; // Default to first verse of surah on this page
+          
+          final surahMeta = _metadataCache.getSurah(surahId);
+          if (surahMeta != null) {
+            surahName = surahMeta['name_simple'] ?? surahName;
+          }
+          juzNum = _sqliteService.calculateJuzAccurate(surahId, 1);
+        }
       }
     } catch (e) {
       // Silent fail, keep previous data
