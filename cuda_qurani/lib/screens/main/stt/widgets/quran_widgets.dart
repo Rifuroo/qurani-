@@ -579,12 +579,17 @@ class _QuranBottomBarState extends State<QuranBottomBar>
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<SttController>();
+    // ✅ OPTIMIZATION: Read controller once, listen only to specific changes
+    final controller = context.read<SttController>(); // Changed from watch to read
+    
+    // Select specific properties to listen to
+    final isUIVisible = context.select<SttController, bool>((c) => c.isUIVisible);
+    final isListening = context.select<SttController, bool>((c) => c.isListeningMode);
+    final isRecording = context.select<SttController, bool>((c) => c.isRecording);
 
-    // ✅ Auto-reset when modes end (using addPostFrameCallback to avoid setState during build)
-    final isListening = controller.isListeningMode;
-    final isRecording = controller.isRecording;
-
+    // Only add post-frame callback if mode changed (checked via local state tracking if needed)
+    // But for now, we rely on the parent rebuild which is triggered by Selectors
+    
     if (_activeMode == 'listen' && !isListening) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -614,9 +619,9 @@ class _QuranBottomBarState extends State<QuranBottomBar>
 
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
-      opacity: controller.isUIVisible ? 1.0 : 0.0,
+      opacity: isUIVisible ? 1.0 : 0.0,
       child: IgnorePointer(
-        ignoring: !controller.isUIVisible,
+        ignoring: !isUIVisible,
         child: SizedBox(
           height: containerHeight,
           child: Stack(

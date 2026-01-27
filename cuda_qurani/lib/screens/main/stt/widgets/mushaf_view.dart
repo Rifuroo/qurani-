@@ -18,13 +18,14 @@ import 'package:cuda_qurani/screens/main/stt/widgets/mushaf_paper_background.dar
 
 
 
+
 class MushafRenderer {
   static double pageHeight(BuildContext context) {
     return MediaQuery.of(context).size.height * 0.85; // 85% screen height
   }
 
   static double lineHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height * 0.050; // Reverted to default 5.0%
+    return MediaQuery.of(context).size.height * 0.050; // Reverted to original 5.0%
   }
 
   static const double PAGE_PADDING =
@@ -41,8 +42,7 @@ class MushafRenderer {
     required BuildContext context,
     bool allowOverflow = false,
     double? customLineHeight,
-    bool useFittedBox = false, // ✅ ADDED
-    required double baseFontSize, // Not used in flex layout but kept for signature compatibility
+    bool useFittedBox = false,
   }) {
     if (wordSpans.isEmpty) return const SizedBox.shrink();
 
@@ -107,10 +107,21 @@ class MushafRenderer {
         : child;
     }
 
-    // ✅ ROBUST FALLBACK: Use a single unified Row with SpaceBetween
-    // and wrap the entire thing in a FittedBox with scaleDown.
-    // This provides "Lurus" (straight) edges whenever possible
-    // and invisible scaling for tiny overflows (like 1.7px).
+    // Calculate total text width WITHOUT spacing for FittedBox decision
+    double totalTextWidth = 0;
+    for (final span in wordSpans) {
+      if (span is WidgetSpan) {
+         totalTextWidth += 40.0; // Approximation for marker
+      } else {
+         final painter = TextPainter(
+           text: span is TextSpan ? span : TextSpan(children: [span]),
+           textDirection: TextDirection.rtl,
+           maxLines: 1,
+         )..layout();
+         totalTextWidth += painter.width;
+      }
+    }
+
     return SizedBox(
       width: maxWidth,
       height: lineH,
@@ -146,53 +157,44 @@ class MushafRenderer {
     final screenHeight = MediaQuery.of(context).size.height;
 
     double horizontalPadding = 0.0;
-    double fontSizeMultiplier = 0.055; // Default declaration
+    double fontSizeMultiplier = 0.055;
     double scaleX = 1.0;
     double scaleY = 1.0;
-    double targetLineHeight = lineHeight(context); // Default
-    bool useFittedBox = false; // Default
+    double targetLineHeight = lineHeight(context);
+    bool useFittedBox = false;
 
-    // 1. Determine Padding & Scale based on layout/page
     if (isIndopak) {
       if (pageNumber == 1 || pageNumber == 2) {
-         // Page 1 & 2: Replicating "Relaxed Density" (Step 60)
          horizontalPadding = screenWidth * 0.05;
-         fontSizeMultiplier = 0.070; // Good balance
+         fontSizeMultiplier = 0.070;
          scaleY = 1.0;
          scaleX = 1.0;
-         targetLineHeight = screenHeight * 0.060; // "Golden" Value
-         useFittedBox = false; // Disable to trust natural layout
+         targetLineHeight = screenHeight * 0.060;
+         useFittedBox = false;
       } else {
-        // Normal pages: Tighter layout (Reverted)
         horizontalPadding = 0.0;
-        fontSizeMultiplier = 0.0630; // Standard font
+        fontSizeMultiplier = 0.0630;
         scaleY = 1.150;
         scaleX = 0.98;
-        targetLineHeight = screenHeight * 0.050; // Standard line
+        targetLineHeight = screenHeight * 0.050;
         useFittedBox = false;
       }
     } else {
-      // QPC / Standard
       if (pageNumber == 1 || pageNumber == 2) {
         horizontalPadding = screenWidth * 0.05;
-        fontSizeMultiplier = 0.062; // Good balance
-        targetLineHeight = screenHeight * 0.060; // "Golden" Value
-        useFittedBox = false; // Disable
+        fontSizeMultiplier = 0.062;
+        targetLineHeight = screenHeight * 0.060;
+        useFittedBox = false;
       } else {
         horizontalPadding = 0.0;
         fontSizeMultiplier = 0.060;
+        targetLineHeight = screenHeight * 0.050;
       }
     }
 
-    // ✅ SAFETY: Subtract 2 pixels total for rounding safety
     final availableWidth = screenWidth - (horizontalPadding * 2) - 2.0;
-
-    // 2. Calculate Responsive Font Size
-    // Removed strict height constraint to restore original behavior for normal pages
     double calculatedFontSize = screenWidth * fontSizeMultiplier;
-    
-    // ✅ RESTORED: Constraint enabled ONLY for normal pages (without FittedBox)
-    // This ensures Page 3+ don't have overflowing text, restoring original look.
+
     if (!useFittedBox) {
       final maxFontSizeByHeight = targetLineHeight * 0.85; 
       if (calculatedFontSize > maxFontSizeByHeight) {
@@ -212,7 +214,6 @@ class MushafRenderer {
   }
 }
 
-// ✅ STANDALONE CONFIG CLASS
 class MushafLayoutConfig {
   final double horizontalPadding;
   final double availableWidth;
@@ -220,7 +221,7 @@ class MushafLayoutConfig {
   final double scaleX;
   final double scaleY;
   final double lineHeight;
-  final bool useFittedBox; // ✅ ADDED
+  final bool useFittedBox;
 
   MushafLayoutConfig({
     required this.horizontalPadding,
@@ -229,7 +230,7 @@ class MushafLayoutConfig {
     required this.scaleX,
     required this.scaleY,
     required this.lineHeight,
-    required this.useFittedBox, // ✅ ADDED
+    required this.useFittedBox,
   });
 }
 
@@ -241,110 +242,97 @@ class MushafDisplay extends StatefulWidget {
 }
 
 class _MushafDisplayState extends State<MushafDisplay> {
-  bool _isSwipeInProgress = false;
-  double _dragStartPosition = 0;
-  bool _isUpdating = false; // âœ… FIX: Prevent concurrent updates
-
-  late PageController _pageController; // ✅ PERSIST CONTROLLER
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
-    // ✅ Initialize once to avoid "patah-patah" on rebuild
     final controller = context.read<SttController>();
-    _pageController = PageController(initialPage: controller.currentPage - 1);
-    
-    // ✅ REAL-TIME MONITOR: Update AppBar quietly during fast swipe
-    _pageController.addListener(() {
-       if (_pageController.hasClients && _pageController.page != null) {
-         // Report to controller quietly (NO rebuild of MushafView)
-         final pageNum = _pageController.page!.round() + 1;
-         controller.updateVisiblePageQuiet(pageNum);
-       }
-    });
-
-    // ✅ SYNC LISTENER: Handle external page changes (e.g. from Surah Picker)
-    controller.addListener(_handleControllerChange);
+    _pageController = PageController(
+      initialPage: controller.currentPage - 1,
+    );
+    context.read<SttController>().addListener(_handleControllerChange);
   }
 
   void _handleControllerChange() {
     if (!mounted) return;
     final controller = context.read<SttController>();
-    
-    // ✅ SYNC: Only jump if page actually differs and we ARE NOT swiping
-    // This prevents "fighting" between PageView and Controller
     if (_pageController.hasClients) {
-      final currentViewPage = (_pageController.page?.round() ?? _pageController.initialPage) + 1;
-      if (controller.currentPage != currentViewPage) {
-         // Only jump if not currently being manipulated by user
-         if (!_pageController.position.isScrollingNotifier.value) {
-           _pageController.animateToPage(
-             controller.currentPage - 1,
-             duration: const Duration(milliseconds: 300),
-             curve: Curves.easeInOut,
-           );
-         }
+      final currentViewPage = _pageController.page?.round() ?? 0;
+      if (currentViewPage != controller.currentPage - 1) {
+        _pageController.animateToPage(
+          controller.currentPage - 1,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
       }
     }
   }
 
   @override
   void dispose() {
-    // ✅ Clean up listener
     try {
       context.read<SttController>().removeListener(_handleControllerChange);
     } catch (_) {}
     _pageController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
-    // âœ… OPTIMIZATION: Read controller once
     final controller = context.read<SttController>();
 
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        textScaler: TextScaler.noScaling,
-      ),
+    return Directionality(
+      textDirection: TextDirection.rtl, // ✅ FIX RTL: Kanan ke Kiri
       child: NotificationListener<ScrollNotification>(
         onNotification: (notification) {
-          if (notification is ScrollStartNotification) {
-            controller.setIsSwiping(true);
-          } else if (notification is ScrollEndNotification) {
-            controller.setIsSwiping(false);
+          // 🚀 DEFERRED NAVIGATION: Only update state when scrolling is finished
+          // This prevents the AppBar and surrounding UI from rebuilding mid-swipe.
+          if (notification is ScrollEndNotification) {
+            final pageValue = _pageController.page?.round() ?? 0;
+            final newPage = pageValue + 1;
+            if (newPage != controller.currentPage) {
+              controller.navigateToPage(newPage);
+            }
           }
           return false;
         },
         child: PageView.builder(
           controller: _pageController,
           itemCount: controller.totalPages,
-          reverse: true, // Arabic direction
-          physics: const BouncingScrollPhysics(),
-          onPageChanged: (newIndex) {
-            final newPage = newIndex + 1;
-            // Debounce or only update if changed
-            if (newPage != controller.currentPage) {
-              controller.navigateToPage(newPage);
-            }
-          },
+          // onPageChanged is too "early" and causes jank. 
+          // We use the NotificationListener above instead.
+          onPageChanged: null, 
           itemBuilder: (context, index) {
-            final pageNumber = index + 1;
-  
-            // ðŸ”¥ GRANULAR REBUILD: Only this part rebuilds when isSwiping changes
-            // This prevents the entire PageView from being affected by swipe status
-            return Selector<SttController, bool>(
-              selector: (_, c) => c.isSwiping,
-              builder: (ctx, isSwiping, _) {
-                // âœ… OPTIMIZATION: Bypass permanent cache during swipe to show ultra-fast static rendering
-                if (isSwiping) {
-                  return _buildMushafPageOptimized(ctx, pageNumber);
+            // 🚀 ULTRA-PURE OPTIMIZATION: Build the page content ONCE
+            final Widget pageContent = CachedMushafPage(
+              key: ValueKey('cached_page_${index + 1}_${controller.mushafLayout.name}'),
+              pageNumber: index + 1,
+              layout: controller.mushafLayout,
+              builder: () => Builder(
+                builder: (innerC) => _buildMushafPageOptimized(innerC, index + 1),
+              ),
+            );
+
+            // Listen to page scroll but skip rebuild of pageContent
+            return AnimatedBuilder(
+              animation: _pageController,
+              child: pageContent, // ✅ PASS STABLE CHILD: This is never rebuilt during swipe!
+              builder: (context, staticChild) {
+                final double pageValue = _pageController.hasClients 
+                    ? (_pageController.page ?? 0.0) 
+                    : (controller.currentPage - 1).toDouble();
+                    
+                final double position = index - pageValue;
+                
+                // Only build active pages for performance
+                if (position < -2.0 || position > 2.0) {
+                  return const SizedBox.shrink();
                 }
-  
-                // âœ… ULTIMATE CACHING: Render once, keep forever in LRU cache
-                return CachedMushafPage(
-                  pageNumber: pageNumber,
-                  layout: controller.mushafLayout,
-                  builder: () => _buildMushafPageOptimized(ctx, pageNumber),
+
+                return _BookFoldTransformer(
+                  position: position,
+                  child: staticChild!, // ✅ USE STABLE CHILD
                 );
               },
             );
@@ -354,74 +342,42 @@ class _MushafDisplayState extends State<MushafDisplay> {
     );
   }
 
-  // âœ… CRITICAL: Track emergency loads to prevent duplicates
+  // ✅ Keep helper methods
   static final Set<int> _emergencyLoadingPages = {};
 
   Widget _buildMushafPageOptimized(BuildContext context, int pageNumber) {
     //  ✅ OPTIMIZATION: Use granular selects for cache
-    // We only care if the cache for THIS SPECIFIC page updates.
     var cachedLines = context.select<SttController, List<MushafPageLine>?>((c) => c.pageCache[pageNumber]);
     final controller = context.read<SttController>(); 
 
-    // âœ… CRITICAL: Also check QuranService cache (shared singleton)
     if (cachedLines == null || cachedLines.isEmpty) {
       final service = context.read<QuranService>();
       final serviceCache = service.getCachedPage(pageNumber);
       if (serviceCache != null && serviceCache.isNotEmpty) {
-        // âœ… Sync cache immediately
         controller.updatePageCache(pageNumber, serviceCache);
         cachedLines = serviceCache;
       }
     }
 
-    // âœ… FAST PATH: If page is cached, render immediately (NO LOADING)
     if (cachedLines != null && cachedLines.isNotEmpty) {
-      // âœ… OPTIMIZED: Use RepaintBoundary to prevent unnecessary repaints
-      return RepaintBoundary(
-        key: ValueKey('mushaf_page_$pageNumber'),
-        child: MushafPageContent(
-          pageLines: cachedLines,
-          pageNumber: pageNumber,
-        ),
+      return MushafPageContent(
+        pageLines: cachedLines,
+        pageNumber: pageNumber,
       );
     }
 
-
-
-    // âš ï¸ FALLBACK: Emergency load only if not already loading
     if (!_emergencyLoadingPages.contains(pageNumber)) {
       final service = context.read<QuranService>();
-
-      // âœ… CRITICAL: Check if page is already being loaded in QuranService
       if (service.isPageLoading(pageNumber)) {
-        // Wait for existing load instead of creating duplicate
-        final loadingFuture = service.getLoadingFuture(pageNumber);
-        if (loadingFuture != null) {
-          loadingFuture
-              .then((lines) {
-                controller.updatePageCache(pageNumber, lines);
-              })
-              .catchError((e) {
-                print('âŒ Waiting for page $pageNumber load failed: $e');
-              });
-          // Show loading indicator while waiting
-        }
+         // Wait silently
       } else {
-        // Only trigger new emergency load if not already loading
         _emergencyLoadingPages.add(pageNumber);
-        print(
-          'âš ï¸ CACHE MISS: Page $pageNumber not cached, emergency loading...',
-        );
-
-        // âœ… CRITICAL: Trigger emergency load and sync cache
         Future.microtask(() async {
           try {
             final lines = await service.getMushafPageLines(pageNumber);
-
-            // âœ… CRITICAL: Sync cache to controller immediately
             controller.updatePageCache(pageNumber, lines);
           } catch (e) {
-            print('âŒ Emergency load failed: $e');
+            print('Emergency load failed: $e');
           } finally {
             _emergencyLoadingPages.remove(pageNumber);
           }
@@ -429,19 +385,12 @@ class _MushafDisplayState extends State<MushafDisplay> {
       }
     }
 
-    // Show ultra-minimal loading (should be < 100ms)
     return SizedBox(
       height: MushafRenderer.pageHeight(context),
       child: Center(
         child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.03,
-          height: MediaQuery.of(context).size.width * 0.03,
-          child: CircularProgressIndicator(
-            strokeWidth: 1.5,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              AppColors.getTextTertiary(context),
-            ),
-          ),
+           width: 30, height: 30,
+           child: CircularProgressIndicator(color: AppColors.getTextTertiary(context)),
         ),
       ),
     );
@@ -485,33 +434,29 @@ class MushafPageContent extends StatelessWidget {
 
     // ✅ CRITICAL: Clip page to prevent bleeding into adjacent pages during swipe
     // ✅ Use ClipRect with explicit size for efficient clipping
-    return SizedBox(
-      width: screenWidth,
-      child: ClipRect(
-        child: Column(
-          children: [
-            // Header tanpa padding horizontal
-            Padding(
-              padding: EdgeInsets.only(top: appBarHeight),
-              child: const MushafPageHeader(),
-            ),
-
-            // ✅ KHUSUS HALAMAN 1 & 2: Tambahkan ruang kosong di atas Surah Header
-            if (isSpecialPage)
-              SizedBox(height: screenHeight * 0.15),
-
-            const SizedBox(height: 0),
-
-            // Page lines dengan padding horizontal yang bisa diatur terpisah
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: screenWidth * 0.0,
-              ),
-              child: linesContent,
-            ),
-          ],
+    // ✅ Highlighting Consolidated: Use a single Stack with one overlay for the entire page
+    return Column(
+      children: [
+        // Header tanpa padding horizontal
+        Padding(
+          padding: EdgeInsets.only(top: appBarHeight),
+          child: MushafPageHeader(pageNumber: pageNumber),
         ),
-      ),
+
+        // ✅ KHUSUS HALAMAN 1 & 2: Tambahkan ruang kosong di atas Surah Header
+        if (isSpecialPage)
+          SizedBox(height: screenHeight * 0.15),
+
+        const SizedBox(height: 0),
+
+        // Page lines
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: screenWidth * 0.00,
+          ),
+          child: linesContent,
+        ),
+      ],
     );
   }
 
@@ -569,8 +514,7 @@ class MushafPageContent extends StatelessWidget {
         lineWidget = const SizedBox.shrink();
     }
 
-    // ✅ WRAP EACH LINE IN REPAINT BOUNDARY TO MINIMIZE GPU WORK
-    return RepaintBoundary(child: lineWidget);
+    return lineWidget;
   }
 }
 
@@ -647,13 +591,15 @@ class _BasmallahLine extends StatelessWidget {
     final basmallahSize = screenHeight * 0.040;
     final isIndopak = context.select<SttController, bool>((c) => c.mushafLayout == MushafLayout.indopak);
 
+    final isIndopakFontSize = context.select<SttController, bool>((c) => c.mushafLayout == MushafLayout.indopak);
+
     return Container(
       height: MushafRenderer.lineHeight(context),
       alignment: Alignment.center,
       child: Text(
         '﷽',
         style: TextStyle(
-          fontSize: isIndopak ? basmallahSize * 0.85 : basmallahSize,
+          fontSize: isIndopakFontSize ? basmallahSize * 0.85 : basmallahSize,
           fontFamily: isIndopak ? 'IndoPak-Nastaleeq' : 'Quran-Common',
           color: AppColors.getTextPrimary(context),
         ),
@@ -685,13 +631,11 @@ class _JustifiedAyahLine extends StatelessWidget {
     final currentAyatIndex = context.select<SttController, int>((c) => c.currentAyatIndex);
     final isListeningMode = context.select<SttController, bool>((c) => c.isListeningMode);
     final isRecording = context.select<SttController, bool>((c) => c.isRecording);
-    final isSwiping = context.select<SttController, bool>((c) => c.isSwiping);
     final hideUnreadAyat = context.select<SttController, bool>((c) => c.hideUnreadAyat);
-    
+
     // Select ONLY the word status for the current active highlight if it belongs to this line
     final lineAyahKeys = line.ayahSegments?.map((s) => '${s.surahId}:${s.ayahNumber}').toSet() ?? {};
-    final isSpecialPage = pageNumber == 1 || pageNumber == 2;
-    
+
     // ⚡️ ULTIMATE OPTIMIZATION: Rebuild ONLY if the active highlight is on THIS line
     final lineHighlightState = context.select<SttController, String>((c) {
       if (c.currentHighlightKey == null || !lineAyahKeys.contains(c.currentHighlightKey)) {
@@ -704,77 +648,200 @@ class _JustifiedAyahLine extends StatelessWidget {
     });
 
     final controller = context.read<SttController>();
+
+    // ✅ Use Calculated Font Size
     final baseFontSize = layoutConfig.fontSize;
-    final fontFamily = mushafLayout.isGlyphBased ? 'p$pageNumber' : 'IndoPak-Nastaleeq';
+    final lastWordFontMultiplier = 0.850;
 
     if (line.ayahSegments == null || line.ayahSegments!.isEmpty) {
       return SizedBox(height: MushafRenderer.lineHeight(context));
     }
 
-    // ðŸ“ THE TARTEEL WAY: ALWAYS use static rendering (ultra-fast)
-    // We no longer switch to word-by-word TextSpans after swiping.
-    // Instead, we use a single permanent static block and draw highlights as an OVERLAY.
-    return NotificationListener<ScrollNotification>(
-      onNotification: (_) => true, // Absorb scrolls
-      child: Stack(
-        children: [
-          // Layer 1: Static Text (Independently cached as a bitmap)
-          RepaintBoundary(
-            key: ValueKey('static_line_${pageNumber}_${line.lineNumber}'),
-            child: _buildStaticLine(context, layoutConfig, pageNumber, fontFamily),
-          ),
+    List<InlineSpan> spans = [];
 
-          // Layer 2: Highlight Overlay (Drawn on separate Canvas)
-          Positioned.fill(
-            child: RepaintBoundary(
-              child: _WordHighlightOverlay(
-                line: line,
-                pageNumber: pageNumber,
-                layoutConfig: layoutConfig,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    final fontFamily = mushafLayout.isGlyphBased
+        ? 'p$pageNumber' // QPC: p1, p2, p3, etc.
+        : 'IndoPak-Nastaleeq'; // IndoPak: single font for all pages
 
-  Widget _buildStaticLine(BuildContext context, MushafLayoutConfig layoutConfig, int pageNumber, String fontFamily) {
-    final controller = context.read<SttController>();
-    final key = 'p${pageNumber}_l${line.lineNumber}'; 
-    final baseFontSize = layoutConfig.fontSize;
-    final textColor = AppColors.getTextPrimary(context);
+    final wordStatusMap = controller.wordStatusMap;
 
-    // ✅ PRIORITY 1: Use pre-built spans from controller cache (FASTEST)
-    final prebuilt = controller.prebuiltSpans[key];
-    
-    List<InlineSpan> spans;
-    if (prebuilt != null) {
-      spans = prebuilt;
-    } else {
-      // ✅ FALLBACK: Build using AyahCharMapper (matches prebuilt logic)
-      spans = AyahCharMapper.buildStaticLineSpans(
-        line, 
-        fontFamily, 
-        baseFontSize: baseFontSize,
-        textColor: textColor,
+    // ✅ CRITICAL: Ensure segments are sorted by reading order (Surah/Ayah)
+    final sortedSegments = List<AyahSegment>.from(line.ayahSegments ?? []);
+    sortedSegments.sort((a, b) {
+      if (a.surahId != b.surahId) return a.surahId.compareTo(b.surahId);
+      return a.ayahNumber.compareTo(b.ayahNumber);
+    });
+
+    for (final segment in sortedSegments) {
+      final ayatIndex = controller.ayatList.indexWhere(
+        (a) => a.surah_id == segment.surahId && a.ayah == segment.ayahNumber,
       );
+      final isCurrentAyat =
+          ayatIndex >= 0 && ayatIndex == currentAyatIndex;
+
+      for (int i = 0; i < segment.words.length; i++) {
+        final word = segment.words[i];
+        final wordIndex = word.wordNumber - 1;
+
+        final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
+        final wordStatus = wordStatusMap[wordStatusKey]?[wordIndex];
+
+        Color wordBg = Colors.transparent;
+        double wordOpacity = 1.0;
+
+        final isLastWordInAyah =
+            segment.isEndOfAyah && i == (segment.words.length - 1);
+
+        // Highlight logic
+        if (wordStatus != null) {
+          switch (wordStatus) {
+            case WordStatus.matched:
+            case WordStatus.correct:
+              wordBg = getCorrectColor(context).withValues(alpha: 0.6);
+              break;
+            case WordStatus.mismatched:
+            case WordStatus.incorrect:
+            case WordStatus.skipped:
+              wordBg = getErrorColor(context).withValues(alpha: 0.6);
+              break;
+            case WordStatus.processing:
+              if (isRecording || isListeningMode) {
+                wordBg = AppColors.getInfo(context).withValues(alpha: 0.6);
+              }
+              break;
+            default: break;
+          }
+        }
+
+        final hasActiveHighlight = wordStatusMap[wordStatusKey]?.values
+            .any((s) => s == WordStatus.processing) ?? false;
+
+        if (isCurrentAyat && 
+            wordBg == Colors.transparent && 
+            hasActiveHighlight &&
+            (isListeningMode || isRecording)) {
+          wordBg = AppColors.getPrimary(context).withValues(alpha: 0.1);
+        }
+
+        // Opacity logic
+        if (hideUnreadAyat) {
+          if (wordStatus != null && wordStatus != WordStatus.pending) {
+            wordOpacity = 1.0;
+          } else {
+            wordOpacity = (isLastWordInAyah) ? 1.0 : 0.0;
+          }
+        }
+
+        final isLastWord = isLastWordInAyah;
+        final effectiveFontSize = isLastWord
+            ? baseFontSize * lastWordFontMultiplier
+            : baseFontSize;
+
+        // ✅ FORCE INDOPAK STYLE FOR AYAH MARKER WITH STACK
+        if (isLastWord) {
+             spans.add(
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Container(
+                  width: effectiveFontSize * 1.2,
+                  height: effectiveFontSize,
+                  alignment: Alignment.center,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
+                    children: [
+                      // 1. Lingkaran (Ayah End Marker)
+                      Transform.translate(
+                        offset: Offset(0, -effectiveFontSize * 0.15),
+                        child: Transform.scale(
+                          scale: (pageNumber == 1 || pageNumber == 2) ? 1.6 : 1.9,
+                          child: Text(
+                            '\u06DD', 
+                            style: TextStyle(
+                              fontSize: effectiveFontSize,
+                              fontFamily: 'IndoPak-Nastaleeq',
+                              color: AppColors.getAyahNumber(context).withValues(alpha: wordOpacity),
+                              height: 0.1,
+                            ),
+                            textDirection: TextDirection.rtl,
+                            overflow: TextOverflow.visible,
+                          ),
+                        ),
+                      ),
+
+                      // 2. Nomor Ayat (Centered inside ornament)
+                      Center(
+                         child: Text(
+                          LanguageHelper.toIndoPakDigits(segment.ayahNumber),
+                          style: TextStyle(
+                            fontSize: effectiveFontSize * 0.55,
+                            fontFamily: 'Quran-Common',
+                            color: AppColors.getAyahNumber(context).withValues(alpha: wordOpacity),
+                            fontWeight: FontWeight.w800,
+                            height: 1.0,
+                          ),
+                          textAlign: TextAlign.center,
+                          textDirection: TextDirection.rtl,
+                          overflow: TextOverflow.visible,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+        } else {
+             // Normal text word
+             spans.add(
+              TextSpan(
+                text: word.text,
+                style: TextStyle(
+                  fontSize: effectiveFontSize,
+                  fontFamily: fontFamily,
+                  color: _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity),
+                  backgroundColor: wordBg,
+                  fontWeight: FontWeight.normal,
+                  height: (pageNumber == 1 || pageNumber == 2)
+                      ? 1.5
+                      : (isIndopak ? 1.6 : 1.8),
+                ),
+              ),
+            );
+        }
+      }
     }
 
-    return MushafRenderer.renderJustifiedLine(
-      wordSpans: spans,
-      isCentered: line.isCentered,
-      availableWidth: layoutConfig.availableWidth,
-      context: context,
-      customLineHeight: layoutConfig.lineHeight,
-      useFittedBox: false,
-      baseFontSize: baseFontSize,
+    // ✅ Build stack with highlights
+    return Stack(
+      children: [
+        RepaintBoundary(
+          key: ValueKey('static_line_${pageNumber}_${line.lineNumber}'),
+          child: MushafRenderer.renderJustifiedLine(
+            wordSpans: spans,
+            isCentered: line.isCentered,
+            availableWidth: layoutConfig.availableWidth,
+            context: context,
+            allowOverflow: false,
+            customLineHeight: layoutConfig.lineHeight,
+            useFittedBox: layoutConfig.useFittedBox,
+          ),
+        ),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: _WordHighlightOverlay(
+              line: line,
+              pageNumber: pageNumber,
+              layoutConfig: layoutConfig,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
 
-/// ✅ Canvas-Based Highlighting Overlay
+/// ✅ Per-Line Highlighting Overlay (Restored)
 class _WordHighlightOverlay extends StatelessWidget {
   final MushafPageLine line;
   final int pageNumber;
@@ -788,36 +855,35 @@ class _WordHighlightOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ⚡️ ULTIMATE OPTIMIZATION: Only rebuild the overlay when relevant state changes
-    final lineAyahKeys = line.ayahSegments?.map((s) => '${s.surahId}:${s.ayahNumber}').toSet() ?? {};
-    final mushafLayout = context.select<SttController, MushafLayout>((c) => c.mushafLayout);
-    final fontFamily = mushafLayout.isGlyphBased ? 'p$pageNumber' : 'IndoPak-Nastaleeq';
+    if (line.ayahSegments == null) return const SizedBox.shrink();
 
-    // Select the aggregate state for this line
-    final overlayState = context.select<SttController, String>((c) {
-      if (c.currentHighlightKey != null && lineAyahKeys.contains(c.currentHighlightKey)) {
-        return 'active:${c.currentHighlightKey}:${c.currentHighlightWordIdx}';
+    final lineAyahKeys = line.ayahSegments!.map((s) => '${s.surahId}:${s.ayahNumber}').toSet();
+    
+    // Listen to highlight state only if it affects this line
+    final highlightData = context.select<SttController, String?>((c) {
+      if (c.currentHighlightKey == null || !lineAyahKeys.contains(c.currentHighlightKey)) {
+        return null;
       }
-      
-      // Also check if any words on this line have a special status
-      final hasStatus = lineAyahKeys.any((key) {
-        final map = c.wordStatusMap[key];
-        return map != null && map.values.any((s) => s != WordStatus.pending);
-      });
-      
-      return hasStatus ? 'data' : 'none';
+      return '${c.currentHighlightKey}:${c.currentHighlightWordIdx}';
     });
 
-    if (overlayState == 'none') return const SizedBox.shrink();
+    // Hash of statuses on THIS line for efficient rebuilds
+    final statusHash = context.select<SttController, int>((c) {
+      int hash = 0;
+      for (final segment in line.ayahSegments!) {
+        final status = c.wordStatusMap[segment.verseKey];
+        if (status != null) hash ^= status.hashCode;
+      }
+      return hash;
+    });
 
+    final controller = context.read<SttController>();
+    
     return CustomPaint(
       painter: _WordHighlightPainter(
         line: line,
         pageNumber: pageNumber,
-        controller: context.read<SttController>(),
-        layoutConfig: layoutConfig,
-        fontFamily: fontFamily,
-        // ✅ Pre-fetch colors to stay away from context in paint()
+        controller: controller,
         correctColor: AppColors.getCorrect(context).withValues(alpha: 0.4),
         incorrectColor: AppColors.getIncorrect(context).withValues(alpha: 0.4),
         infoColor: AppColors.getInfo(context).withValues(alpha: 0.4),
@@ -831,8 +897,6 @@ class _WordHighlightPainter extends CustomPainter {
   final MushafPageLine line;
   final int pageNumber;
   final SttController controller;
-  final MushafLayoutConfig layoutConfig;
-  final String fontFamily;
   final Color correctColor;
   final Color incorrectColor;
   final Color infoColor;
@@ -842,8 +906,6 @@ class _WordHighlightPainter extends CustomPainter {
     required this.line,
     required this.pageNumber,
     required this.controller,
-    required this.layoutConfig,
-    required this.fontFamily,
     required this.correctColor,
     required this.incorrectColor,
     required this.infoColor,
@@ -852,76 +914,62 @@ class _WordHighlightPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (line.ayahSegments == null) return;
-
     final geometry = controller.geometryCache[pageNumber];
-    if (geometry == null) return; // Wait for precomputation
+    if (geometry == null || line.ayahSegments == null) return;
 
     final wordStatusMap = controller.wordStatusMap;
-    final isCurrentAyat = controller.currentHighlightKey != null && 
-                          line.ayahSegments!.any((s) => s.verseKey == controller.currentHighlightKey);
+    final highlightKey = controller.currentHighlightKey;
+    final highlightWordIdx = controller.currentHighlightWordIdx;
+    final paint = Paint();
 
     for (final segment in line.ayahSegments!) {
       final key = segment.verseKey;
-      
+      final statuses = wordStatusMap[key];
+      if (statuses == null && key != highlightKey) continue;
+
       for (final word in segment.words) {
-         final wordIdx = word.wordNumber - 1;
-         final status = wordStatusMap[key]?[wordIdx];
-         
-         // 1. Determine Color
-         Color? highlightColor;
-         if (status != null && status != WordStatus.pending) {
-           highlightColor = _getHighlightColor(status);
-         } else if (key == controller.currentHighlightKey && controller.currentHighlightWordIdx == wordIdx) {
-           highlightColor = primaryColor;
-         }
+        final wordIdx = word.wordNumber - 1;
+        final status = statuses?[wordIdx];
+        
+        Color? highlightColor;
+        if (status != null && status != WordStatus.pending) {
+          highlightColor = _getHighlightColor(status);
+        } else if (key == highlightKey && highlightWordIdx == wordIdx) {
+          highlightColor = primaryColor;
+        }
 
-         if (highlightColor != null) {
-           // 2. O(1) LOOKUP: No TextPainter.layout() or getBoxesForSelection() here!
-           final geometryKey = PageGeometry.getWordKey(segment.surahId, segment.ayahNumber, word.wordNumber);
-           final rects = geometry.wordBounds[geometryKey];
+        if (highlightColor != null) {
+          final geometryKey = PageGeometry.getWordKey(segment.surahId, segment.ayahNumber, word.wordNumber);
+          final rects = geometry.wordBounds[geometryKey];
 
-           if (rects != null) {
-             final paint = Paint()..color = highlightColor;
-             for (final rect in rects) {
-               // ✅ HARDENING: Ensure coordinate alignment with current size
-               // Scale factor if view size differs from computation size
-               canvas.drawRRect(
-                 RRect.fromRectAndRadius(rect, const Radius.circular(4)),
-                 paint,
-               );
-             }
-           }
-         }
+          if (rects != null) {
+            paint.color = highlightColor;
+            for (final rect in rects) {
+              canvas.drawRRect(
+                RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+                paint,
+              );
+            }
+          }
+        }
       }
     }
   }
 
-  // ✅ REMOVED: _createTextPainter - No measurement logic allowed in paint()
-
   Color _getHighlightColor(WordStatus status) {
     switch (status) {
       case WordStatus.matched:
-      case WordStatus.correct:
-        return correctColor;
+      case WordStatus.correct: return correctColor;
       case WordStatus.mismatched:
       case WordStatus.incorrect:
-      case WordStatus.skipped:
-        return incorrectColor;
-      case WordStatus.processing:
-        return infoColor;
-      default:
-        return Colors.transparent;
+      case WordStatus.skipped: return incorrectColor;
+      case WordStatus.processing: return infoColor;
+      default: return Colors.transparent;
     }
   }
 
   @override
-  bool shouldRepaint(covariant _WordHighlightPainter oldDelegate) {
-    // Re-paint if anything in the controller's highlight state changed
-    return controller.currentHighlightKey != oldDelegate.controller.currentHighlightKey ||
-           controller.currentHighlightWordIdx != oldDelegate.controller.currentHighlightWordIdx ||
-           controller.wordStatusMap != oldDelegate.controller.wordStatusMap;
-  }
+  bool shouldRepaint(covariant _WordHighlightPainter oldDelegate) => true;
 }
 
 
@@ -939,7 +987,8 @@ Color getErrorColor(BuildContext context) {
 }
 
 class MushafPageHeader extends StatefulWidget {
-  const MushafPageHeader({super.key});
+  final int pageNumber; // ✅ ACCEPT PAGE NUMBER
+  const MushafPageHeader({super.key, required this.pageNumber});
 
   @override
   State<MushafPageHeader> createState() => _MushafPageHeaderState();
@@ -949,11 +998,12 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
   Map<String, dynamic> _translations = {};
 
   Future<void> _loadTranslations() async {
-    // Ganti path sesuai file JSON yang dibutuhkan
     final trans = await context.loadTranslations('stt');
-    setState(() {
-      _translations = trans;
-    });
+    if (mounted) {
+      setState(() {
+        _translations = trans;
+      });
+    }
   }
 
   @override
@@ -967,9 +1017,8 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // ✅ OPTIMIZATION: Use select to only rebuild when RELEVANT state changes
+    // ✅ OPTIMIZATION: Only listen to layout changes, NOT page changes
     final mushafLayout = context.select<SttController, MushafLayout>((c) => c.mushafLayout);
-    final currentPageAyats = context.select<SttController, List<AyatData>>((c) => c.currentPageAyats);
     final isIndopak = mushafLayout == MushafLayout.indopak;
 
     final controller = context.read<SttController>(); 
@@ -979,12 +1028,11 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
         ? LanguageHelper.tr(_translations, 'mushaf_view.juz_text')
         : 'Juz';
 
-    final juzNumber = currentPageAyats.isNotEmpty
-        ? controller.calculateJuz(
-            currentPageAyats.first.surah_id,
-            currentPageAyats.first.ayah,
-          )
-        : 1;
+    // ✅ CALCULATE JUZ FOR *THIS* PAGE
+    // Estimation logic: 20 pages per juz.
+    // Juz = ((pageNumber - 1) / 20).floor() + 1
+    // This is instant and doesn't require waiting for controller state
+    final juzNumber = ((widget.pageNumber - 1) / 20).floor() + 1;
 
     return Container(
       height: headerHeight,
@@ -994,7 +1042,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             ? screenWidth *
                   0.035 // indopak
             : screenWidth * 0.010, // qpc,
-      ), // ✅ CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
+      ), 
       alignment: Alignment.center,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1009,7 +1057,7 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             textDirection: TextDirection.rtl,
           ),
           Text(
-            '${context.formatNumber(controller.currentPage)}',
+            '${context.formatNumber(widget.pageNumber)}', // ✅ USE LOCAL PAGE NUMBER
             style: TextStyle(
               fontSize: headerFontSize,
               color: AppColors.getTextPrimary(context).withOpacity(0.8),
@@ -1021,3 +1069,121 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
     );
   }
 }
+
+/// ✅ CUSTOM TRANSFORMER: Memberikan efek "Spacing Sendiri" & "Spine Shadow"
+/// Tanpa package, lebih stabil dan terkontrol performanya.
+class _BookFoldTransformer extends StatelessWidget {
+  final double position;
+  final Widget child;
+
+  const _BookFoldTransformer({
+    required this.position,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double absPosition = position.abs();
+    
+    // 🚀 2D OPTIMIZED TRANSFORM: Simulation of fold using 2D math
+    // Faster for mid-range GPUs (like Redmi Note 12) than 3D matrices.
+    
+    // 1. Horizontal "Squeeze" (Simulates turning away)
+    // ScaleX from 1.0 (straight) to 0.85 (folded)
+    final double scaleX = 1.0 - (absPosition * 0.15);
+    
+    // 2. Subtle Verticall "Skew" (Simulates perspective tilt)
+    // Very cheap 2D tilt
+    final double skewY = position * 0.05;
+
+    final Matrix4 transform = Matrix4.identity()
+      ..scale(scaleX, 1.0);
+    
+    // Simulating skewY without the undefined method
+    transform.setEntry(1, 0, skewY); 
+
+    // 3. Dynamic Crease Shadow
+    final double dimAmount = absPosition.clamp(0.0, 0.45);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 1.0),
+      child: Transform(
+        transform: transform,
+        // RTL Logic for Spine Alignment
+        alignment: position < 0 ? Alignment.centerLeft : Alignment.centerRight,
+        child: Stack(
+          children: [
+            child,
+            
+            // ✅ DUAL-LAYER SHADOW SYSTEM
+            // Layer 1: Fixed subtle gutter (always there)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _GutterShadowPainter(
+                    dimAmount: 0.1, // Permanent subtle spine
+                    isRightPage: position < 0,
+                    isFixed: true,
+                  ),
+                ),
+              ),
+            ),
+
+            // Layer 2: Dynamic crease (grows during fold)
+            if (absPosition > 0)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _GutterShadowPainter(
+                      dimAmount: dimAmount,
+                      isRightPage: position < 0,
+                      isFixed: false,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GutterShadowPainter extends CustomPainter {
+  final double dimAmount;
+  final bool isRightPage;
+  final bool isFixed;
+
+  _GutterShadowPainter({
+    required this.dimAmount,
+    required this.isRightPage,
+    this.isFixed = false,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (dimAmount <= 0) return;
+    
+    final rect = Offset.zero & size;
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: isRightPage ? Alignment.centerLeft : Alignment.centerRight,
+        end: isRightPage ? Alignment.centerRight : Alignment.centerLeft,
+        colors: [
+          Colors.black.withOpacity(isFixed ? 0.3 * dimAmount : 0.8 * dimAmount),
+          Colors.transparent,
+        ],
+        stops: isFixed ? const [0.0, 0.05] : const [0.0, 0.25],
+      ).createShader(rect);
+
+    canvas.drawRect(rect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GutterShadowPainter oldDelegate) {
+    return oldDelegate.dimAmount != dimAmount || oldDelegate.isRightPage != isRightPage;
+  }
+}
+
+
+

@@ -257,7 +257,8 @@ class MushafWidgetCache {
 }
 
 /// ✅ Widget wrapper that uses cache
-class CachedMushafPage extends StatelessWidget {
+/// ✅ Widget wrapper that uses KeepAlive for true performance
+class CachedMushafPage extends StatefulWidget {
   final int pageNumber;
   final MushafLayout layout;
   final Widget Function() builder;
@@ -270,39 +271,22 @@ class CachedMushafPage extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<CachedMushafPage> createState() => _CachedMushafPageState();
+}
+
+class _CachedMushafPageState extends State<CachedMushafPage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true; // ✅ CRITICAL: Keep page alive in memory
+
+  @override
   Widget build(BuildContext context) {
-    final cache = MushafWidgetCache();
+    super.build(context); // Required for KeepAlive checks
 
-    // Try to get from cache
-    final cached = cache.getWidget(pageNumber, layout);
-    if (cached != null) {
-      return cached;
-    }
-
-    // Build new widget
-    if (!cache.startRendering(pageNumber, layout)) {
-      // Already being rendered, show loading
-      return const Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      );
-    }
-
-    try {
-      final widget = RepaintBoundary(
-        key: ValueKey('mushaf_${pageNumber}_${layout.name}'),
-        child: builder(),
-      );
-
-      // Cache the built widget
-      cache.cacheWidget(pageNumber, layout, widget);
-
-      return widget;
-    } finally {
-      cache.finishRendering(pageNumber, layout);
-    }
+    // Wrap with RepaintBoundary to isolate frequent repaints (cursor highlighting)
+    return RepaintBoundary(
+      key: ValueKey('mushaf_${widget.pageNumber}_${widget.layout.name}'),
+      child: widget.builder(),
+    );
   }
 }

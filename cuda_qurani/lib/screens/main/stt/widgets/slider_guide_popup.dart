@@ -31,12 +31,21 @@ class _SliderGuidePopupState extends State<SliderGuidePopup>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  static Uint8List? _cachedCompressedImage; // ✅ STATIC CACHE: Prevent re-compression
+
   @override
   void initState() {
     super.initState();
     _initAnimations();
     _loadShowCount();
-    _loadAndCompressImage();
+    
+    // ✅ OPTIMIZATION: Check cache first
+    if (_cachedCompressedImage != null) {
+      _compressedImage = _cachedCompressedImage;
+    } else {
+      _loadAndCompressImage();
+    }
+    
     _startIdleDetection();
   }
 
@@ -101,6 +110,7 @@ class _SliderGuidePopupState extends State<SliderGuidePopup>
         setState(() {
           _compressedImage = compressedBytes;
         });
+        _cachedCompressedImage = compressedBytes; // ✅ Save to static cache
         print(
           '✅ Image compressed successfully: ${compressedBytes.length} bytes',
         );

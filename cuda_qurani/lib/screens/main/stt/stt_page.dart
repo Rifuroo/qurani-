@@ -116,12 +116,19 @@ class _SttPageState extends State<SttPage> {
 
           return Scaffold(
             backgroundColor: AppColors.getBackground(context),
-            extendBodyBehindAppBar: true, // ✅ Key: Body extends behind AppBar
+            extendBodyBehindAppBar: true, 
             appBar: const QuranAppBar(),
-            body: controller.isLoading
-                ? const SizedBox.shrink()
-                : (controller.errorMessage?.isNotEmpty ?? false)
-                ? Column(
+            // ✅ OPTIMIZATION: Selector for Loading/Error states ONLY
+            body: Selector<SttController, String?>(
+              selector: (_, c) => c.errorMessage,
+              builder: (context, errorMessage, _) {
+                 final isLoading = context.select<SttController, bool>((c) => c.isLoading);
+                 
+                 if (isLoading) return const SizedBox.shrink();
+                 
+                 if (errorMessage?.isNotEmpty ?? false) {
+                    final controller = context.read<SttController>();
+                    return Column(
                     children: [
                       // Error banner below AppBar
                       SizedBox(height: kToolbarHeight * 0.86),
@@ -146,7 +153,7 @@ class _SttPageState extends State<SttPage> {
                             ),
                             Expanded(
                               child: Text(
-                                controller.errorMessage ?? 'An error occurred',
+                                errorMessage ?? 'An error occurred',
                                 style: TextStyle(
                                   color: AppColors.textInverse,
                                   fontSize:
@@ -170,54 +177,69 @@ class _SttPageState extends State<SttPage> {
                           onTap: controller.toggleUIVisibility,
                           child: Column(
                             children: [
-                              Expanded(child: _buildMainContent()),
-                              if (controller.showLogs && controller.isUIVisible)
-                                const QuranLogsPanel(),
+                              Expanded(child: _buildMainContent(context)), // ✅ Pass context!
+                              // Logs panel logic moved inside
+                              Selector<SttController, bool>(
+                                selector: (_, c) => c.showLogs && c.isUIVisible,
+                                builder: (_, show, __) => show ? const QuranLogsPanel() : const SizedBox.shrink(),
+                              )
                             ],
                           ),
                         ),
                       ),
                     ],
-                  )
-                : GestureDetector(
-                    onTap: controller.toggleUIVisibility,
+                  );
+                 }
+                 
+                 return GestureDetector(
+                    onTap: context.read<SttController>().toggleUIVisibility,
                     child: MushafPaperBackground(
                       child: Column(
                         children: [
-                          Expanded(child: _buildMainContent()),
-                          if (controller.showLogs && controller.isUIVisible)
-                            const QuranLogsPanel(),
+                          Expanded(child: _buildMainContent(context)), // ✅ Pass context!
+                          Selector<SttController, bool>(
+                                selector: (_, c) => c.showLogs && c.isUIVisible,
+                                builder: (_, show, __) => show ? const QuranLogsPanel() : const SizedBox.shrink(),
+                          )
                         ],
                       ),
                     ),
-                  ),
+                  );
+              },
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildMainContent() {
-    return Consumer<SttController>(
-      builder: (context, controller, child) {
-        return Stack(
-          children: [
-            _buildQuranText(context, controller),
-            const Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: QuranBottomBar(),
-            ),
-            // ✅ TAMBAHKAN INI - Popup Guide
-            const SliderGuidePopup(),
+  // ✅ FIXED: Pass context to ensure Provider is found
+  Widget _buildMainContent(BuildContext context) {
+    // ✅ OPTIMIZATION: Remove blanket Consumer
+    // Use select for specific checks to keep Stack stable
+    return Stack(
+      children: [
+        // MushafView handles its own listeners
+        _buildQuranText(context, context.read<SttController>()),
+        
+        // BottomBar handles its own listeners
+        const Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: QuranBottomBar(key: ValueKey('quran_bottom_bar')),
+        ),
+        
+        // Popup handles its own state
+        const SliderGuidePopup(),
 
-            // ✅ NEW: Rate Limit Warning Banner (at top)
-            if (controller.rateLimit != null &&
-                controller.rateLimitRemaining <= 1 &&
-                controller.rateLimitRemaining > 0 &&
-                !controller.isRateLimitExceeded)
-              Positioned(
+        // ✅ RATE LIMIT BANNER (Selector)
+        Selector<SttController, bool>(
+           selector: (_, c) => c.rateLimit != null && c.rateLimitRemaining <= 1 && c.rateLimitRemaining > 0 && !c.isRateLimitExceeded,
+           builder: (context, show, _) {
+             if (!show) return const SizedBox.shrink();
+             final controller = context.read<SttController>();
+             return Positioned(
                 top: kToolbarHeight + MediaQuery.of(context).padding.top,
                 left: 0,
                 right: 0,
@@ -230,63 +252,50 @@ class _SttPageState extends State<SttPage> {
                   isExceeded: false,
                   onUpgradePressed: () => _navigateToPremium(context),
                 ),
-              ),
+              );
+           }
+        ),
 
-            // ✅ NEW: Rate Limit Exceeded Overlay (full screen)
-            if (controller.isRateLimitExceeded)
-              Positioned.fill(
+        // ✅ RATE LIMIT EXCEEDED (Selector)
+        Selector<SttController, bool>(
+          selector: (_, c) => c.isRateLimitExceeded,
+          builder: (context, show, _) => show ? Positioned.fill(
                 child: RateLimitExceededOverlay(
-                  limit: controller.rateLimitMax,
-                  resetTime: controller.rateLimitResetFormatted,
-                  plan: controller.rateLimitPlan,
+                  limit: context.read<SttController>().rateLimitMax,
+                  resetTime: context.read<SttController>().rateLimitResetFormatted,
+                  plan: context.read<SttController>().rateLimitPlan,
                   onUpgradePressed: () => _navigateToPremium(context),
                   onClose: () => Navigator.of(context).pop(),
                 ),
-              ),
+              ) : const SizedBox.shrink(),
+        ),
 
-            // ⏳ NEW: Duration Warning Banner (3 menit tersisa)
-            if (controller.isDurationWarningActive &&
-                !controller.isDurationLimitExceeded &&
-                !controller.isDurationUnlimited)
-              Positioned(
+        // ✅ DURATION WARNING (Selector)
+        Selector<SttController, bool>(
+           selector: (_, c) => c.isDurationWarningActive && !c.isDurationLimitExceeded && !c.isDurationUnlimited,
+           builder: (context, show, _) => show ? Positioned(
                 top: kToolbarHeight + MediaQuery.of(context).padding.top,
                 left: 0,
                 right: 0,
                 child: DurationWarningBanner(
-                  warningMessage: controller.durationWarning,
-                  onDismiss: () {
-                    // Optional: dismiss warning
-                  },
+                  warningMessage: context.read<SttController>().durationWarning,
+                  onDismiss: () {},
                 ),
-              ),
+              ) : const SizedBox.shrink(),
+        ),
 
-            // // 🚨 NEW: Surah Mismatch Warning Banner
-            // if (controller.isSurahMismatch && controller.surahMismatchWarning != null)
-            //   Positioned(
-            //     top: kToolbarHeight + MediaQuery.of(context).padding.top,
-            //     left: 0,
-            //     right: 0,
-            //     child: SurahMismatchBanner(
-            //       warningMessage: controller.surahMismatchWarning!,
-            //       detectedSurahName: controller.detectedMismatchSurahName,
-            //       onDismiss: () {
-            //         // Will auto-dismiss after 10 seconds
-            //       },
-            //     ),
-            //   ),
-
-            // ⏳ NEW: Duration Limit Exceeded Overlay
-            if (controller.isDurationLimitExceeded)
-              Positioned.fill(
+        // ✅ DURATION EXCEEDED (Selector)
+        Selector<SttController, bool>(
+           selector: (_, c) => c.isDurationLimitExceeded,
+           builder: (context, show, _) => show ? Positioned.fill(
                 child: DurationLimitExceededOverlay(
-                  message: controller.durationWarning,
+                  message: context.read<SttController>().durationWarning,
                   onUpgradePressed: () => _navigateToPremium(context),
                   onClose: () => Navigator.of(context).pop(),
                 ),
-              ),
-          ],
-        );
-      },
+              ) : const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 
