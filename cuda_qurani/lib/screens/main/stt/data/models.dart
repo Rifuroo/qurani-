@@ -1,5 +1,7 @@
 // lib\screens\main\stt\data\models.dart
 
+import 'package:flutter/material.dart';
+
 enum ReadingStatus { notRead, correct, error, skipped }
 
 enum MushafLineType { surahName, basmallah, ayah }
@@ -268,4 +270,13 @@ class AyatProgress {
   });
 }
 
+class PageGeometry {
+  /// Map of word coordinates for a single page.
+  /// Key: "surahId:ayahNumber:wordNumber"
+  /// Value: List of Rects (to support multi-line wrap if it ever happens at word level, but usually one rect)
+  final Map<String, List<Rect>> wordBounds;
+  
+  PageGeometry({required this.wordBounds});
 
+  static String getWordKey(int surah, int ayah, int word) => '$surah:$ayah:$word';
+}

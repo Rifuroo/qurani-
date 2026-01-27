@@ -1,5 +1,4 @@
-﻿// lib\screens\main\stt\controllers\stt_controller.dart
-
+﻿import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
@@ -11,7 +10,8 @@ import 'package:cuda_qurani/services/global_ayat_services.dart';
 import 'package:cuda_qurani/services/listening_audio_services.dart';
 import 'package:cuda_qurani/services/local_database_service.dart';
 import 'package:cuda_qurani/services/reciter_database_service.dart';
-import 'package:flutter/material.dart';
+import 'package:cuda_qurani/screens/main/stt/utils/ayah_char_mapper.dart';
+import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../data/models.dart' hide TartibStatus;
@@ -20,21 +20,30 @@ import '../utils/constants.dart';
 import '../utils/logger.dart';
 import 'package:cuda_qurani/services/audio_service.dart';
 import 'package:cuda_qurani/services/websocket_service.dart';
-import 'package:cuda_qurani/services/supabase_service.dart'; // ? NEW: For session management
-import 'package:cuda_qurani/services/auth_service.dart'; // ? NEW: For user UUID
+import 'package:cuda_qurani/services/supabase_service.dart';
+import 'package:cuda_qurani/services/auth_service.dart';
 import 'package:cuda_qurani/config/app_config.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
-import 'package:cuda_qurani/core/widgets/achievement_popup.dart'; // ? NEW: Achievement popup
-import 'package:cuda_qurani/providers/premium_provider.dart'; // ✅ NEW: Premium gating
-import 'package:cuda_qurani/models/premium_features.dart'; // ✅ NEW: Premium features
+import 'package:cuda_qurani/core/widgets/achievement_popup.dart';
+import 'package:cuda_qurani/providers/premium_provider.dart';
+import 'package:cuda_qurani/models/premium_features.dart';
 
-class SttController with ChangeNotifier {
+class SttController extends ChangeNotifier {
+  // Core State
+  bool _isLoading = true;
+  String? _errorMessage = '';
+  List<AyatData> _ayatList = [];
+  // ✅ O(1) LOOKUP: Map "surahId:ayahNumber" -> Index in _ayatList
+  final Map<String, int> _ayahIndexMap = {};
+  // ✅ O(1) LOOKUP: Map "surahId:ayahNumber" -> Ayah index for CURRENT page
+  final Map<String, int> _currentPageAyahIndexMap = {};
+
   final int? suratId;
   final int? pageId;
   final int? juzId;
   final bool isFromHistory;
   final Map<String, dynamic>? initialWordStatusMap;
-  final String? resumeSessionId; // ? NEW: Continue existing session
+  final String? resumeSessionId;
   final ValueNotifier<PageDisplayData> appBarNotifier = ValueNotifier(
     PageDisplayData.initial(),
   );
@@ -58,6 +67,7 @@ class SttController with ChangeNotifier {
     _topVerseId = ayahId;
     _topVersePage = pageNumber;
   }
+
 
   SttController({
     this.suratId,
@@ -128,7 +138,11 @@ class SttController with ChangeNotifier {
 
     // ✅ STEP 5: Clear ALL caches
     pageCache.clear();
+    _geometryCache.clear(); // ✅ Clear geometry cache
     _sqliteService.clearPageCache();
+    _ayahIndexMap.clear();
+    _currentPageAyahIndexMap.clear();
+    _prebuiltSpans.clear(); // ✅ Clear span cache
     _lastLoadedAyatsPage = null;
     _lastPreloadedPage = null;
 
@@ -201,15 +215,14 @@ class SttController with ChangeNotifier {
   bool _hasResumableSession = false;
   bool get hasResumableSession => _hasResumableSession;
 
-  // Core State
-  bool _isLoading = true;
-  String? _errorMessage = '';
-  List<AyatData> _ayatList = [];
-  int _currentAyatIndex = 0;
 
-  AyatData? get currentAyat => (_currentAyatIndex >= 0 && _currentAyatIndex < _ayatList.length)
-      ? _ayatList[_currentAyatIndex]
-      : null;
+  // ✅ DUAL-PHASE RENDERING STATE
+  bool _isSwiping = false;
+  Timer? _settleTimer;
+  final Map<String, List<InlineSpan>> _prebuiltSpans = {};
+
+  // STT State
+  int _currentAyatIndex = -1;
   String _suratNameSimple = '';
   String _suratVersesCount = '';
   DateTime? _sessionStartTime;
@@ -222,9 +235,8 @@ class SttController with ChangeNotifier {
   bool _showLogs = false;
   int _currentPage = 1;
   int _listViewCurrentPage = 1;
-  bool _isDataLoaded = false; // Prevent unnecessary reloads
-  bool _isDisposed =
-      false; // FIX: Track disposal state to prevent background task errors
+  bool _isDataLoaded = false;
+  bool _isDisposed = false;
   List<AyatData> _currentPageAyats = [];
   final ScrollController _scrollController = ScrollController();
 
@@ -236,10 +248,8 @@ class SttController with ChangeNotifier {
   String? _sessionId;
   int _expectedAyah = 1;
   final Map<int, TartibStatus> _tartibStatus = {};
-  // ? FIX: Key = "surahId:ayahNumber" untuk hindari collision antar surah
   final Map<String, Map<int, WordStatus>> _wordStatusMap = {};
-  List<WordFeedback> _currentWords =
-      []; // ✅ ADD: Store current words for realtime updates
+  List<WordFeedback> _currentWords = [];
   StreamSubscription? _wsSubscription;
   StreamSubscription? _connectionSubscription;
 
@@ -386,7 +396,11 @@ class SttController with ChangeNotifier {
 
   // Page Pre-loading Cache
   final Map<int, List<MushafPageLine>> pageCache = {};
+  final Map<int, PageGeometry> _geometryCache = {}; // ✅ NEW: Coordinate cache
   final MetadataCacheService _metadataCache = MetadataCacheService();
+  double? _viewportWidth; // ✅ Screen width for geometry computation
+  
+  Map<int, PageGeometry> get geometryCache => _geometryCache;
 
   bool _isPreloadingPages = false;
   // Tambahkan property ini setelah deklarasi _isPreloadingPages
@@ -414,6 +428,13 @@ class SttController with ChangeNotifier {
   bool get showLogs => _showLogs;
   int get currentPage => _currentPage;
   List<AyatData> get currentPageAyats => _currentPageAyats;
+  
+  // ✅ ACCESSORS FOR MAPS
+  Map<String, int> get ayahIndexMap => _ayahIndexMap;
+  Map<String, int> get currentPageAyahIndexMap => _currentPageAyahIndexMap;
+  bool get isSwiping => _isSwiping;
+  Map<String, List<InlineSpan>> get prebuiltSpans => _prebuiltSpans;
+
   ScrollController get scrollController => _scrollController;
   int get listViewCurrentPage => _listViewCurrentPage;
 
@@ -491,6 +512,8 @@ class SttController with ChangeNotifier {
       // 🚀 STEP 3: Background tasks
       Future.microtask(() {
         if (_isQuranMode) {
+          // ✅ Aggressive preloading
+          _sqliteService.preloadAllPagesInBackground();
           _preloadAdjacentPagesAggressively();
         }
       });
@@ -1120,6 +1143,8 @@ class SttController with ChangeNotifier {
                 fullArabicText: ayahWords.map((w) => w.text).join(' '),
               ),
             );
+            // ✅ Populate O(1) map
+            _ayahIndexMap['$surahId:$ayahNum'] = _ayatList.length - 1;
           }
 
           // Sort by surah then ayah
@@ -1128,6 +1153,12 @@ class SttController with ChangeNotifier {
               return a.surah_id.compareTo(b.surah_id);
             return a.ayah.compareTo(b.ayah);
           });
+          
+          // ✅ Re-populate map after sort to ensure correct indices
+          _ayahIndexMap.clear();
+          for (int i = 0; i < _ayatList.length; i++) {
+            _ayahIndexMap['${_ayatList[i].surah_id}:${_ayatList[i].ayah}'] = i;
+          }
 
           // ? Simpan semua ayat page untuk UI rendering (layout mushaf)
           final allPageAyats = List<AyatData>.from(_ayatList);
@@ -1146,6 +1177,12 @@ class SttController with ChangeNotifier {
 
           // ? UI tetap tampilkan SEMUA ayat di page (layout mushaf lengkap)
           _currentPageAyats = allPageAyats;
+          
+          // ✅ Populate current page map
+          _currentPageAyahIndexMap.clear();
+          for (int i = 0; i < _currentPageAyats.length; i++) {
+            _currentPageAyahIndexMap['${_currentPageAyats[i].surah_id}:${_currentPageAyats[i].ayah}'] = i;
+          }
 
           appLogger.log(
             'DATA',
@@ -1279,6 +1316,13 @@ class SttController with ChangeNotifier {
           surahIdForPage,
           isQuranMode: _isQuranMode,
         );
+        
+        // ✅ Populate O(1) map
+        _ayahIndexMap.clear();
+        for (int i = 0; i < _ayatList.length; i++) {
+          _ayahIndexMap['${_ayatList[i].surah_id}:${_ayatList[i].ayah}'] = i;
+        }
+        
         appLogger.log('DATA_OPTIMIZED', 'Loaded ${_ayatList.length} ayats');
       }
 
@@ -1336,6 +1380,16 @@ class SttController with ChangeNotifier {
       // ✅ Wait for current page ayats to load (priority)
       _currentPageAyats = await currentPageAyatsFuture;
       _lastLoadedAyatsPage = _currentPage;
+
+      // ✅ WARMUP: Build spans for current page too
+      final fontFamily = _mushafLayout.isGlyphBased ? 'p$_currentPage' : 'IndoPak-Nastaleeq';
+      warmupSpansForPage(_currentPage, fontFamily);
+
+      // ✅ Populate current page map O(1)
+      _currentPageAyahIndexMap.clear();
+      for (int i = 0; i < _currentPageAyats.length; i++) {
+        _currentPageAyahIndexMap['${_currentPageAyats[i].surah_id}:${_currentPageAyats[i].ayah}'] = i;
+      }
 
       appLogger.log(
         'DATA',
@@ -1398,62 +1452,50 @@ class SttController with ChangeNotifier {
 
       // Then load expanding radius pages
       for (int i = 2; i <= cacheRadius; i++) {
-        if (_stopPreloading) break; // ✅ Check on each iteration
+        if (_stopPreloading) break;
         if (_currentPage - i >= 1) pagesToPreload.add(_currentPage - i);
         if (_currentPage + i <= totalPages)
           pagesToPreload.add(_currentPage + i);
       }
 
-      // Rest of the method remains the same...
-      // (keep existing code for loading pages)
-
       final immediatePages = <int>[];
       final backgroundPages = <int>[];
 
       for (final page in pagesToPreload) {
-        if (_isDisposed || _stopPreloading) {
-          print('[PRELOAD] Stopped during page filtering, aborting');
-          return;
-        }
+        if (_isDisposed || _stopPreloading) return;
 
         if (pageCache.containsKey(page)) continue;
 
         final serviceCache = _sqliteService.getCachedPage(page);
         if (serviceCache != null) {
           pageCache[page] = serviceCache;
+          // Ensure spans/geometry are warmed up if not already
+          final fontFamily = _mushafLayout.isGlyphBased ? 'p$page' : 'IndoPak-Nastaleeq';
+          warmupSpansForPage(page, fontFamily);
           continue;
         }
 
         final distance = (page - _currentPage).abs();
-        if (distance <= 20) {
+        if (distance <= 10) { // Larger "immediate" range for faster startup
           immediatePages.add(page);
         } else {
           backgroundPages.add(page);
         }
       }
 
-      // ✅ OPTIMIZED: Load immediate pages using batch method
+      // ✅ STEP 1: Load IMMEDIATE pages (parallel)
       if (immediatePages.isNotEmpty && !_stopPreloading) {
         try {
-          final batchResults = await _sqliteService.getMushafPageLinesBatch(
-            immediatePages,
-          );
-
+          final batchResults = await _sqliteService.getMushafPageLinesBatch(immediatePages);
           if (_isDisposed || _stopPreloading) return;
 
-          // Update cache with batch results
           for (final entry in batchResults.entries) {
             pageCache[entry.key] = entry.value;
+            final fontFamily = _mushafLayout.isGlyphBased ? 'p${entry.key}' : 'IndoPak-Nastaleeq';
+            warmupSpansForPage(entry.key, fontFamily);
           }
-
-          appLogger.log(
-            'CACHE',
-            '⚡ Immediate batch loaded ${batchResults.length} pages',
-          );
         } catch (e) {
-          if (!_isDisposed && !_stopPreloading) {
-            appLogger.log('CACHE_ERROR', 'Immediate batch load failed: $e');
-          }
+          appLogger.log('CACHE_ERROR', 'Immediate batch load failed: $e');
         }
       }
 
@@ -1480,6 +1522,9 @@ class SttController with ChangeNotifier {
               // Update cache
               for (final entry in batchResults.entries) {
                 pageCache[entry.key] = entry.value;
+                // ✅ WARMUP SPANS: Build spans in background
+                final fontFamily = _mushafLayout.isGlyphBased ? 'p${entry.key}' : 'IndoPak-Nastaleeq';
+                warmupSpansForPage(entry.key, fontFamily);
               }
 
               totalLoaded += batchResults.length;
@@ -1537,6 +1582,11 @@ class SttController with ChangeNotifier {
 
       for (final key in keysToRemove) {
         pageCache.remove(key);
+        _geometryCache.remove(key); // ✅ CRITICAL: Evict geometry too
+        
+        // ✅ NEW: Evict prebuilt spans to release font references
+        _prebuiltSpans.removeWhere((k, _) => k.startsWith('p${key}_'));
+
         if (keysToRemove.length % 10 == 0) {
           // Only log occasionally
           appLogger.log(
@@ -1928,8 +1978,138 @@ class SttController with ChangeNotifier {
   }
 
   // ===== UI TOGGLES & ACTIONS =====
+  // ===== UI TOGGLES & ACTIONS =====
+  void setIsSwiping(bool value) {
+    if (value) {
+      // ✅ Start swiping: Immediate transition to static mode
+      _settleTimer?.cancel();
+      if (!_isSwiping) {
+        _isSwiping = true;
+        notifyListeners();
+      }
+    } else {
+      // ✅ End swiping: Buffer the transition to interactive mode
+      // This prevents "WBW artifacts" while the page is still settling/bouncing
+      _settleTimer?.cancel();
+      _settleTimer = Timer(const Duration(milliseconds: 300), () {
+        if (!_isDisposed && _isSwiping) {
+          _isSwiping = false;
+          notifyListeners();
+        }
+      });
+    }
+  }
+
+  /// ✅ VIEWPORT TRACKING: Set the width for geometry precomputation
+  void setViewportWidth(double width) {
+    if (_viewportWidth == width) return;
+    _viewportWidth = width;
+    
+    // If width changed, we need to recompute geometry for already cached pages
+    if (pageCache.isNotEmpty) {
+       for (final page in pageCache.keys.toList()) {
+         _precomputeGeometryForPage(page);
+       }
+    }
+  }
+
+  /// ✅ PRE-COMPUTATION ENGINE: Build spans and GEOMETRY for a page
+  void warmupSpansForPage(int pageNumber, String fontFamily) {
+    if (_isDisposed) return;
+    final lines = pageCache[pageNumber];
+    if (lines == null || lines.isEmpty) return;
+    
+    // ✅ Use a default base font size if not available
+    const double baseFontSize = 24.0; 
+
+    bool anyNew = false;
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final key = 'p${pageNumber}_l${line.lineNumber}';
+      if (_prebuiltSpans.containsKey(key)) continue;
+
+      _prebuiltSpans[key] = AyahCharMapper.buildStaticLineSpans(
+        line,
+        fontFamily, // ✅ Use passed fontFamily
+        baseFontSize: baseFontSize,
+      );
+      anyNew = true;
+    }
+    
+    // ✅ NEW: Trigger geometry precomputation if width is known
+    _precomputeGeometryForPage(pageNumber);
+    
+    if (anyNew) {
+      // print('🔥 Warmed up spans for page $pageNumber');
+    }
+  }
+
+  void _precomputeGeometryForPage(int pageNumber) {
+    if (_viewportWidth == null || _isDisposed) return;
+    final lines = pageCache[pageNumber];
+    if (lines == null) return;
+
+    final Map<String, List<Rect>> allWordBounds = {};
+
+    for (final line in lines) {
+       if (line.lineType != 'ayah' || line.ayahSegments == null) continue;
+
+       // 1. Reconstruct logical spans for this line
+       final fontFamily = _mushafLayout.isGlyphBased ? 'p$pageNumber' : 'IndoPak-Nastaleeq';
+       // We use a dummy fontSize here, but it must be proportional
+       const double baseFontSize = 24.0; 
+       
+       final rawSpans = AyahCharMapper.buildStaticLineSpans(
+         line, 
+         fontFamily, 
+         baseFontSize: baseFontSize
+       );
+
+       // ⚠️ DO NOT apply justification hack here - it contains WidgetSpan
+       // which requires BuildContext unavailable during background precomputation.
+       // Raw spans are sufficient for measuring word bounding boxes.
+       final spans = rawSpans;
+       final availableWidth = _viewportWidth!; 
+
+       // 2. Measure using TextPainter
+       final tp = TextPainter(
+         text: TextSpan(children: spans),
+         textDirection: TextDirection.rtl,
+         textAlign: line.isCentered ? TextAlign.center : TextAlign.justify,
+       );
+       
+       tp.layout(maxWidth: availableWidth);
+
+
+       // 3. Harvest Bounding Boxes
+       for (final segment in line.ayahSegments!) {
+          final AyahCharMap? charMap = segment.charMap as AyahCharMap?;
+          if (charMap == null) continue;
+
+          for (final word in segment.words) {
+             try {
+               final (start, end) = charMap.getSegmentRange(word.wordNumber, word.wordNumber);
+               final boxes = tp.getBoxesForSelection(
+                 TextSelection(baseOffset: start, extentOffset: end)
+               );
+               
+               final key = PageGeometry.getWordKey(segment.surahId, segment.ayahNumber, word.wordNumber);
+               allWordBounds[key] = boxes.map((b) => b.toRect()).toList();
+             } catch (_) {}
+          }
+       }
+    }
+
+    _geometryCache[pageNumber] = PageGeometry(wordBounds: allWordBounds);
+  }
+
   void toggleUIVisibility() {
     _isUIVisible = !_isUIVisible;
+    notifyListeners();
+  }
+
+  void toggleHideUnread() {
+    _hideUnreadAyat = !_hideUnreadAyat;
     notifyListeners();
   }
 
@@ -2048,11 +2228,6 @@ class SttController with ChangeNotifier {
     );
   }
 
-  void toggleHideUnread() {
-    _hideUnreadAyat = !_hideUnreadAyat;
-    notifyListeners();
-  }
-
   void toggleLogs() {
     _showLogs = !_showLogs;
     notifyListeners();
@@ -2137,7 +2312,7 @@ class SttController with ChangeNotifier {
 
   String formatSurahHeaderName(int surahId) {
     final base = formatSurahIdForGlyph(surahId);
-    return _mushafLayout == MushafLayout.indopak ? base : '$base surah-icon';
+    return base; // ✅ FIX: Remove '-icon' placeholder for all layouts
   }
 
   int calculateJuz(int surahId, int ayahNumber) {

@@ -635,19 +635,20 @@ class QuranService {
   }
 
   Future<List<MushafPageLine>> getMushafPageLines(int pageNumber) async {
-    // ✅ OPTIMIZED: Check cache first and update access order
-    if (_pageCache.containsKey(pageNumber)) {
+    // ✅ OPTIMIZED: Check cache first safely
+    final cached = _pageCache[pageNumber];
+    if (cached != null) {
       _updateCacheAccess(pageNumber);
-      return _pageCache[pageNumber]!;
+      return cached;
     }
 
-    // ✅ CRITICAL: Prevent duplicate requests - if already loading, wait for existing future
-    if (_loadingPages.contains(pageNumber) &&
-        _loadingFutures.containsKey(pageNumber)) {
+    // ✅ CRITICAL: Prevent duplicate requests safely
+    final existingFuture = _loadingFutures[pageNumber];
+    if (_loadingPages.contains(pageNumber) && existingFuture != null) {
       print(
         'MUSHAF_LINES: Page $pageNumber already loading, waiting for existing request...',
       );
-      return await _loadingFutures[pageNumber]!;
+      return await existingFuture;
     }
 
     // ✅ Mark as loading and create future
@@ -774,12 +775,17 @@ class QuranService {
             final ayahNum = int.parse(parts[1]);
             final totalWords = maxWordPerAyah[entry.key] ?? entry.value.last.wordNumber;
 
+            // ✅ CRITICAL: Sort words by wordNumber (not id) to match charMap order
+            // This ensures consistent placement matching word-by-word database
+            final sortedWords = List<WordData>.from(entry.value)
+              ..sort((a, b) => a.wordNumber.compareTo(b.wordNumber));
+            
             return AyahSegment(
               surahId: surahId,
               ayahNumber: ayahNum,
-              words: entry.value..sort((a, b) => a.id.compareTo(b.id)), // Ensure words are sorted
-              isStartOfAyah: entry.value.first.wordNumber == 1,
-              isEndOfAyah: entry.value.last.wordNumber == totalWords,
+              words: sortedWords, // ✅ Sorted by wordNumber to match charMap
+              isStartOfAyah: sortedWords.first.wordNumber == 1,
+              isEndOfAyah: sortedWords.last.wordNumber == totalWords,
               // ayahGlyphText will be added in next step
             );
           }).toList();
@@ -790,70 +796,17 @@ class QuranService {
             return a.ayahNumber.compareTo(b.ayahNumber);
           });
 
-          // ✅ NEW: Batch fetch Ayah glyphs from ABA database for QPC layout
-          if (_currentLayout == MushafLayout.qpc && sortedSegments.isNotEmpty) {
-            final abaDB = await _getABADatabase();
-            final verseKeys = sortedSegments.map((s) => s.verseKey).toSet().toList();
-            
-            // Batch query for all verse glyphs on this line
-            final placeholders = verseKeys.map((_) => '?').join(',');
-            final glyphResults = await abaDB.rawQuery(
-              'SELECT verse_key, text FROM verses WHERE verse_key IN ($placeholders)',
-              verseKeys,
-            );
-            
-            // Create map for O(1) lookup
-            final glyphMap = <String, String>{};
-            for (final row in glyphResults) {
-              glyphMap[row['verse_key'] as String] = row['text'] as String;
-            }
-            
-            // ✅ NEW: Build char maps for each ayah and store in page cache
-            final pageCache = PageCharMapCache();
-            for (final verseKey in verseKeys) {
-              final glyphText = glyphMap[verseKey];
-              if (glyphText != null) {
-                // Find all words for this ayah
-                final ayahWords = allWordsMap.values
-                    .where((w) => '${w.surah}:${w.ayah}' == verseKey)
-                    .toList()
-                  ..sort((a, b) => a.wordNumber.compareTo(b.wordNumber));
-                
-                if (ayahWords.isNotEmpty) {
-                  // ✅ Build char map with marker stripping
-                  final charMap = AyahCharMapper.buildCharMap(
-                    verseKey: verseKey,
-                    ayahGlyphText: glyphText,
-                    words: ayahWords,
-                  );
-                  pageCache.addAyahMap(verseKey, charMap);
-                }
-              }
-            }
-            
-            // ✅ Store page cache for this page
-            _pageCharMapCache[layout.pageNumber] = pageCache;
-            
-            // Attach glyphs and char maps to segments
-            for (int i = 0; i < sortedSegments.length; i++) {
-              final segment = sortedSegments[i];
-              final glyphText = glyphMap[segment.verseKey];
-              final charMap = pageCache.getAyahMap(segment.verseKey);
-              if (glyphText != null) {
-                // Create new segment with glyph text and char map
-                sortedSegments[i] = AyahSegment(
-                  surahId: segment.surahId,
-                  ayahNumber: segment.ayahNumber,
-                  words: segment.words,
-                  isStartOfAyah: segment.isStartOfAyah,
-                  isEndOfAyah: segment.isEndOfAyah,
-                  ayahGlyphText: glyphText,
-                  charMap: charMap, // Attach char map from page cache
-                );
-              }
-            }
-          }
-
+          // ✅ REFACTORED: Use strictly Word-by-Word assembly for ALL layouts (including QPC)
+          // User explicitly requested to use 'qpc-v2.db' (words) + 'qpc-v2-15-lines.db' (layout)
+          // and avoided 'qpc-v2-ayah-by-ayah-glyphs.db'.
+          
+          // Attach char maps to segments if needed (for word highlighting/mapping)
+          // Since we are now using WBW composition, the 'text' property of each word is used.
+          // QPC V2 words in 'qpc-v2.db' already contain the correct glyphs.
+          
+          // Just attach the segments directly. No need for ABA database query.
+          // The words are already sorted by wordNumber above.
+          
           line = MushafPageLine(
             lineNumber: layout.lineNumber,
             lineType: layout.lineType,
@@ -886,11 +839,12 @@ class QuranService {
   ) async {
     final result = <int, List<MushafPageLine>>{};
 
-    // ✅ OPTIMIZED: Check cache first and update access order
+    // ✅ OPTIMIZED: Check cache first safely
     for (final pageNum in pageNumbers) {
-      if (_pageCache.containsKey(pageNum)) {
+      final cached = _pageCache[pageNum];
+      if (cached != null) {
         _updateCacheAccess(pageNum);
-        result[pageNum] = _pageCache[pageNum]!;
+        result[pageNum] = cached;
       }
     }
 

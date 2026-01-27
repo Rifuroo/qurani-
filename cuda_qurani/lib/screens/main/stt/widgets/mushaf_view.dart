@@ -8,14 +8,15 @@ import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
 
 import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
+import '../services/mushaf_widget_cache.dart';
 import '../utils/constants.dart';
 import '../utils/ayah_char_mapper.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/mushaf_paper_background.dart';
+
+
 
 class MushafRenderer {
   static double pageHeight(BuildContext context) {
@@ -40,7 +41,8 @@ class MushafRenderer {
     required BuildContext context,
     bool allowOverflow = false,
     double? customLineHeight,
-    bool useFittedBox = false,
+    bool useFittedBox = false, // ✅ ADDED
+    required double baseFontSize, // Not used in flex layout but kept for signature compatibility
   }) {
     if (wordSpans.isEmpty) return const SizedBox.shrink();
 
@@ -61,30 +63,77 @@ class MushafRenderer {
       );
     }
 
-    // ✅ NATIVE JUSTIFICATION: Use a single RichText for the entire line
-    // This provides perfect RTL justification for Arabic text.
-    final child = SizedBox(
-      width: availableWidth,
+    return SizedBox(
       height: lineH,
-      child: RichText(
-        textAlign: TextAlign.justify,
-        textDirection: TextDirection.rtl,
-        softWrap: true, // Allow justification to work
-        text: TextSpan(
-          children: wordSpans,
+      width: availableWidth,
+      child: _usText(
+        wordSpans: wordSpans,
+        maxWidth: availableWidth,
+        allowOverflow: allowOverflow,
+        context: context,
+        customLineHeight: lineH,
+        useFittedBox: useFittedBox,
+      ),
+    );
+  }
+
+  static Widget _usText({
+    required List<InlineSpan> wordSpans,
+    required double maxWidth,
+    bool allowOverflow = false,
+    required BuildContext context,
+    double? customLineHeight,
+    required bool useFittedBox,
+  }) {
+    if (wordSpans.isEmpty) return const SizedBox.shrink();
+
+    final lineH = customLineHeight ?? lineHeight(context);
+
+    // Single word case
+    if (wordSpans.length == 1) {
+      final child = SizedBox(
+        width: maxWidth,
+        child: RichText(
+          textDirection: TextDirection.rtl,
+          textAlign: TextAlign.justify,
+          text: TextSpan(
+            children: [wordSpans.first],
+          ),
+        ),
+      );
+
+      return useFittedBox 
+        ? FittedBox(fit: BoxFit.scaleDown, child: child)
+        : child;
+    }
+
+    // ✅ ROBUST FALLBACK: Use a single unified Row with SpaceBetween
+    // and wrap the entire thing in a FittedBox with scaleDown.
+    // This provides "Lurus" (straight) edges whenever possible
+    // and invisible scaling for tiny overflows (like 1.7px).
+    return SizedBox(
+      width: maxWidth,
+      height: lineH,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.center,
+        child: SizedBox(
+          width: maxWidth,
+          child: Row(
+            textDirection: TextDirection.rtl,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              for (int i = 0; i < wordSpans.length; i++) 
+                RichText(
+                  textDirection: TextDirection.rtl,
+                  text: TextSpan(children: [wordSpans[i]]),
+                ),
+            ],
+          ),
         ),
       ),
     );
-
-    if (useFittedBox) {
-      return FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.center,
-        child: child,
-      );
-    }
-    
-    return child;
   }
 
   // ✅ NEW: Centralized layout configuration for consistency
@@ -158,11 +207,12 @@ class MushafRenderer {
       scaleX: scaleX,
       scaleY: scaleY,
       lineHeight: targetLineHeight,
-      useFittedBox: useFittedBox, // ✅ ADDED
+      useFittedBox: useFittedBox,
     );
   }
 }
 
+// ✅ STANDALONE CONFIG CLASS
 class MushafLayoutConfig {
   final double horizontalPadding;
   final double availableWidth;
@@ -195,30 +245,112 @@ class _MushafDisplayState extends State<MushafDisplay> {
   double _dragStartPosition = 0;
   bool _isUpdating = false; // âœ… FIX: Prevent concurrent updates
 
+  late PageController _pageController; // ✅ PERSIST CONTROLLER
+
+  @override
+  void initState() {
+    super.initState();
+    // ✅ Initialize once to avoid "patah-patah" on rebuild
+    final controller = context.read<SttController>();
+    _pageController = PageController(initialPage: controller.currentPage - 1);
+    
+    // ✅ REAL-TIME MONITOR: Update AppBar quietly during fast swipe
+    _pageController.addListener(() {
+       if (_pageController.hasClients && _pageController.page != null) {
+         // Report to controller quietly (NO rebuild of MushafView)
+         final pageNum = _pageController.page!.round() + 1;
+         controller.updateVisiblePageQuiet(pageNum);
+       }
+    });
+
+    // ✅ SYNC LISTENER: Handle external page changes (e.g. from Surah Picker)
+    controller.addListener(_handleControllerChange);
+  }
+
+  void _handleControllerChange() {
+    if (!mounted) return;
+    final controller = context.read<SttController>();
+    
+    // ✅ SYNC: Only jump if page actually differs and we ARE NOT swiping
+    // This prevents "fighting" between PageView and Controller
+    if (_pageController.hasClients) {
+      final currentViewPage = (_pageController.page?.round() ?? _pageController.initialPage) + 1;
+      if (controller.currentPage != currentViewPage) {
+         // Only jump if not currently being manipulated by user
+         if (!_pageController.position.isScrollingNotifier.value) {
+           _pageController.animateToPage(
+             controller.currentPage - 1,
+             duration: const Duration(milliseconds: 300),
+             curve: Curves.easeInOut,
+           );
+         }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    // ✅ Clean up listener
+    try {
+      context.read<SttController>().removeListener(_handleControllerChange);
+    } catch (_) {}
+    _pageController.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     // âœ… OPTIMIZATION: Read controller once
     final controller = context.read<SttController>();
-    
-    // âœ… Listen to currentPage just to update PageView controller if needed
-    // (Optional: if we want to support programmatic jumps from outside)
-    // But PageView itself handles internal state.
 
-    return PageView.builder(
-      controller: PageController(initialPage: controller.currentPage),
-      itemCount: 604 + 1,
-      reverse: true, // Arabic direction
-      physics: const BouncingScrollPhysics(),
-      onPageChanged: (newPage) {
-        // Debounce or only update if changed
-        if (newPage != controller.currentPage) {
-          controller.navigateToPage(newPage);
-        }
-      },
-      itemBuilder: (context, index) {
-        // âœ… CRITICAL: Pass index as pageNumber
-        return _buildMushafPageOptimized(context, index); 
-      },
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.noScaling,
+      ),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification is ScrollStartNotification) {
+            controller.setIsSwiping(true);
+          } else if (notification is ScrollEndNotification) {
+            controller.setIsSwiping(false);
+          }
+          return false;
+        },
+        child: PageView.builder(
+          controller: _pageController,
+          itemCount: controller.totalPages,
+          reverse: true, // Arabic direction
+          physics: const BouncingScrollPhysics(),
+          onPageChanged: (newIndex) {
+            final newPage = newIndex + 1;
+            // Debounce or only update if changed
+            if (newPage != controller.currentPage) {
+              controller.navigateToPage(newPage);
+            }
+          },
+          itemBuilder: (context, index) {
+            final pageNumber = index + 1;
+  
+            // ðŸ”¥ GRANULAR REBUILD: Only this part rebuilds when isSwiping changes
+            // This prevents the entire PageView from being affected by swipe status
+            return Selector<SttController, bool>(
+              selector: (_, c) => c.isSwiping,
+              builder: (ctx, isSwiping, _) {
+                // âœ… OPTIMIZATION: Bypass permanent cache during swipe to show ultra-fast static rendering
+                if (isSwiping) {
+                  return _buildMushafPageOptimized(ctx, pageNumber);
+                }
+  
+                // âœ… ULTIMATE CACHING: Render once, keep forever in LRU cache
+                return CachedMushafPage(
+                  pageNumber: pageNumber,
+                  layout: controller.mushafLayout,
+                  builder: () => _buildMushafPageOptimized(ctx, pageNumber),
+                );
+              },
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -332,47 +464,61 @@ class MushafPageContent extends StatelessWidget {
     final screenHeight = MediaQuery.of(context).size.height;
     final isSpecialPage = pageNumber == 1 || pageNumber == 2;
 
+    // ✅ CALCULATE LAYOUT CONFIG ONCE PER PAGE
+    final controller = context.read<SttController>();
+    final isIndopak = context.select<SttController, bool>((c) => c.mushafLayout == MushafLayout.indopak);
+    final layoutConfig = MushafRenderer.calculateLayoutConfig(context, pageNumber, isIndopak);
+
+    // ✅ HARDENING: Record viewport width for coordinate mapping
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) {
+        controller.setViewportWidth(layoutConfig.availableWidth);
+      }
+    });
+
     final linesContent = Column(
       mainAxisSize: MainAxisSize.min,
       children: pageLines
-          .map((line) => _buildMushafLine(line, context))
+          .map((line) => _buildMushafLine(line, context, layoutConfig))
           .toList(),
     );
 
-    return Column(
-      children: [
-        // Header tanpa padding horizontal
-        Padding(
-          padding: EdgeInsets.only(top: appBarHeight),
-          child: const MushafPageHeader(),
+    // ✅ CRITICAL: Clip page to prevent bleeding into adjacent pages during swipe
+    // ✅ Use ClipRect with explicit size for efficient clipping
+    return SizedBox(
+      width: screenWidth,
+      child: ClipRect(
+        child: Column(
+          children: [
+            // Header tanpa padding horizontal
+            Padding(
+              padding: EdgeInsets.only(top: appBarHeight),
+              child: const MushafPageHeader(),
+            ),
+
+            // ✅ KHUSUS HALAMAN 1 & 2: Tambahkan ruang kosong di atas Surah Header
+            if (isSpecialPage)
+              SizedBox(height: screenHeight * 0.15),
+
+            const SizedBox(height: 0),
+
+            // Page lines dengan padding horizontal yang bisa diatur terpisah
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.0,
+              ),
+              child: linesContent,
+            ),
+          ],
         ),
-
-        // ✅ KHUSUS HALAMAN 1 & 2: Tambahkan ruang kosong di atas Surah Header
-        if (isSpecialPage)
-          SizedBox(height: screenHeight * 0.15),
-
-        const SizedBox(height: 0),
-
-        // Page lines dengan padding horizontal yang bisa diatur terpisah
-        Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.0,
-          ),
-          child: linesContent,
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildMushafLine(MushafPageLine line, BuildContext context) {
-    final controller = context.watch<SttController>();
-    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    Widget lineWidget;
+  Widget _buildMushafLine(MushafPageLine line, BuildContext context, MushafLayoutConfig layoutConfig) {
+    // ✅ OPTIMIZATION: Use read/select instead of watch to prevent full page rebuilds on highlight
     
-    // ✅ Calculate config once
-    final layoutConfig = MushafRenderer.calculateLayoutConfig(context, pageNumber, isIndopak);
+    Widget lineWidget;
 
     switch (line.lineType) {
       case 'surah_name':
@@ -423,7 +569,8 @@ class MushafPageContent extends StatelessWidget {
         lineWidget = const SizedBox.shrink();
     }
 
-    return lineWidget;
+    // ✅ WRAP EACH LINE IN REPAINT BOUNDARY TO MINIMIZE GPU WORK
+    return RepaintBoundary(child: lineWidget);
   }
 }
 
@@ -438,8 +585,9 @@ class _SurahNameLine extends StatelessWidget {
     final headerSize = screenHeight * 0.040;
     final surahNameSize = screenHeight * 0.045; // 👈 Ubah angka ini untuk mengatur besar Nama Surah (0.050 -> 0.040)
 
-    final controller = context.watch<SttController>();
-    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
+    final controller = context.read<SttController>();
+    final isIndopak = context.select<SttController, bool>((c) => c.mushafLayout == MushafLayout.indopak);
+
     final surahGlyphCode = line.surahNumber != null
         ? controller.formatSurahHeaderName(line.surahNumber!)
         : '';
@@ -449,9 +597,6 @@ class _SurahNameLine extends StatelessWidget {
               0.005 // indopak
         : -screenWidth * 0.004; // qpc
 
-    print(
-      '🎨 SurahNameLine - Layout: ${isIndopak ? "IndoPak" : "QPC"}, Offset: $ornamentOffset',
-    );
 
     return Center(
       key: ValueKey(
@@ -500,9 +645,7 @@ class _BasmallahLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final basmallahSize = screenHeight * 0.040;
-    final controller = context.watch<SttController>();
-    final isIndopakFontFamily = controller.mushafLayout == MushafLayout.indopak;
-    final isIndopakFontSize = controller.mushafLayout == MushafLayout.indopak;
+    final isIndopak = context.select<SttController, bool>((c) => c.mushafLayout == MushafLayout.indopak);
 
     return Container(
       height: MushafRenderer.lineHeight(context),
@@ -510,16 +653,9 @@ class _BasmallahLine extends StatelessWidget {
       child: Text(
         '﷽',
         style: TextStyle(
-          fontSize: isIndopakFontSize ? basmallahSize * 0.85 : basmallahSize,
-          fontFamily: isIndopakFontFamily
-              ? 'IndoPak-Nastaleeq'
-              : 'Quran-Common',
-          foreground: Paint()
-            ..color = AppColors.getTextPrimary(context)
-            ..colorFilter = ColorFilter.mode(
-              AppColors.getTextPrimary(context),
-              BlendMode.srcIn,
-            ),
+          fontSize: isIndopak ? basmallahSize * 0.85 : basmallahSize,
+          fontFamily: isIndopak ? 'IndoPak-Nastaleeq' : 'Quran-Common',
+          color: AppColors.getTextPrimary(context),
         ),
         textAlign: TextAlign.center,
       ),
@@ -531,6 +667,9 @@ class _JustifiedAyahLine extends StatelessWidget {
   final MushafPageLine line;
   final int pageNumber;
   final MushafLayoutConfig layoutConfig; // ✅ Use Config
+
+  // ✅ OPTIMIZATION: Pre-compile RegExp to avoid recreation inside loop
+  static final RegExp _arabicNumberRegExp = RegExp(r'[٠-٩0-9]');
 
   const _JustifiedAyahLine({
     required this.line,
@@ -546,6 +685,7 @@ class _JustifiedAyahLine extends StatelessWidget {
     final currentAyatIndex = context.select<SttController, int>((c) => c.currentAyatIndex);
     final isListeningMode = context.select<SttController, bool>((c) => c.isListeningMode);
     final isRecording = context.select<SttController, bool>((c) => c.isRecording);
+    final isSwiping = context.select<SttController, bool>((c) => c.isSwiping);
     final hideUnreadAyat = context.select<SttController, bool>((c) => c.hideUnreadAyat);
     
     // Select ONLY the word status for the current active highlight if it belongs to this line
@@ -553,11 +693,8 @@ class _JustifiedAyahLine extends StatelessWidget {
     final isSpecialPage = pageNumber == 1 || pageNumber == 2;
     
     // ⚡️ ULTIMATE OPTIMIZATION: Rebuild ONLY if the active highlight is on THIS line
-    // This selection returns a stable string that only changes when the active word on this line moves.
     final lineHighlightState = context.select<SttController, String>((c) {
       if (c.currentHighlightKey == null || !lineAyahKeys.contains(c.currentHighlightKey)) {
-        // Check if ANY word in this line still has a non-pending status (from previous match)
-        // This is rare but needed for correctness during transitions.
         final hasAnyActive = lineAyahKeys.any((key) => 
           c.wordStatusMap[key]?.values.any((s) => s != WordStatus.pending) ?? false
         );
@@ -567,477 +704,226 @@ class _JustifiedAyahLine extends StatelessWidget {
     });
 
     final controller = context.read<SttController>();
-
-    // ✅ Use Calculated Font Size
     final baseFontSize = layoutConfig.fontSize;
-    final lastWordFontMultiplier = 0.850;
+    final fontFamily = mushafLayout.isGlyphBased ? 'p$pageNumber' : 'IndoPak-Nastaleeq';
 
     if (line.ayahSegments == null || line.ayahSegments!.isEmpty) {
       return SizedBox(height: MushafRenderer.lineHeight(context));
     }
 
-    List<InlineSpan> spans = [];
+    // ðŸ“ THE TARTEEL WAY: ALWAYS use static rendering (ultra-fast)
+    // We no longer switch to word-by-word TextSpans after swiping.
+    // Instead, we use a single permanent static block and draw highlights as an OVERLAY.
+    return NotificationListener<ScrollNotification>(
+      onNotification: (_) => true, // Absorb scrolls
+      child: Stack(
+        children: [
+          // Layer 1: Static Text (Independently cached as a bitmap)
+          RepaintBoundary(
+            key: ValueKey('static_line_${pageNumber}_${line.lineNumber}'),
+            child: _buildStaticLine(context, layoutConfig, pageNumber, fontFamily),
+          ),
 
-    final fontFamily = mushafLayout.isGlyphBased
-        ? 'p$pageNumber' // QPC: p1, p2, p3, etc.
-        : 'IndoPak-Nastaleeq'; // IndoPak: single font for all pages
+          // Layer 2: Highlight Overlay (Drawn on separate Canvas)
+          Positioned.fill(
+            child: RepaintBoundary(
+              child: _WordHighlightOverlay(
+                line: line,
+                pageNumber: pageNumber,
+                layoutConfig: layoutConfig,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-    final wordStatusMap = controller.wordStatusMap;
+  Widget _buildStaticLine(BuildContext context, MushafLayoutConfig layoutConfig, int pageNumber, String fontFamily) {
+    final controller = context.read<SttController>();
+    final key = 'p${pageNumber}_l${line.lineNumber}'; 
+    final baseFontSize = layoutConfig.fontSize;
+    final textColor = AppColors.getTextPrimary(context);
 
-    // ✅ CRITICAL: Ensure segments are sorted by reading order (Surah/Ayah)
-    final sortedSegments = List<AyahSegment>.from(line.ayahSegments ?? []);
-    sortedSegments.sort((a, b) {
-      if (a.surahId != b.surahId) return a.surahId.compareTo(b.surahId);
-      return a.ayahNumber.compareTo(b.ayahNumber);
-    });
-
-    for (final segment in sortedSegments) {
-      final ayatIndex = controller.ayatList.indexWhere(
-        (a) => a.surah_id == segment.surahId && a.ayah == segment.ayahNumber,
+    // ✅ PRIORITY 1: Use pre-built spans from controller cache (FASTEST)
+    final prebuilt = controller.prebuiltSpans[key];
+    
+    List<InlineSpan> spans;
+    if (prebuilt != null) {
+      spans = prebuilt;
+    } else {
+      // ✅ FALLBACK: Build using AyahCharMapper (matches prebuilt logic)
+      spans = AyahCharMapper.buildStaticLineSpans(
+        line, 
+        fontFamily, 
+        baseFontSize: baseFontSize,
+        textColor: textColor,
       );
-      final isCurrentAyat =
-          ayatIndex >= 0 && ayatIndex == currentAyatIndex;
-
-      // ✅ TRUE AYAH-BY-AYAH: Use AyahCharMap for clean text and char ranges
-      if (segment.charMap != null && segment.words.isNotEmpty) {
-        final charMap = segment.charMap as AyahCharMap;
-        String cleanText = charMap.cleanText;
-        
-        // 🛠 QPC NORMALIZATION: Ensure whitespaces are standard for RichText justification
-        // Replace non-breaking spaces and RTL marks that might break justification
-        cleanText = cleanText.replaceAll('\u00A0', ' ').replaceAll('\u200F', '');
-
-        final firstWordNum = segment.words.first.wordNumber;
-        final lastWordNum = segment.words.last.wordNumber;
-        final (startChar, endChar) = charMap.getSegmentRange(firstWordNum, lastWordNum);
-        
-        final wordStatKey = '${segment.surahId}:${segment.ayahNumber}';
-        final ayahStatusMap = wordStatusMap[wordStatKey];
-        
-        // Logical flags
-        final isHighlightingOn = isListeningMode && isCurrentAyat && controller.currentHighlightWordIdx != null;
-
-        // ✅ STRATEGY: Select rendering mode
-        if (!hideUnreadAyat && !isHighlightingOn && (ayahStatusMap == null || ayahStatusMap.isEmpty)) {
-          // MODE 1: Static - Zero Overhead (Single Span)
-          spans.add(
-            TextSpan(
-              text: cleanText.substring(startChar, endChar),
-              style: TextStyle(
-                fontSize: baseFontSize,
-                fontFamily: fontFamily,
-                color: Colors.black,
-                fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
-                height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
-                letterSpacing: 0.0,
-              ),
-            ),
-          );
-        } else if (!hideUnreadAyat && isHighlightingOn) {
-          // MODE 2: Highlight Only - Extreme Optimization (Max 3 Spans)
-          final activeWordIdx = controller.currentHighlightWordIdx!;
-          final activeWordNum = activeWordIdx + 1;
-          
-          // Find if the active word is in THIS segment
-          final hasActiveWord = segment.words.any((w) => w.wordNumber == activeWordNum);
-          
-          if (!hasActiveWord) {
-            // Whole segment is "After" or "Before" - single span
-            spans.add(
-              TextSpan(
-                text: cleanText.substring(startChar, endChar),
-                style: TextStyle(
-                  fontSize: baseFontSize,
-                  fontFamily: fontFamily,
-                  color: Colors.black,
-                  fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
-                  height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
-                ),
-              ),
-            );
-          } else {
-            // Split into Before, Active, After
-            final (wStart, wEnd) = charMap.getSegmentRange(activeWordNum, activeWordNum);
-            
-            // 1. Before span
-            if (wStart > startChar) {
-              spans.add(TextSpan(
-                text: cleanText.substring(startChar, wStart),
-                style: TextStyle(
-                  fontSize: baseFontSize, fontFamily: fontFamily, color: Colors.black,
-                  fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
-                  height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
-                ),
-              ));
-            }
-            
-            // 2. Active span (with background)
-            spans.add(TextSpan(
-              text: cleanText.substring(wStart, wEnd),
-              style: TextStyle(
-                fontSize: baseFontSize, fontFamily: fontFamily, color: Colors.black,
-                backgroundColor: AppColors.getInfo(context).withValues(alpha: 0.4),
-                fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
-                height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
-              ),
-            ));
-            
-            // 3. After span
-            if (wEnd < endChar) {
-              spans.add(TextSpan(
-                text: cleanText.substring(wEnd, endChar),
-                style: TextStyle(
-                  fontSize: baseFontSize, fontFamily: fontFamily, color: Colors.black,
-                  fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
-                  height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
-                ),
-              ));
-            }
-          }
-        } else {
-          // MODE 3: Hybrid (Hide Unread or complex status) - Word loop (only when needed)
-          for (final word in segment.words) {
-            final wordIdx = word.wordNumber - 1;
-            final wordStatus = ayahStatusMap?[wordIdx];
-            final (wStart, wEnd) = charMap.getSegmentRange(word.wordNumber, word.wordNumber);
-            
-            // 1. Calculate Opacity (Hide/Show)
-            double opacity = 1.0;
-            if (hideUnreadAyat) {
-              if (wordStatus != null && wordStatus != WordStatus.pending) {
-                opacity = 1.0;
-              } else if (isCurrentAyat) {
-                opacity = 0.0; // Keep current ayah hidden until read
-              } else {
-                opacity = 0.0;
-              }
-            }
-
-            // 2. Calculate Highlight Color
-            Color? highlightColor;
-            if (wordStatus != null) {
-              switch (wordStatus) {
-                case WordStatus.matched:
-                case WordStatus.correct:
-                  highlightColor = getCorrectColor(context).withValues(alpha: 0.6);
-                  break;
-                case WordStatus.processing:
-                  highlightColor = AppColors.getInfo(context).withValues(alpha: 0.6);
-                  break;
-                case WordStatus.incorrect:
-                case WordStatus.mismatched:
-                  highlightColor = getErrorColor(context).withValues(alpha: 0.6);
-                  break;
-                default:
-                  break;
-              }
-            }
-
-            // 3. Slice word text including its trailing space (if any)
-            // We use the word range but expand to cover the space to maintain justification
-            int wordDisplayEnd = wEnd;
-            if (wordDisplayEnd < endChar && cleanText[wordDisplayEnd] == ' ') {
-              wordDisplayEnd++;
-            }
-
-            final wordText = cleanText.substring(
-              wStart.clamp(0, cleanText.length),
-              wordDisplayEnd.clamp(0, cleanText.length),
-            );
-
-            spans.add(
-              TextSpan(
-                text: wordText,
-                style: TextStyle(
-                  fontSize: baseFontSize,
-                  fontFamily: fontFamily,
-                  color: Colors.black.withOpacity(opacity),
-                  backgroundColor: highlightColor,
-                  fontWeight: isIndopak ? FontWeight.normal : FontWeight.w500,
-                  height: isSpecialPage ? 1.5 : (isIndopak ? 1.6 : 1.8),
-                  letterSpacing: 0.0,
-                ),
-              ),
-            );
-          }
-        }
-
-        // ✅ CUSTOM AYAH MARKER (Uses ACTUAL ayah metadata)
-        if (segment.isEndOfAyah) {
-          final effectiveFontSize = baseFontSize * lastWordFontMultiplier;
-          spans.add(
-            WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: Container(
-                width: effectiveFontSize * 1.2,
-                height: effectiveFontSize,
-                alignment: Alignment.center,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
-                  children: [
-                    // Ornament circle
-                    Transform.translate(
-                      offset: Offset(0, -effectiveFontSize * 0.15),
-                      child: Transform.scale(
-                        scale: (pageNumber == 1 || pageNumber == 2) ? 1.6 : 1.9,
-                        child: Text(
-                          '\u06DD',
-                          style: TextStyle(
-                            fontSize: effectiveFontSize,
-                            fontFamily: 'IndoPak-Nastaleeq',
-                            foreground: Paint()
-                              ..color = const Color(0xFF2D5A4A) // ✅ Hijau Madinah
-                              ..colorFilter = const ColorFilter.mode(
-                                Color(0xFF2D5A4A),
-                                BlendMode.srcIn,
-                              ),
-                            height: 0.1,
-                          ),
-                          textDirection: TextDirection.rtl,
-                          softWrap: false,
-                          overflow: TextOverflow.visible,
-                        ),
-                      ),
-                    ),
-                    // Ayah number (custom, not from glyph)
-                    Center(
-                      child: Text(
-                        LanguageHelper.toIndoPakDigits(segment.ayahNumber),
-                        style: TextStyle(
-                          fontSize: effectiveFontSize * 0.55,
-                          fontFamily: 'Quran-Common',
-                          color: Colors.black, // ✅ STRICT BLACK for number
-                          fontWeight: FontWeight.w800,
-                          height: 1.0,
-                        ),
-                        textAlign: TextAlign.center,
-                        textDirection: TextDirection.rtl,
-                        softWrap: false,
-                        overflow: TextOverflow.visible,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-        
-        continue; // Skip word-by-word loop
-      }
-
-      // ✅ FALLBACK: Word-by-word for IndoPak or if no ayahGlyphText
-      for (int i = 0; i < segment.words.length; i++) {
-        final word = segment.words[i];
-        final wordIndex = word.wordNumber - 1;
-
-        // ✅ CRITICAL FIX: Use ACTUAL surah:ayah from segment, not hardcoded
-        final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
-        final wordStatus = wordStatusMap[wordStatusKey]?[wordIndex];
-
-        // 🎥 DEBUG: Only log if listening mode is active
-        if (isListeningMode && isCurrentAyat) {
-          // print('🎨 UI RENDER: ...'); 
-        }
-
-        final wordSegments = controller.segmentText(word.text);
-        final hasArabicNumber = wordSegments.any((s) => s.isArabicNumber);
-
-        Color wordBg = Colors.transparent;
-        double wordOpacity = 1.0;
-
-        final isLastWordInAyah =
-            segment.isEndOfAyah && i == (segment.words.length - 1);
-
-        // ========== PRIORITAS 1: Background color dari wordStatus ==========
-        // SKIP highlighting for Arabic numbers (ayah end markers)
-        if (wordStatus != null && !hasArabicNumber) {
-          switch (wordStatus) {
-            case WordStatus.matched:
-            case WordStatus.correct:
-              wordBg = getCorrectColor(context).withValues(alpha: 0.6);
-              break;
-            case WordStatus.mismatched:
-            case WordStatus.incorrect:
-            case WordStatus.skipped:
-              wordBg = getErrorColor(context).withValues(alpha: 0.6);
-              break;
-            case WordStatus.processing:
-              if (isRecording || isListeningMode) {
-                wordBg = AppColors.getInfo(context).withValues(alpha: 0.6);
-              } else {
-                wordBg = Colors.transparent;
-              }
-              break;
-            case WordStatus.pending:
-              wordBg = Colors.transparent;
-              break;
-          }
-        }
-
-        // ✅ FIX: Only show "current ayah" highlight when there's ACTIVE word highlighting
-        // This prevents "estimasi" highlight on NEXT ayah before audio starts (User Report)
-        // Check if this ayah has any word currently being processed
-        final hasActiveHighlight = wordStatusMap[wordStatusKey]?.values
-            .any((s) => s == WordStatus.processing) ?? false;
-        
-        if (isCurrentAyat && 
-            wordBg == Colors.transparent && 
-            hasActiveHighlight &&  // ✅ Only if there's active highlighting
-            (isListeningMode || isRecording)) {
-          wordBg = AppColors.getPrimary(context).withValues(alpha: 0.1);
-        }
-
-        // ========== PRIORITAS 2: Logika Opacity (hideUnread) ==========
-        if (hideUnreadAyat) {
-          if (wordStatus != null && wordStatus != WordStatus.pending) {
-            wordOpacity = 1.0;
-          } else if (isCurrentAyat) {
-            wordOpacity = (hasArabicNumber || isLastWordInAyah) ? 1.0 : 0.0;
-          } else {
-            wordOpacity = (hasArabicNumber || isLastWordInAyah) ? 1.0 : 0.0;
-          }
-        }
-
-        final segments = controller.segmentText(word.text);
-        final isLastWord = isLastWordInAyah;
-        final effectiveFontSize = isLastWord
-            ? baseFontSize * lastWordFontMultiplier
-            : baseFontSize;
-
-        for (final textSegment in segments) {
-          String displayText = textSegment.text;
-          String displayFont = fontFamily;
-          // Apply standard spacing rules first
-          double displayLetterSpacing = (pageNumber == 1 || pageNumber == 2)
-              ? 0.0
-              : (isIndopak ? 0.0 : 0.0); // ✅ IndoPak: Must be 0.0 for standard look
-
-          // ✅ FORCE INDOPAK STYLE FOR AYAH MARKER WITH STACK
-          if (isLastWord) {
-             spans.add(
-              WidgetSpan(
-                alignment: PlaceholderAlignment.middle,
-                child: Container(
-                  width: effectiveFontSize * 1.2, // ✅ Balanced width for 3 digits and 1.9x scale
-                  height: effectiveFontSize,
-                  alignment: Alignment.center,
-                  child: Stack(
-                    clipBehavior: Clip.none, // ✅ Allow scale to visual exceed if needed
-                    alignment: Alignment.center,
-                    children: [
-                      // 1. Lingkaran (Ayah End Marker)
-                      Transform.translate(
-                        offset: Offset(0, -effectiveFontSize * 0.15),
-                        child: Transform.scale(
-                          scale: (pageNumber == 1 || pageNumber == 2) ? 1.6 : 1.9, // ✅ Reduced scale for better fit
-                          child: Text(
-                            '\u06DD', 
-                            style: TextStyle(
-                              fontSize: effectiveFontSize,
-                              fontFamily: 'IndoPak-Nastaleeq',
-                              foreground: Paint()
-                                ..color = AppColors.getAyahNumber(context).withValues(alpha: wordOpacity)
-                                ..colorFilter = ColorFilter.mode(
-                                  AppColors.getAyahNumber(context).withValues(alpha: wordOpacity),
-                                  BlendMode.srcIn,
-                                ),
-                              height: 0.1, // ✅ User preference
-                            ),
-                            textDirection: TextDirection.rtl,
-                            softWrap: false, // ✅ Prevent wrap
-                            overflow: TextOverflow.visible,
-                          ),
-                        ),
-                      ),
-                      
-                      // 2. Nomor Ayat (Centered inside ornament)
-                      Center(
-                         child: Text(
-                          LanguageHelper.toIndoPakDigits(segment.ayahNumber),
-                          style: TextStyle(
-                            fontSize: effectiveFontSize * 0.55, // ✅ Balanced for 3 digits
-                            fontFamily: 'Quran-Common',
-                            foreground: Paint()
-                              ..color = AppColors.getAyahNumber(context).withValues(alpha: wordOpacity)
-                              ..colorFilter = ColorFilter.mode(
-                                AppColors.getAyahNumber(context).withValues(alpha: wordOpacity),
-                                BlendMode.srcIn,
-                              ),
-                            fontWeight: FontWeight.w800,
-                            height: 1.0,
-                          ),
-                          textAlign: TextAlign.center,
-                          textDirection: TextDirection.rtl,
-                          softWrap: false, // ✅ NO WRAPPING
-                          overflow: TextOverflow.visible,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          } else {
-             // Normal text word
-             spans.add(
-              TextSpan(
-                text: displayText,
-                style: TextStyle(
-                  fontSize: effectiveFontSize,
-                  fontFamily: displayFont,
-                  color: isIndopak ? _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity) : null,
-                  foreground: isIndopak ? null : (Paint()
-                    ..color = _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity)
-                    ..colorFilter = ColorFilter.mode(
-                      _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity),
-                      BlendMode.srcIn,
-                    )),
-                  backgroundColor: wordBg,
-                  fontWeight: isIndopak ? FontWeight.normal : FontWeight.w600, // ✅ QPC ONLY: Bold
-                  height: (pageNumber == 1 || pageNumber == 2)
-                      ? 1.5
-                      : (isIndopak ? 1.6 : 1.8), // ✅ IndoPak: 1.6 (Original), QPC: 1.8
-                  letterSpacing: displayLetterSpacing,
-                  shadows: isIndopak ? null : [
-                    // ✅ QPC ONLY: Cleaner Bolding
-                    Shadow(
-                      color: _getWordColor(isCurrentAyat, context).withValues(alpha: wordOpacity * 0.7),
-                      offset: const Offset(0.0, 0.0),
-                      blurRadius: 0.2,
-                    ),
-                  ],
-                  decoration: (controller.hideUnreadAyat && !isLastWord)
-                      ? TextDecoration.underline
-                      : null,
-                  decorationColor: AppColors.getTextPrimary(
-                    context,
-                  ).withValues(alpha: 0.15),
-                  decorationThickness: 0.3,
-                ),
-              ),
-            );
-          }
-        }
-      }
     }
 
-    // ✅ Build line widget with CORRECT Available Width
-    // We must pass the width that accounts for the padding!
-    final lineWidget = MushafRenderer.renderJustifiedLine(
+    return MushafRenderer.renderJustifiedLine(
       wordSpans: spans,
       isCentered: line.isCentered,
       availableWidth: layoutConfig.availableWidth,
       context: context,
-      allowOverflow: false,
       customLineHeight: layoutConfig.lineHeight,
-      useFittedBox: layoutConfig.useFittedBox, // ✅ PASS FLAG
+      useFittedBox: false,
+      baseFontSize: baseFontSize,
     );
-
-    return lineWidget; // Return directly, Padding is handled in parent
   }
 }
+
+
+/// ✅ Canvas-Based Highlighting Overlay
+class _WordHighlightOverlay extends StatelessWidget {
+  final MushafPageLine line;
+  final int pageNumber;
+  final MushafLayoutConfig layoutConfig;
+
+  const _WordHighlightOverlay({
+    required this.line,
+    required this.pageNumber,
+    required this.layoutConfig,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // ⚡️ ULTIMATE OPTIMIZATION: Only rebuild the overlay when relevant state changes
+    final lineAyahKeys = line.ayahSegments?.map((s) => '${s.surahId}:${s.ayahNumber}').toSet() ?? {};
+    final mushafLayout = context.select<SttController, MushafLayout>((c) => c.mushafLayout);
+    final fontFamily = mushafLayout.isGlyphBased ? 'p$pageNumber' : 'IndoPak-Nastaleeq';
+
+    // Select the aggregate state for this line
+    final overlayState = context.select<SttController, String>((c) {
+      if (c.currentHighlightKey != null && lineAyahKeys.contains(c.currentHighlightKey)) {
+        return 'active:${c.currentHighlightKey}:${c.currentHighlightWordIdx}';
+      }
+      
+      // Also check if any words on this line have a special status
+      final hasStatus = lineAyahKeys.any((key) {
+        final map = c.wordStatusMap[key];
+        return map != null && map.values.any((s) => s != WordStatus.pending);
+      });
+      
+      return hasStatus ? 'data' : 'none';
+    });
+
+    if (overlayState == 'none') return const SizedBox.shrink();
+
+    return CustomPaint(
+      painter: _WordHighlightPainter(
+        line: line,
+        pageNumber: pageNumber,
+        controller: context.read<SttController>(),
+        layoutConfig: layoutConfig,
+        fontFamily: fontFamily,
+        // ✅ Pre-fetch colors to stay away from context in paint()
+        correctColor: AppColors.getCorrect(context).withValues(alpha: 0.4),
+        incorrectColor: AppColors.getIncorrect(context).withValues(alpha: 0.4),
+        infoColor: AppColors.getInfo(context).withValues(alpha: 0.4),
+        primaryColor: AppColors.getPrimary(context).withValues(alpha: 0.1),
+      ),
+    );
+  }
+}
+
+class _WordHighlightPainter extends CustomPainter {
+  final MushafPageLine line;
+  final int pageNumber;
+  final SttController controller;
+  final MushafLayoutConfig layoutConfig;
+  final String fontFamily;
+  final Color correctColor;
+  final Color incorrectColor;
+  final Color infoColor;
+  final Color primaryColor;
+
+  _WordHighlightPainter({
+    required this.line,
+    required this.pageNumber,
+    required this.controller,
+    required this.layoutConfig,
+    required this.fontFamily,
+    required this.correctColor,
+    required this.incorrectColor,
+    required this.infoColor,
+    required this.primaryColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (line.ayahSegments == null) return;
+
+    final geometry = controller.geometryCache[pageNumber];
+    if (geometry == null) return; // Wait for precomputation
+
+    final wordStatusMap = controller.wordStatusMap;
+    final isCurrentAyat = controller.currentHighlightKey != null && 
+                          line.ayahSegments!.any((s) => s.verseKey == controller.currentHighlightKey);
+
+    for (final segment in line.ayahSegments!) {
+      final key = segment.verseKey;
+      
+      for (final word in segment.words) {
+         final wordIdx = word.wordNumber - 1;
+         final status = wordStatusMap[key]?[wordIdx];
+         
+         // 1. Determine Color
+         Color? highlightColor;
+         if (status != null && status != WordStatus.pending) {
+           highlightColor = _getHighlightColor(status);
+         } else if (key == controller.currentHighlightKey && controller.currentHighlightWordIdx == wordIdx) {
+           highlightColor = primaryColor;
+         }
+
+         if (highlightColor != null) {
+           // 2. O(1) LOOKUP: No TextPainter.layout() or getBoxesForSelection() here!
+           final geometryKey = PageGeometry.getWordKey(segment.surahId, segment.ayahNumber, word.wordNumber);
+           final rects = geometry.wordBounds[geometryKey];
+
+           if (rects != null) {
+             final paint = Paint()..color = highlightColor;
+             for (final rect in rects) {
+               // ✅ HARDENING: Ensure coordinate alignment with current size
+               // Scale factor if view size differs from computation size
+               canvas.drawRRect(
+                 RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+                 paint,
+               );
+             }
+           }
+         }
+      }
+    }
+  }
+
+  // ✅ REMOVED: _createTextPainter - No measurement logic allowed in paint()
+
+  Color _getHighlightColor(WordStatus status) {
+    switch (status) {
+      case WordStatus.matched:
+      case WordStatus.correct:
+        return correctColor;
+      case WordStatus.mismatched:
+      case WordStatus.incorrect:
+      case WordStatus.skipped:
+        return incorrectColor;
+      case WordStatus.processing:
+        return infoColor;
+      default:
+        return Colors.transparent;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WordHighlightPainter oldDelegate) {
+    // Re-paint if anything in the controller's highlight state changed
+    return controller.currentHighlightKey != oldDelegate.controller.currentHighlightKey ||
+           controller.currentHighlightWordIdx != oldDelegate.controller.currentHighlightWordIdx ||
+           controller.wordStatusMap != oldDelegate.controller.wordStatusMap;
+  }
+}
+
 
 // Methods tetap sama
 Color _getWordColor(bool isCurrentWord, BuildContext context) {
@@ -1080,30 +966,35 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final controller = context.watch<SttController>();
-    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
+
+    // ✅ OPTIMIZATION: Use select to only rebuild when RELEVANT state changes
+    final mushafLayout = context.select<SttController, MushafLayout>((c) => c.mushafLayout);
+    final currentPageAyats = context.select<SttController, List<AyatData>>((c) => c.currentPageAyats);
+    final isIndopak = mushafLayout == MushafLayout.indopak;
+
+    final controller = context.read<SttController>(); 
     final headerFontSize = screenWidth * 0.035;
     final headerHeight = screenHeight * 0.035;
     final juzText = _translations.isNotEmpty
         ? LanguageHelper.tr(_translations, 'mushaf_view.juz_text')
         : 'Juz';
 
-    final juzNumber = controller.currentPageAyats.isNotEmpty
+    final juzNumber = currentPageAyats.isNotEmpty
         ? controller.calculateJuz(
-            controller.currentPageAyats.first.surah_id,
-            controller.currentPageAyats.first.ayah,
+            currentPageAyats.first.surah_id,
+            currentPageAyats.first.ayah,
           )
         : 1;
 
     return Container(
       height: headerHeight,
-      // âœ… FIX: Hapus background color sama sekali
+      // ✅ FIX: Hapus background color sama sekali
       padding: EdgeInsets.symmetric(
         horizontal: isIndopak
             ? screenWidth *
                   0.035 // indopak
             : screenWidth * 0.010, // qpc,
-      ), // âœ… CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
+      ), // ✅ CHANGE: Minimal horizontal padding (was screenWidth * 0.005)
       alignment: Alignment.center,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

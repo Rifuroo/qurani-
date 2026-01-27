@@ -75,13 +75,12 @@ const Color accentColor = Color(0xFF9B59B6);
 const Color skippedColor = Color(0xFF95A5A6);
 
 // ==================== PRE-LOADING CACHE ====================
-// ✅ OPTIMIZED: Increased cache radius and size for faster mushaf loading (Tarteel-style)
-// ✅ CRITICAL: Large cache to prevent re-loading when swiping back and forth
-const int cacheRadius = 20; // Preload ±20 pages for ultra-fast swipe
-const int maxCacheSize = 500; // Increased to 500 (keep ALL visited pages in memory - no re-loading!)
-const int quranServiceCacheSize = 500; // Increased for faster preload (dynamic: 604 QPC / 610 IndoPak)
-const int cacheEvictionThreshold = 600; // Only evict when cache exceeds this (very large buffer)
-const int cacheEvictionDistance = 300; // Only evict pages > 300 pages away from current
+// ✅ REDUCED: Reasonable cache radius to prevent background task storms
+const int cacheRadius = 3; 
+const int maxCacheSize = 150; // Keep 150 pages worth of metadata in RAM
+const int quranServiceCacheSize = 200;
+const int cacheEvictionThreshold = 250; // Only evict when exceeding this
+const int cacheEvictionDistance = 100; // Keep pages within 100 distance
 
 // ==================== PERFORMANCE TUNING ====================
 const double averageAyatHeight = 170.0;

@@ -297,8 +297,11 @@ class _SttPageState extends State<SttPage> {
   }
 
   Widget _buildQuranText(BuildContext context, SttController controller) {
-    final controller = context.watch<SttController>();
-    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
+    // ✅ OPTIMIZATION: Read only specific properties.
+    // Watching the whole controller causes full rebuild on every word highlight!
+    final isQuranMode = context.select<SttController, bool>((c) => c.isQuranMode);
+    final isIndopak = context.select<SttController, bool>((c) => c.mushafLayout == MushafLayout.indopak);
+    
     final screenWidth = MediaQuery.of(context).size.width;
     final padding = isIndopak ? screenWidth * 0.00 : screenWidth * 0.03;
 
@@ -311,17 +314,17 @@ class _SttPageState extends State<SttPage> {
         transitionBuilder: (child, animation) {
           return FadeTransition(opacity: animation, child: child);
         },
-        child: controller.isQuranMode
-            ? _buildMushafView(controller) // ✅ UBAH: Dynamic widget
-            : _buildListView(controller), // ✅ UBAH: Dynamic widget
+        child: isQuranMode
+            ? _buildMushafView(controller) 
+            : _buildListView(controller), 
       ),
     );
   }
 
   Widget _buildMushafView(SttController controller) {
-    // ✅ Key UNIK per layout untuk force rebuild saat switch
-    final uniqueKey =
-        '${controller.mushafLayout.toStringValue()}_${controller.currentPage}';
+    // ✅ STABLE KEY: Only unique per layout
+    // Removing currentPage prevents full widget disposal during swipes
+    final uniqueKey = controller.mushafLayout.toStringValue();
 
     return MushafDisplay(key: ValueKey('mushaf_$uniqueKey'));
   }
