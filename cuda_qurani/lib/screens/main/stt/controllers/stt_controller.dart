@@ -2215,7 +2215,14 @@ class SttController extends ChangeNotifier {
     // ✅ Persist targetAyahId so the view can read it during initialization jump
     _topVerseId = targetAyahId;
 
-    // ? STEP 2: Toggle mode flag FIRST
+    // ✅ CRITICAL FIX: Pre-load page data BEFORE mode toggle to prevent visual glitch
+    if (!pageCache.containsKey(targetPage)) {
+      appLogger.log('MODE_TOGGLE', 'Pre-loading page $targetPage before switch...');
+      final lines = await _sqliteService.getMushafPageLines(targetPage);
+      pageCache[targetPage] = lines;
+    }
+
+    // ✅ STEP 2: Toggle mode flag AFTER data is ready
     _isQuranMode = !_isQuranMode;
 
     // ✅ SYNC: Ensure both variables are in sync for the new mode before first notify

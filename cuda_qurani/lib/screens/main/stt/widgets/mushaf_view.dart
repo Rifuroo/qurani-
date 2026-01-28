@@ -361,6 +361,7 @@ class _MushafDisplayState extends State<MushafDisplay> {
 
     if (cachedLines != null && cachedLines.isNotEmpty) {
       return MushafPageContent(
+        key: ValueKey('page_$pageNumber'), // ✅ Add Key to force refresh if needed
         pageLines: cachedLines,
         pageNumber: pageNumber,
       );
@@ -1045,24 +1046,27 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
       ), 
       alignment: Alignment.center,
       child: Row(
+        textDirection: TextDirection.rtl, // ✅ RTL layout
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // RIGHT side in RTL
           Text(
-            '$juzText ${context.formatNumber(juzNumber)}',
+            '${context.formatNumber(widget.pageNumber)}', // ✅ Page number on RIGHT
+            style: TextStyle(
+              fontSize: headerFontSize,
+              color: AppColors.getTextPrimary(context).withOpacity(0.8),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          // LEFT side in RTL
+          Text(
+            '$juzText ${context.formatNumber(juzNumber)}', // ✅ Juz on LEFT
             style: TextStyle(
               fontSize: headerFontSize,
               color: AppColors.getTextPrimary(context).withOpacity(0.8),
               fontWeight: FontWeight.w500,
             ),
             textDirection: TextDirection.rtl,
-          ),
-          Text(
-            '${context.formatNumber(widget.pageNumber)}', // ✅ USE LOCAL PAGE NUMBER
-            style: TextStyle(
-              fontSize: headerFontSize,
-              color: AppColors.getTextPrimary(context).withOpacity(0.8),
-              fontWeight: FontWeight.w500,
-            ),
           ),
         ],
       ),
@@ -1106,44 +1110,12 @@ class _BookFoldTransformer extends StatelessWidget {
     final double dimAmount = absPosition.clamp(0.0, 0.45);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 1.0),
+      margin: const EdgeInsets.symmetric(horizontal: 8.0), // ✅ Wider white gap
       child: Transform(
         transform: transform,
         // RTL Logic for Spine Alignment
         alignment: position < 0 ? Alignment.centerLeft : Alignment.centerRight,
-        child: Stack(
-          children: [
-            child,
-            
-            // ✅ DUAL-LAYER SHADOW SYSTEM
-            // Layer 1: Fixed subtle gutter (always there)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _GutterShadowPainter(
-                    dimAmount: 0.1, // Permanent subtle spine
-                    isRightPage: position < 0,
-                    isFixed: true,
-                  ),
-                ),
-              ),
-            ),
-
-            // Layer 2: Dynamic crease (grows during fold)
-            if (absPosition > 0)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: _GutterShadowPainter(
-                      dimAmount: dimAmount,
-                      isRightPage: position < 0,
-                      isFixed: false,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+        child: child, // ✅ Removed gutter shadow
       ),
     );
   }

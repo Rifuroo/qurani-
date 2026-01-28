@@ -751,8 +751,8 @@ class _SurahHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<SttController>();
-    final isIndopak = controller.mushafLayout == MushafLayout.indopak;
+    final controller = context.read<SttController>();
+    final isIndopak = context.select<SttController, bool>((c) => c.mushafLayout == MushafLayout.indopak);
     final surahId = line.surahNumber ?? 1;
     final surahGlyphCode = controller.formatSurahHeaderName(surahId);
     final screenHeight = MediaQuery.of(context).size.height;
@@ -781,7 +781,7 @@ class _SurahHeader extends StatelessWidget {
                 surahGlyphCode,
                 style: TextStyle(
                   fontSize: surahNameSize - 1,
-                  fontFamily: isIndopak ? 'surah-name-v2' : 'surah-name-v4',
+                  fontFamily: 'surah-name-v2', // Matches mushaf_view.dart
                   color: AppColors.getTextPrimary(context),
                   height: 1.0,
                 ),
@@ -893,7 +893,6 @@ class _CompleteAyahWidget extends StatelessWidget {
                           color: state.isCurrentAyat
                               ? AppColors.getPrimary(context)
                               : AppColors.getTextPrimary(context),
-                          fontWeight: FontWeight.w600,
                           fontSize: screenWidth * 0.0275,
                         ),
                       ),
@@ -1115,7 +1114,7 @@ class _CompleteAyahWidget extends StatelessWidget {
             AppColors.getTextPrimary(context),
             BlendMode.srcIn,
           )),
-        fontWeight: effectiveIsIndopak ? FontWeight.normal : FontWeight.w600, // ✅ QPC ONLY: Bold
+        fontWeight: FontWeight.normal, // ✅ Normal weight for all layouts
         height: effectiveIsIndopak ? 1.6 : 1.7, // ✅ IndoPak: 1.6 (Original)
         letterSpacing: effectiveIsIndopak ? 0 : 0.0,
         shadows: effectiveIsIndopak ? null : [

@@ -307,26 +307,20 @@ class _SttPageState extends State<SttPage> {
 
   Widget _buildQuranText(BuildContext context, SttController controller) {
     // ✅ OPTIMIZATION: Read only specific properties.
-    // Watching the whole controller causes full rebuild on every word highlight!
     final isQuranMode = context.select<SttController, bool>((c) => c.isQuranMode);
-    final isIndopak = context.select<SttController, bool>((c) => c.mushafLayout == MushafLayout.indopak);
-    
-    final screenWidth = MediaQuery.of(context).size.width;
-    final padding = isIndopak ? screenWidth * 0.00 : screenWidth * 0.03;
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: padding),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        switchInCurve: Curves.easeInOut,
-        switchOutCurve: Curves.easeInOut,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        child: isQuranMode
-            ? _buildMushafView(controller) 
-            : _buildListView(controller), 
-      ),
+    // ✅ No horizontal padding - let individual views handle their own
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 100),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      child: isQuranMode
+          ? _buildMushafView(controller) 
+          : _buildListView(controller), 
     );
   }
 
