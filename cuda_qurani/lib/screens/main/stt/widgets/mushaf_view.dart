@@ -113,12 +113,25 @@ class MushafRenderer {
       if (span is WidgetSpan) {
          totalTextWidth += 40.0; // Approximation for marker
       } else {
-         final painter = TextPainter(
-           text: span is TextSpan ? span : TextSpan(children: [span]),
-           textDirection: TextDirection.rtl,
-           maxLines: 1,
-         )..layout();
-         totalTextWidth += painter.width;
+         // ✅ FIX: Safely measure TextSpan that might contain nested WidgetSpans
+         bool hasNestedWidget(InlineSpan s) {
+           if (s is WidgetSpan) return true;
+           if (s is TextSpan && s.children != null) {
+             return s.children!.any(hasNestedWidget);
+           }
+           return false;
+         }
+
+         if (hasNestedWidget(span)) {
+           totalTextWidth += 40.0; // Use approximation if nested widget exists
+         } else {
+           final painter = TextPainter(
+             text: span is TextSpan ? span : TextSpan(children: [span]),
+             textDirection: TextDirection.rtl,
+             maxLines: 1,
+           )..layout();
+           totalTextWidth += painter.width;
+         }
       }
     }
 
@@ -738,64 +751,82 @@ class _JustifiedAyahLine extends StatelessWidget {
             ? baseFontSize * lastWordFontMultiplier
             : baseFontSize;
 
+        final markerStripper = RegExp(r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}]');
+        final cleanText = word.text.replaceAll(markerStripper, '');
+
         // ✅ FORCE INDOPAK STYLE FOR AYAH MARKER WITH STACK
         if (isLastWord) {
-             spans.add(
-              WidgetSpan(
-                alignment: PlaceholderAlignment.middle,
-                child: Container(
-                  width: effectiveFontSize * 1.2,
-                  height: effectiveFontSize,
-                  alignment: Alignment.center,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.center,
-                    children: [
-                      // 1. Lingkaran (Ayah End Marker)
-                      Transform.translate(
-                        offset: Offset(0, -effectiveFontSize * 0.15),
-                        child: Transform.scale(
-                          scale: (pageNumber == 1 || pageNumber == 2) ? 1.6 : 1.9,
-                          child: Text(
-                            '\u06DD', 
-                            style: TextStyle(
-                              fontSize: effectiveFontSize,
-                              fontFamily: 'IndoPak-Nastaleeq',
-                              color: AppColors.getAyahNumber(context).withValues(alpha: wordOpacity),
-                              height: 0.1,
-                            ),
-                            textDirection: TextDirection.rtl,
-                            overflow: TextOverflow.visible,
-                          ),
+          final markerSpan = WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Container(
+              width: effectiveFontSize * 1.1, 
+              height: effectiveFontSize,
+              alignment: Alignment.center,
+              margin: const EdgeInsets.symmetric(horizontal: 1.0), // ✅ Celah kecil kanan-kiri
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  // 1. Lingkaran (Ayah End Marker)
+                  Transform.translate(
+                    offset: Offset(0, -effectiveFontSize * 0.15),
+                    child: Transform.scale(
+                      scale: (pageNumber == 1 || pageNumber == 2) ? 1.6 : 1.9,
+                      child: Text(
+                        '\u06DD', 
+                        style: TextStyle(
+                          fontSize: effectiveFontSize,
+                          fontFamily: 'IndoPak-Nastaleeq',
+                          color: AppColors.getAyahNumber(context).withValues(alpha: wordOpacity),
+                          height: 0.1,
                         ),
+                        textDirection: TextDirection.rtl,
+                        overflow: TextOverflow.visible,
                       ),
-
-                      // 2. Nomor Ayat (Centered inside ornament)
-                      Center(
-                         child: Text(
-                          LanguageHelper.toIndoPakDigits(segment.ayahNumber),
-                          style: TextStyle(
-                            fontSize: effectiveFontSize * 0.55,
-                            fontFamily: 'Quran-Common',
-                            color: AppColors.getAyahNumber(context).withValues(alpha: wordOpacity),
-                            fontWeight: FontWeight.w800,
-                            height: 1.0,
-                          ),
-                          textAlign: TextAlign.center,
-                          textDirection: TextDirection.rtl,
-                          overflow: TextOverflow.visible,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+
+                  // 2. Nomor Ayat (Centered inside ornament)
+                  Center(
+                     child: Text(
+                      LanguageHelper.toIndoPakDigits(segment.ayahNumber),
+                      style: TextStyle(
+                        fontSize: effectiveFontSize * 0.55,
+                        fontFamily: 'Quran-Common',
+                        color: AppColors.getAyahNumber(context).withValues(alpha: wordOpacity),
+                        fontWeight: FontWeight.w800,
+                        height: 1.0,
+                      ),
+                      textAlign: TextAlign.center,
+                      textDirection: TextDirection.rtl,
+                      overflow: TextOverflow.visible,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+
+          // ✅ MERGE WITH PREVIOUS WORD TO PREVENT JUSTIFICATION GAP
+          if (spans.isNotEmpty) {
+            final lastSpan = spans.removeLast();
+            spans.add(
+              TextSpan(
+                children: [
+                  lastSpan,
+                  markerSpan,
+                ],
               ),
             );
-        } else {
+          } else {
+            spans.add(markerSpan);
+          }
+        }
+ else {
              // Normal text word
              spans.add(
               TextSpan(
-                text: word.text,
+                text: cleanText,
                 style: TextStyle(
                   fontSize: effectiveFontSize,
                   fontFamily: fontFamily,
