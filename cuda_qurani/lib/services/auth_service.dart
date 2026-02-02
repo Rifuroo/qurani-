@@ -157,7 +157,7 @@ class AuthService {
 
       final authCode = googleUser.serverAuthCode;
       
-      print('📦 Google Auth: authCode length: ${authCode?.length ?? 0}');
+      print('📦 Google Auth: authCode: $authCode');
 
       if (authCode == null) {
         throw Exception('Kredensial Google (serverAuthCode) tidak ditemukan.');
