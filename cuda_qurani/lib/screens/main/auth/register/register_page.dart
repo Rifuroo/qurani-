@@ -34,71 +34,102 @@ class _RegisterPageState extends State<RegisterPage> {
 
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
 
   bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
   bool _agreeToTerms = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   Future<void> _handleRegister() async {
+    if (!_formKey.currentState!.validate()) return;
     if (!_agreeToTerms) {
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   AppComponentStyles.errorSnackBar(
-      //     message: '',
-      //     duration: const Duration(seconds: 2),
-      //   ),
-      // );
+      ScaffoldMessenger.of(context).showSnackBar(
+        AppComponentStyles.errorSnackBar(
+          message: 'Anda harus menyetujui Syarat & Ketentuan',
+        ),
+      );
       return;
     }
 
-    if (!_formKey.currentState!.validate()) return;
-
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.signUp(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      fullName: _nameController.text.trim(),
-    );
 
-    if (!mounted) return;
+    try {
+      final success = await authProvider.signUp(
+        email: _emailController.text.trim(),
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+      );
 
-    if (success) {
-      if (authProvider.errorMessage?.contains('email') == true) {
+      if (!mounted) return;
+
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           AppComponentStyles.successSnackBar(
-            message: 'Registrasi berhasil! Silakan cek email untuk verifikasi',
-            duration: const Duration(seconds: 3),
+            message: 'Registrasi berhasil! Silakan login.',
           ),
         );
-        Navigator.of(context).pop();
+        Navigator.pop(context); // Go back to login
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          AppComponentStyles.successSnackBar(
-            message: 'Registrasi berhasil! Selamat datang',
+          AppComponentStyles.errorSnackBar(
+            message: authProvider.errorMessage ?? 'Registrasi gagal',
           ),
         );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          AppComponentStyles.errorSnackBar(message: 'Terjadi kesalahan saat registrasi'),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    try {
+      final success = await authProvider.signInWithGoogle();
+
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          AppComponentStyles.successSnackBar(
+            message: 'Login berhasil!',
+            duration: const Duration(seconds: 1),
+          ),
+        );
+
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const HomePage()),
           (route) => false,
         );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          AppComponentStyles.errorSnackBar(
+            message: authProvider.errorMessage ?? 'Google Sign In gagal',
+          ),
+        );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        AppComponentStyles.errorSnackBar(
-          message: authProvider.errorMessage ?? 'Registrasi gagal',
-        ),
-      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          AppComponentStyles.errorSnackBar(message: 'Terjadi kesalahan saat login'),
+        );
+      }
     }
   }
 
@@ -123,6 +154,10 @@ class _RegisterPageState extends State<RegisterPage> {
                 _buildForm(s),
                 AppMargin.gapLarge(context),
                 _buildRegisterButton(),
+                // AppMargin.gap(context),
+                // _buildDivider(context, s),
+                // AppMargin.gap(context),
+                // _buildGoogleButton(context, s),
                 AppMargin.gap(context),
                 _buildLoginLink(context),
                 AppMargin.customGap(context, AppDesignSystem.space32),
@@ -138,50 +173,68 @@ class _RegisterPageState extends State<RegisterPage> {
     return Center(
       child: Column(
         children: [
-          Container(
-            width: 140 * s,
-            height: 140 * s,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(
-                AppDesignSystem.radiusLarge * s,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                'ﲐ',
-                style: TextStyle(
-                  fontFamily: 'surah_names',
-                  fontSize: 90 * s,
-                  color: AppColors.getPrimary(context),
-                  height: 1.0,
+          Hero(
+            tag: 'auth_logo',
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: 140 * s,
+                height: 140 * s,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(
+                    AppDesignSystem.radiusLarge * s,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    'ﲐ',
+                    style: TextStyle(
+                      fontFamily: 'surah_names',
+                      fontSize: 90 * s,
+                      color: AppColors.getPrimary(context),
+                      height: 1.0,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
           AppMargin.gap(context),
-          Image.asset(
-            'assets/images/qurani-white-text.png',
-            height: 28 * s,
-            color: AppColors.getPrimary(context),
-            errorBuilder: (context, error, stackTrace) {
-              return Text(
-                'Qurani',
-                style: AppTypography.h2(
-                  context,
-                  color: AppColors.getPrimary(context),
-                  weight: AppTypography.bold,
-                ),
-              );
-            },
+          Hero(
+            tag: 'auth_title',
+            child: Material(
+              color: Colors.transparent,
+              child: Image.asset(
+                'assets/images/qurani-white-text.png',
+                height: 28 * s,
+                color: AppColors.getPrimary(context),
+                errorBuilder: (context, error, stackTrace) {
+                  return Text(
+                    'Qurani',
+                    style: AppTypography.h2(
+                      context,
+                      color: AppColors.getPrimary(context),
+                      weight: AppTypography.bold,
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
           SizedBox(height: 4 * s),
-          Text(
-            'Hafidz',
-            style: AppTypography.label(
-              context,
-              color: AppColors.getPrimary(context),
-              weight: AppTypography.semiBold,
-            ).copyWith(letterSpacing: 2 * s),
+          Hero(
+            tag: 'auth_subtitle',
+            child: Material(
+              color: Colors.transparent,
+              child: Text(
+                'Hafidz',
+                style: AppTypography.label(
+                  context,
+                  color: AppColors.getPrimary(context),
+                  weight: AppTypography.semiBold,
+                ).copyWith(letterSpacing: 2 * s),
+              ),
+            ),
           ),
         ],
       ),
@@ -213,10 +266,23 @@ class _RegisterPageState extends State<RegisterPage> {
         children: [
           _buildTextField(
             controller: _nameController,
+            label: 'Full Name',
+            icon: Icons.badge_outlined,
+            textInputAction: TextInputAction.next,
+            validator: (value) {
+              if (value == null || value.isEmpty) return 'Nama lengkap tidak boleh kosong';
+              return null;
+            },
+            s: s,
+          ),
+          AppMargin.gap(context),
+          _buildTextField(
+            controller: _usernameController,
             label: _translations.isNotEmpty
                 ? LanguageHelper.tr(_translations, 'register.username_text')
                 : 'Username',
             icon: Icons.person_outline_rounded,
+            textInputAction: TextInputAction.next,
             validator: (value) {
               if (value == null || value.isEmpty)
                 return _translations.isNotEmpty
@@ -244,6 +310,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 : 'Email',
             icon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
             validator: (value) {
               if (value == null || value.isEmpty)
                 return _translations.isNotEmpty
@@ -274,22 +341,7 @@ class _RegisterPageState extends State<RegisterPage> {
               setState(() => _isPasswordVisible = val);
             },
             s,
-          ),
-          AppMargin.gap(context),
-          _buildPasswordField(
-            _confirmPasswordController,
-            _translations.isNotEmpty
-                ? LanguageHelper.tr(
-                    _translations,
-                    'register.confirm_password_text',
-                  )
-                : 'Confirm Password',
-            _isConfirmPasswordVisible,
-            (val) {
-              setState(() => _isConfirmPasswordVisible = val);
-            },
-            s,
-            confirmPassword: true,
+            textInputAction: TextInputAction.done,
           ),
           AppMargin.gap(context),
           _buildTermsCheckbox(s),
@@ -305,10 +357,12 @@ class _RegisterPageState extends State<RegisterPage> {
     required String? Function(String?) validator,
     required double s,
     TextInputType? keyboardType,
+    TextInputAction? textInputAction,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      textInputAction: textInputAction,
       textCapitalization: label == 'Username'
           ? TextCapitalization.words
           : TextCapitalization.none,
@@ -343,10 +397,13 @@ class _RegisterPageState extends State<RegisterPage> {
     Function(bool) onToggle,
     double s, {
     bool confirmPassword = false,
+    TextInputAction? textInputAction,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: !isVisible,
+      textInputAction: textInputAction ?? (confirmPassword ? TextInputAction.done : TextInputAction.next),
+      onFieldSubmitted: confirmPassword ? (_) => _handleRegister() : null,
       style: AppTypography.body(
         context,
         color: AppColors.getTextPrimary(context),
@@ -386,6 +443,8 @@ class _RegisterPageState extends State<RegisterPage> {
                   'login.error_password_length_text',
                 )
               : 'Password must be at least 6 characters';
+        if (!RegExp(r'[A-Z]').hasMatch(value))
+          return 'Password harus mengandung minimal satu huruf besar (A-Z)';
         if (confirmPassword && value != _passwordController.text)
           return _translations.isNotEmpty
               ? LanguageHelper.tr(
@@ -508,6 +567,92 @@ class _RegisterPageState extends State<RegisterPage> {
           fullWidth: true,
         );
       },
+    );
+  }
+
+  Widget _buildDivider(BuildContext context, double s) {
+    return Row(
+      children: [
+        Expanded(
+          child: AppDivider(color: AppColors.getDivider(context), thickness: 1 * s),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppDesignSystem.space16 * s,
+          ),
+          child: Text(
+            _translations.isNotEmpty
+                ? LanguageHelper.tr(_translations, 'login.or_text')
+                : 'Or',
+            style: AppTypography.caption(
+              context,
+              color: AppColors.getTextTertiary(context),
+            ),
+          ),
+        ),
+        Expanded(
+          child: AppDivider(color: AppColors.getDivider(context), thickness: 1 * s),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGoogleButton(BuildContext context, double s) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final double iconSize = 28 * s;
+
+    return SizedBox(
+      height: AppDesignSystem.scale(context, AppDesignSystem.buttonHeightLarge),
+      child: OutlinedButton(
+        onPressed: auth.isLoading ? null : _handleGoogleSignIn,
+        style: AppComponentStyles.secondaryButton(context).copyWith(
+          padding: WidgetStateProperty.all(
+            EdgeInsets.symmetric(
+              horizontal: AppDesignSystem.scale(context, 16),
+            ),
+          ),
+        ),
+        child: auth.isLoading
+            ? SizedBox(
+                height: AppDesignSystem.scale(context, 20),
+                width: AppDesignSystem.scale(context, 20),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.getPrimary(context)),
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'assets/images/google-icon.png',
+                    height: iconSize,
+                    width: iconSize,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.g_mobiledata,
+                        size: AppDesignSystem.iconLarge * s,
+                        color: AppColors.getTextPrimary(context),
+                      );
+                    },
+                  ),
+                  SizedBox(width: 12 * s),
+                  Text(
+                    _translations.isNotEmpty
+                        ? LanguageHelper.tr(
+                            _translations,
+                            'login.google_sign_in_text',
+                          )
+                        : 'Sign up with Google',
+                    style: AppTypography.label(
+                      context,
+                      color: AppColors.getTextPrimary(context),
+                      weight: AppTypography.semiBold,
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 

@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   firebase_core
   flutter_localization
+  flutter_secure_storage_windows
   permission_handler_windows
   record_windows
   url_launcher_windows

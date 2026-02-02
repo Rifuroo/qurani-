@@ -57,7 +57,7 @@ class _LoginPageState extends State<LoginPage> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     setState(() {
-      _isEmailLoginLoading = true; // ✅ Only email login loading
+      _isEmailLoginLoading = true;
     });
 
     print('🔐 LoginPage: Starting login for ${_emailController.text.trim()}');
@@ -70,26 +70,18 @@ class _LoginPageState extends State<LoginPage> {
 
     print('🔐 LoginPage: Login result = $success');
 
-    setState(() {
-      _isEmailLoginLoading = false; // ✅ Stop email login loading
-    });
+    if (mounted) {
+      setState(() {
+        _isEmailLoginLoading = false;
+      });
+    }
 
     if (success && mounted) {
-      // print('✅ LoginPage: Login SUCCESS! Navigating to HomePage...');
-
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   AppComponentStyles.successSnackBar(
-      //     message: 'Login berhasil!',
-      //     duration: const Duration(seconds: 1),
-      //   ),
-      // );
-
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const HomePage()),
         (route) => false,
       );
     } else if (!success && mounted) {
-      // print('❌ LoginPage: Login FAILED - ${authProvider.errorMessage}');
       ScaffoldMessenger.of(context).showSnackBar(
         AppComponentStyles.errorSnackBar(
           message: authProvider.errorMessage ?? 'Login gagal',
@@ -104,60 +96,20 @@ class _LoginPageState extends State<LoginPage> {
     print('🔐 LoginPage: ===== STARTING Google Sign In =====');
 
     setState(() {
-      _isGoogleLoginLoading = true; // ✅ Only Google login loading
+      _isGoogleLoginLoading = true;
     });
 
-    print(
-      '🔐 LoginPage: Button clicked, calling authProvider.signInWithGoogle()...',
-    );
-
     try {
-      print('🔐 LoginPage: Waiting for Google Sign In to complete...');
       final success = await authProvider.signInWithGoogle();
       print('🔐 LoginPage: Google Sign In completed! Result: $success');
 
-      if (!mounted) {
-        print(
-          '⚠️ LoginPage: Widget not mounted after sign in, skipping navigation',
-        );
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
-        _isGoogleLoginLoading = false; // ✅ Stop Google login loading
+        _isGoogleLoginLoading = false;
       });
 
-      print('🔐 LoginPage: ===== SIGN IN RESULT =====');
-      print('   - Success: $success');
-      print('   - Error message: ${authProvider.errorMessage ?? "null"}');
-      print('   - Is authenticated: ${authProvider.isAuthenticated}');
-      print('   - Current user: ${authProvider.currentUser?.email ?? "null"}');
-      print('   - User ID: ${authProvider.userId ?? "null"}');
-
       if (success) {
-        print('✅ LoginPage: Google Sign In SUCCESS! Preparing navigation...');
-
-        // Double check authentication status
-        bool isAuth = authProvider.isAuthenticated;
-        print('   - Initial isAuthenticated check: $isAuth');
-
-        if (!isAuth) {
-          print('⚠️ isAuthenticated is false, waiting for state update...');
-          // Wait a bit longer for auth state to update
-          for (int i = 0; i < 5; i++) {
-            await Future.delayed(const Duration(milliseconds: 200));
-            isAuth = authProvider.isAuthenticated;
-            print('   - Check ${i + 1}/5: isAuthenticated = $isAuth');
-            if (isAuth) break;
-          }
-        }
-
-        if (!mounted) {
-          print('⚠️ LoginPage: Widget not mounted before navigation');
-          return;
-        }
-
-        print('✅ LoginPage: Showing success message...');
         ScaffoldMessenger.of(context).showSnackBar(
           AppComponentStyles.successSnackBar(
             message: 'Login berhasil!',
@@ -165,62 +117,27 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
 
-        print('✅ LoginPage: Navigating to HomePage...');
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const HomePage()),
           (route) => false,
         );
-
-        print('✅ LoginPage: ===== NAVIGATION COMPLETED =====');
       } else {
-        print('❌ LoginPage: ===== SIGN IN FAILED =====');
-        print('   - Success: $success');
-        print('   - Is authenticated: ${authProvider.isAuthenticated}');
-        print('   - Error: ${authProvider.errorMessage ?? "No error message"}');
-
         ScaffoldMessenger.of(context).showSnackBar(
           AppComponentStyles.errorSnackBar(
-            message:
-                authProvider.errorMessage ??
-                'Google Sign In gagal. Silakan coba lagi.',
+            message: authProvider.errorMessage ?? 'Google Sign In gagal',
           ),
         );
       }
-    } catch (e, stackTrace) {
-      print('❌ LoginPage: ===== EXCEPTION CAUGHT =====');
-      print('   - Error: $e');
-      print('   - Type: ${e.runtimeType}');
-      print('   - Stack trace: $stackTrace');
-
-      if (!mounted) {
-        print('⚠️ LoginPage: Widget not mounted in catch block');
-        return;
+    } catch (e) {
+      print('❌ LoginPage: Exception caught: $e');
+      if (mounted) {
+        setState(() {
+          _isGoogleLoginLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          AppComponentStyles.errorSnackBar(message: 'Terjadi kesalahan saat login'),
+        );
       }
-
-      setState(() {
-        _isGoogleLoginLoading = false; // ✅ Stop Google login loading
-      });
-
-      String errorMessage = 'Terjadi kesalahan saat login dengan Google';
-
-      // Handle specific errors
-      final errorString = e.toString().toLowerCase();
-      if (errorString.contains('dibatalkan') ||
-          errorString.contains('cancelled')) {
-        errorMessage = 'Login dibatalkan';
-      } else if (errorString.contains('network') ||
-          errorString.contains('connection')) {
-        errorMessage = 'Periksa koneksi internet Anda';
-      } else if (errorString.contains('id token')) {
-        errorMessage =
-            'Gagal mendapatkan token. Pastikan konfigurasi Google Sign In sudah benar.';
-      } else if (errorString.contains('supabase')) {
-        errorMessage = 'Gagal menghubungkan ke server. Silakan coba lagi.';
-      }
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(AppComponentStyles.errorSnackBar(message: errorMessage));
     }
   }
 
@@ -281,50 +198,68 @@ class _LoginPageState extends State<LoginPage> {
     return Center(
       child: Column(
         children: [
-          Container(
-            width: 140 * s,
-            height: 140 * s,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(
-                AppDesignSystem.radiusLarge * s,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                'ﲐ',
-                style: TextStyle(
-                  fontFamily: 'surah_names',
-                  fontSize: 90 * s,
-                  color: AppColors.getPrimary(context),
-                  height: 1.0,
+          Hero(
+            tag: 'auth_logo',
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: 140 * s,
+                height: 140 * s,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(
+                    AppDesignSystem.radiusLarge * s,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    'ﲐ',
+                    style: TextStyle(
+                      fontFamily: 'surah_names',
+                      fontSize: 90 * s,
+                      color: AppColors.getPrimary(context),
+                      height: 1.0,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
           AppMargin.gap(context),
-          Image.asset(
-            'assets/images/qurani-white-text.png',
-            height: 28 * s,
-            color: AppColors.getPrimary(context),
-            errorBuilder: (context, error, stackTrace) {
-              return Text(
-                'Qurani',
-                style: AppTypography.h2(
-                  context,
-                  color: AppColors.getPrimary(context),
-                  weight: AppTypography.bold,
-                ),
-              );
-            },
+          Hero(
+            tag: 'auth_title',
+            child: Material(
+              color: Colors.transparent,
+              child: Image.asset(
+                'assets/images/qurani-white-text.png',
+                height: 28 * s,
+                color: AppColors.getPrimary(context),
+                errorBuilder: (context, error, stackTrace) {
+                  return Text(
+                    'Qurani',
+                    style: AppTypography.h2(
+                      context,
+                      color: AppColors.getPrimary(context),
+                      weight: AppTypography.bold,
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
           SizedBox(height: 4 * s),
-          Text(
-            'Hafidz',
-            style: AppTypography.label(
-              context,
-              color: AppColors.getPrimary(context),
-              weight: AppTypography.semiBold,
-            ).copyWith(letterSpacing: 2 * s),
+          Hero(
+            tag: 'auth_subtitle',
+            child: Material(
+              color: Colors.transparent,
+              child: Text(
+                'Hafidz',
+                style: AppTypography.label(
+                  context,
+                  color: AppColors.getPrimary(context),
+                  weight: AppTypography.semiBold,
+                ).copyWith(letterSpacing: 2 * s),
+              ),
+            ),
           ),
         ],
       ),
@@ -357,126 +292,140 @@ class _LoginPageState extends State<LoginPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Email Field
-          TextFormField(
+          _buildTextField(
             controller: _emailController,
+            label: _translations.isNotEmpty
+                ? LanguageHelper.tr(_translations, 'login.email_or_username_text')
+                : 'Email or Username',
+            icon: Icons.person_outline_rounded, // Changed to person icon as it's more general
             keyboardType: TextInputType.emailAddress,
-            style: AppTypography.body(
-              context,
-              color: AppColors.getTextPrimary(context),
-              weight: AppTypography.medium,
-            ),
-            decoration: AppComponentStyles.inputDecoration(
-              context: context,
-              labelText: _translations.isNotEmpty
-                  ? LanguageHelper.tr(_translations, 'login.email_text')
-                  : 'Email',
-              prefixIcon: Padding(
-                padding: EdgeInsets.only(
-                  left: AppDesignSystem.space16 * s,
-                  right: AppDesignSystem.space12 * s,
-                ),
-                child: Icon(
-                  Icons.email_outlined,
-                  color: AppColors.getTextTertiary(context),
-                  size: AppDesignSystem.iconLarge * s,
-                ),
-              ),
-            ),
+            textInputAction: TextInputAction.next,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return _translations.isNotEmpty
                     ? LanguageHelper.tr(_translations, 'login.null_email_text')
-                    : 'Email cannot be empty';
+                    : 'Email or Username cannot be empty';
               }
-              if (!RegExp(
-                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-              ).hasMatch(value)) {
-                return _translations.isNotEmpty
-                    ? LanguageHelper.tr(
-                        _translations,
-                        'login.error_email_format_text',
-                      )
-                    : 'Invalid email format';
-              }
+              // Removed regex to allow username login
               return null;
             },
+            s: s,
           ),
 
           AppMargin.gap(context),
 
-          // Password Field
-          TextFormField(
+          _buildPasswordField(
             controller: _passwordController,
-            obscureText: !_isPasswordVisible,
-            style: AppTypography.body(
-              context,
-              color: AppColors.getTextPrimary(context),
-              weight: AppTypography.medium,
-            ),
-            decoration: AppComponentStyles.inputDecoration(
-              context: context,
-              labelText: _translations.isNotEmpty
-                  ? LanguageHelper.tr(_translations, 'login.password_text')
-                  : 'Password',
-              prefixIcon: Padding(
-                padding: EdgeInsets.only(
-                  left: AppDesignSystem.space16 * s,
-                  right: AppDesignSystem.space12 * s,
-                ),
-                child: Icon(
-                  Icons.lock_outline,
-                  color: AppColors.getTextTertiary(context),
-                  size: AppDesignSystem.iconLarge * s,
-                ),
-              ),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _isPasswordVisible
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: AppColors.getTextTertiary(context),
-                  size: AppDesignSystem.iconLarge * s,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _isPasswordVisible = !_isPasswordVisible;
-                  });
-                },
-              ),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return _translations.isNotEmpty
-                    ? LanguageHelper.tr(
-                        _translations,
-                        'login.null_password_text',
-                      )
-                    : 'Password cannot be empty';
-              }
-              if (value.length < 6) {
-                return _translations.isNotEmpty
-                    ? LanguageHelper.tr(
-                        _translations,
-                        'login.error_password_length_text',
-                      )
-                    : 'Password must be at least 6 characters';
-              }
-              return null;
-            },
+            label: _translations.isNotEmpty
+                ? LanguageHelper.tr(_translations, 'login.password_text')
+                : 'Password',
+            isVisible: _isPasswordVisible,
+            onToggle: (val) => setState(() => _isPasswordVisible = val),
+            s: s,
           ),
 
           AppMargin.gap(context),
 
-          // Remember Me & Forgot Password
           _buildRememberAndForgot(context, s),
 
           AppMargin.gapLarge(context),
 
-          // Login Button
           _buildLoginButton(context),
         ],
       ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required double s,
+    TextInputType? keyboardType,
+    TextInputAction? textInputAction,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      style: AppTypography.body(
+        context,
+        color: AppColors.getTextPrimary(context),
+        weight: AppTypography.medium,
+      ),
+      decoration: AppComponentStyles.inputDecoration(
+        context: context,
+        labelText: label,
+        prefixIcon: Padding(
+          padding: EdgeInsets.only(
+            left: AppDesignSystem.space16 * s,
+            right: AppDesignSystem.space12 * s,
+          ),
+          child: Icon(
+            icon,
+            color: AppColors.getTextTertiary(context),
+            size: AppDesignSystem.iconLarge * s,
+          ),
+        ),
+      ),
+      validator: validator,
+    );
+  }
+
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String label,
+    required bool isVisible,
+    required Function(bool) onToggle,
+    required double s,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: !isVisible,
+      textInputAction: TextInputAction.done,
+      onFieldSubmitted: (_) => _handleLogin(),
+      style: AppTypography.body(
+        context,
+        color: AppColors.getTextPrimary(context),
+        weight: AppTypography.medium,
+      ),
+      decoration: AppComponentStyles.inputDecoration(
+        context: context,
+        labelText: label,
+        prefixIcon: Padding(
+          padding: EdgeInsets.only(
+            left: AppDesignSystem.space16 * s,
+            right: AppDesignSystem.space12 * s,
+          ),
+          child: Icon(
+            Icons.lock_outline,
+            color: AppColors.getTextTertiary(context),
+            size: AppDesignSystem.iconLarge * s,
+          ),
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            isVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            color: AppColors.getTextTertiary(context),
+            size: AppDesignSystem.iconLarge * s,
+          ),
+          onPressed: () => onToggle(!isVisible),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return _translations.isNotEmpty
+              ? LanguageHelper.tr(_translations, 'login.null_password_text')
+              : 'Password cannot be empty';
+        }
+        if (value.length < 6) {
+          return _translations.isNotEmpty
+              ? LanguageHelper.tr(_translations, 'login.error_password_length_text')
+              : 'Password must be at least 6 characters';
+        }
+        return null;
+      },
     );
   }
 

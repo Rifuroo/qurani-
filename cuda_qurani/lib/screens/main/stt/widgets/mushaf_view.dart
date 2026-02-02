@@ -19,6 +19,7 @@ import 'package:cuda_qurani/screens/main/stt/widgets/mushaf_paper_background.dar
 
 
 
+/// Utility class for rendering Mushaf pages with precise layout control.
 class MushafRenderer {
   static double pageHeight(BuildContext context) {
     return MediaQuery.of(context).size.height * 0.85; // 85% screen height
@@ -34,7 +35,10 @@ class MushafRenderer {
   static const double WORD_SPACING_MAX =
       0.0; // Maximum gap to prevent huge spaces
 
-  // Render justified text for ayah lines
+  /// Renders a single line of Quranic text with full justification.
+  ///
+  /// Handles both centered lines (for simpler text) and fully justified lines
+  /// using custom spacing logic.
   static Widget renderJustifiedLine({
     required List<InlineSpan> wordSpans,
     required bool isCentered,
@@ -77,6 +81,9 @@ class MushafRenderer {
     );
   }
 
+  /// Core text rendering logic that distributes words evenly across the available width.
+  ///
+  /// Uses [FittedBox] or calculated spacing to ensure the line fills [maxWidth] exactly.
   static Widget _usText({
     required List<InlineSpan> wordSpans,
     required double maxWidth,
@@ -160,7 +167,9 @@ class MushafRenderer {
     );
   }
 
-  // ✅ NEW: Centralized layout configuration for consistency
+  /// Calculates the layout configuration (padding, font size, scale) based on screen size and Mushaf type.
+  ///
+  /// Returns a [MushafLayoutConfig] containing all necessary metrics for rendering.
   static MushafLayoutConfig calculateLayoutConfig(
     BuildContext context,
     int pageNumber,
@@ -247,13 +256,16 @@ class MushafLayoutConfig {
   });
 }
 
+/// Main widget for displaying the Quran page-by-page (horizontal paging).
 class MushafDisplay extends StatefulWidget {
-  const MushafDisplay({Key? key}) : super(key: key); // ✅ Already OK
+  /// Creates a [MushafDisplay].
+  const MushafDisplay({Key? key}) : super(key: key);
 
   @override
   State<MushafDisplay> createState() => _MushafDisplayState();
 }
 
+/// Manages the state of the Mushaf display, including page controllers and scroll synchronization.
 class _MushafDisplayState extends State<MushafDisplay> {
   late PageController _pageController;
 

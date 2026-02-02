@@ -66,7 +66,9 @@ class _QuranListViewState extends State<QuranListView> {
     });
   }
 
-  /// ✅ UPDATED: Support batch loading dari pipeline
+  /// Immediately loads a specific list of pages into the cache.
+  ///
+  /// This bypasses the throttling queue for high-priority UI updates.
   Future<void> _loadImmediateRange(List<int> pageNumbers) async {
     if (!mounted || pageNumbers.isEmpty) return;
 
@@ -101,6 +103,12 @@ class _QuranListViewState extends State<QuranListView> {
     if (mounted) setState(() {});
   }
 
+  /// Handles programmatic scrolling to a specific page index.
+  ///
+  /// Uses a multi-phase approach:
+  /// 1. Precision jump if target widget is already built.
+  /// 2. Estimation jump based on beacon widgets if available.
+  /// 3. Fallback absolute calculation.
   void _jumpToPage(int pageNumber, {int retryCount = 0}) {
     if (!mounted) return;
     if (retryCount > 10) { // ✅ INCREASED: More retries for high page numbers
@@ -250,7 +258,12 @@ class _QuranListViewState extends State<QuranListView> {
     }
   }
 
-  /// ✅ ULTIMATE: Smart preload (throttled, priority-based)
+  /// Initiates a prioritized background preloading strategy.
+  ///
+  /// Loads pages in concentric circles around the [centerPage]:
+  /// 1. Immediate neighbors (High Priority)
+  /// 2. Near neighbors (Medium Priority)
+  /// 3. Remaining pages (Low Priority, throttled)
   Future<void> _startSmartPreload(int centerPage) async {
     if (_preloadPaused || _userScrolling || !mounted) return;
 
@@ -290,7 +303,7 @@ class _QuranListViewState extends State<QuranListView> {
     }
   }
 
-  /// ✅ NEW: Throttled batch loading (prevent database overload)
+  /// Loads a batch of pages with throttling to prevent database contention.
   Future<void> _loadBatchThrottled(
     List<int> pages, {
     int delayMs = 50,
@@ -338,7 +351,7 @@ class _QuranListViewState extends State<QuranListView> {
     }
   }
 
-  /// ✅ NEW: Calculate which page is MOST visible using GlobalKeys (Beacon)
+  /// Determines the most visible page index using on-screen widget beacons.
   int _calculateVisiblePage() {
     if (!mounted || !_scrollController.hasClients) return _currentVisiblePage;
 
@@ -429,7 +442,7 @@ class _QuranListViewState extends State<QuranListView> {
     }
   }
 
-  /// ✅ NEW: Build page range (filter already cached)
+  /// Generates a list of page numbers between [start] and [end], excluding already cached pages.
   List<int> _buildPageRange(int start, int end, int totalPages) {
     final controller = context.read<SttController>();
     final pages = <int>[];

@@ -1,12 +1,10 @@
-import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:dio/dio.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
-  StreamSubscription<AuthState>? _authStateSubscription;
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -19,82 +17,49 @@ class AuthProvider extends ChangeNotifier {
   String? get accessToken => _authService.accessToken;
 
   AuthProvider() {
-    // ✅ Check session immediately without waiting
-    _checkImmediateSession();
     _initialize();
   }
   
-  void _checkImmediateSession() {
-    // ✅ Quick check for existing session
-    final currentSession = Supabase.instance.client.auth.currentSession;
-    final currentUser = Supabase.instance.client.auth.currentUser;
-    
-    if (currentSession != null && currentUser != null) {
-      print('🚀 AuthProvider: Immediate session found, setting loading to false');
-      _isLoading = false;
-      // Don't notify listeners yet, let _initialize() handle it properly
-    }
-  }
-
   Future<void> _initialize() async {
     print('🔧 AuthProvider: Initializing...');
+    _setLoading(true);
     
     try {
-      // ✅ Initialize AuthService (now faster)
       await _authService.initialize();
-      
-      // ✅ Setup auth state listener
-      _authStateSubscription = _authService.authStateChanges.listen((AuthState state) {
-        print('🔔 AuthProvider: Auth state changed');
-        print('   - Event: ${state.event}');
-        print('   - User: ${state.session?.user.email ?? "null"}');
-        notifyListeners();
-      });
-      
-      // ✅ Skip session validation if already authenticated (faster)
-      if (_authService.isAuthenticated) {
-        print('✅ AuthProvider: User already authenticated, skipping validation');
-      }
-      
       print('✅ AuthProvider: Initialized (isAuthenticated=${_authService.isAuthenticated})');
     } catch (e) {
       print('❌ AuthProvider: Initialization failed: $e');
-      // Don't crash, just continue with unauthenticated state
+    } finally {
+      _setLoading(false);
     }
-    
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _authStateSubscription?.cancel();
-    super.dispose();
   }
 
   Future<bool> signUp({
     required String email,
+    required String username,
     required String password,
-    String? fullName,
+    required String name,
   }) async {
     _setLoading(true);
     _clearError();
 
     try {
-      final response = await _authService.signUp(
+      final success = await _authService.signUp(
         email: email,
+        username: username,
         password: password,
-        fullName: fullName,
+        name: name,
       );
 
-      if (response.user != null && response.session == null) {
-        _setError('Silakan cek email untuk verifikasi akun');
+      if (success) {
+        print('✅ AuthProvider: Sign up successful');
+        _setLoading(false);
+        return true;
+      } else {
+        _setError('Registrasi gagal. Silakan coba lagi.');
         _setLoading(false);
         return false;
       }
-      
-      _setLoading(false);
-      return response.user != null;
     } catch (e) {
       _setError(_parseError(e));
       _setLoading(false);
@@ -111,14 +76,14 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      final response = await _authService.signIn(
+      final success = await _authService.signIn(
         email: email,
         password: password,
         rememberMe: rememberMe,
       );
       
       _setLoading(false);
-      return response.user != null;
+      return success;
     } catch (e) {
       _setError(_parseError(e));
       _setLoading(false);
@@ -126,21 +91,16 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// ✅ Native Google Sign In
   Future<bool> signInWithGoogle() async {
     _setLoading(true);
     _clearError();
 
     try {
       print('🔑 AuthProvider: Starting Native Google Sign In...');
-      
-      final response = await _authService.signInWithGoogle();
+      final success = await _authService.signInWithGoogle();
       
       _setLoading(false);
-      
-      final success = response.user != null;
       print('🔑 AuthProvider: Google Sign In ${success ? "SUCCESS" : "FAILED"}');
-      
       return success;
     } catch (e) {
       print('❌ AuthProvider: Google Sign In error: $e');
@@ -159,21 +119,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> resetPassword(String email) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
-      await _authService.resetPassword(email);
-      _setLoading(false);
-      return true;
-    } catch (e) {
-      _setError(e.toString());
-      _setLoading(false);
-      return false;
-    }
-  }
-
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
@@ -189,17 +134,38 @@ class AuthProvider extends ChangeNotifier {
   }
 
   String _parseError(dynamic error) {
-    if (error is AuthException) {
-      switch (error.message) {
-        case 'Invalid login credentials':
-          return 'Email atau password salah';
-        case 'Email not confirmed':
-          return 'Cek email untuk verifikasi';
-        case 'User already registered':
-          return 'Email sudah terdaftar';
-        default:
-          return error.message;
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data != null && data is Map) {
+        // 1. Check for dedicated 'message' field
+        if (data['message'] != null) {
+          return data['message'];
+        }
+        
+        // 2. Check for multi-field validation errors (ASP.NET Core style)
+        if (data['errors'] != null && data['errors'] is Map) {
+          final errorsMap = data['errors'] as Map;
+          final List<String> errorMessages = [];
+          
+          errorsMap.forEach((key, value) {
+            if (value is List) {
+              errorMessages.addAll(value.map((e) => e.toString()));
+            } else {
+              errorMessages.add(value.toString());
+            }
+          });
+          
+          if (errorMessages.isNotEmpty) {
+            return errorMessages.join('\n');
+          }
+        }
+
+        // 3. Fallback to 'title' (often used in RFC 7807 problem details)
+        if (data['title'] != null) {
+          return data['title'];
+        }
       }
+      return 'Koneksi ke server bermasalah (Code: ${error.response?.statusCode ?? "Unknown"})';
     }
     return error.toString();
   }
