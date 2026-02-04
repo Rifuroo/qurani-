@@ -841,20 +841,26 @@ class _CompleteAyahWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Selector<SttController, _AyahState>(
-      selector: (_, controller) {
+    final controller = context.read<SttController>();
+    return GestureDetector(
+      onLongPress: () => controller.handleListViewLongPress(context, segment),
+      behavior: HitTestBehavior.opaque,
+      child: Selector<SttController, _AyahState>(
+        selector: (_, controller) {
+        final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
+        
         final ayatIndex = controller.ayatList.indexWhere(
           (a) => a.surah_id == segment.surahId && a.ayah == segment.ayahNumber,
         );
         final isCurrentAyat =
             ayatIndex >= 0 && ayatIndex == controller.currentAyatIndex;
-        final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
 
         return _AyahState(
           isCurrentAyat: isCurrentAyat,
           wordStatusMap: controller.wordStatusMap[wordStatusKey],
           hideUnreadAyat: controller.hideUnreadAyat,
           isListeningMode: controller.isListeningMode,
+          isHighlighted: controller.currentHighlightKey == wordStatusKey,
         );
       },
       shouldRebuild: (prev, next) => prev != next,
@@ -931,9 +937,10 @@ class _CompleteAyahWidget extends StatelessWidget {
             ],
           ),
         );
-      },
-    );
-  }
+      }, // Selector builder
+    ), // Selector widget
+  ); // GestureDetector
+}
 
   List<Widget> _buildWords(
     BuildContext context,
@@ -979,8 +986,8 @@ class _CompleteAyahWidget extends StatelessWidget {
         }
       }
 
-      // ✅ NEW: DEEP LINK HIGHLIGHT - subtle background for current ayah
-      if (state.isCurrentAyat && wordBg == Colors.transparent) {
+      // ✅ NEW: DEEP LINK / LONG PRESS HIGHLIGHT - subtle background for current ayah
+      if ((state.isCurrentAyat || state.isHighlighted) && wordBg == Colors.transparent) {
         wordBg = AppColors.getPrimary(context).withValues(alpha: 0.1);
       }
 
@@ -1069,7 +1076,7 @@ class _CompleteAyahWidget extends StatelessWidget {
         return Container(
           padding: EdgeInsets.symmetric(
             horizontal: screenWidth * 0.005,
-            vertical: screenHeight * 0.00125,
+            vertical: 0, // ✅ TIGHT: Remove vertical padding for closer fit
           ),
           decoration: BoxDecoration(
             color: wordBg,
@@ -1128,7 +1135,7 @@ class _CompleteAyahWidget extends StatelessWidget {
             BlendMode.srcIn,
           )),
         fontWeight: FontWeight.normal, // ✅ Normal weight for all layouts
-        height: effectiveIsIndopak ? 1.6 : 1.7, // ✅ IndoPak: 1.6 (Original)
+        height: effectiveIsIndopak ? 1.5 : 1.6, // ✅ TIGHT: Match Mushaf View alignment
         letterSpacing: effectiveIsIndopak ? 0 : 0.0,
         shadows: effectiveIsIndopak ? null : [
           Shadow(
@@ -1148,12 +1155,14 @@ class _AyahState {
   final Map<int, WordStatus>? wordStatusMap;
   final bool hideUnreadAyat;
   final bool isListeningMode;
+  final bool isHighlighted;
 
   const _AyahState({
     required this.isCurrentAyat,
     required this.wordStatusMap,
     required this.hideUnreadAyat,
     required this.isListeningMode,
+    required this.isHighlighted,
   });
 
   @override
@@ -1163,6 +1172,7 @@ class _AyahState {
           isCurrentAyat == other.isCurrentAyat &&
           hideUnreadAyat == other.hideUnreadAyat &&
           isListeningMode == other.isListeningMode &&
+          isHighlighted == other.isHighlighted &&
           _mapEquals(wordStatusMap, other.wordStatusMap);
 
   @override
@@ -1170,6 +1180,7 @@ class _AyahState {
     isCurrentAyat,
     hideUnreadAyat,
     isListeningMode,
+    isHighlighted,
     wordStatusMap,
   );
 

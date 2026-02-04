@@ -26,6 +26,7 @@ import 'package:cuda_qurani/config/app_config.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
 import 'package:cuda_qurani/core/widgets/achievement_popup.dart';
 import 'package:cuda_qurani/providers/premium_provider.dart';
+import 'package:cuda_qurani/screens/main/stt/widgets/ayah_options_sheet.dart';
 import 'package:cuda_qurani/models/premium_features.dart';
 
 class SttController extends ChangeNotifier {
@@ -298,6 +299,22 @@ class SttController extends ChangeNotifier {
 
   // Backend Integration - Recording & WebSocket
   final AudioService _audioService = AudioService();
+  
+  // ✅ AYAH LONG-PRESS OPTIONS STATE
+  AyahSegment? _selectedAyahForOptions;
+  AyahSegment? get selectedAyahForOptions => _selectedAyahForOptions;
+
+  void setSelectedAyahForOptions(AyahSegment? segment) {
+    if (_selectedAyahForOptions == segment) return;
+    _selectedAyahForOptions = segment;
+    notifyListeners();
+  }
+
+  void clearSelectedAyahForOptions() {
+    if (_selectedAyahForOptions == null) return;
+    _selectedAyahForOptions = null;
+    notifyListeners();
+  }
   late final WebSocketService _webSocketService;
   bool _isRecording = false;
   bool _isConnected = false;
@@ -305,6 +322,9 @@ class SttController extends ChangeNotifier {
   int _expectedAyah = 1;
   final Map<int, TartibStatus> _tartibStatus = {};
   final Map<String, Map<int, WordStatus>> _wordStatusMap = {};
+  int _wordStatusRevision = 0; // ✅ NEW: State tracker for wordStatusMap changes
+  int get wordStatusRevision => _wordStatusRevision;
+
   List<WordFeedback> _currentWords = [];
   StreamSubscription? _wsSubscription;
   StreamSubscription? _connectionSubscription;
@@ -578,8 +598,31 @@ class SttController extends ChangeNotifier {
       appLogger.log('APP_INIT_ERROR', errorString);
       _errorMessage = errorString;
       _isLoading = false;
+      _isLoading = false;
       notifyListeners();
     }
+  }
+
+  // ✅ NEW: Play specific Ayah (Start Listening from here)
+  Future<void> playAyah(AyahSegment segment) async {
+    appLogger.log('AUDIO', 'Requesting playback for Surah ${segment.surahId}:${segment.ayahNumber}');
+    
+    // Default to Mishari for now (TODO: User preference)
+    const reciterIdentifier = 'mishari-alafasy';
+    
+    // Get Surah stats to find endVerse (play until end of Surah)
+    final surahMeta = MetadataCacheService().getSurah(segment.surahId);
+    final endVerse = surahMeta?['verses_count'] as int? ?? segment.ayahNumber; 
+
+    final settings = PlaybackSettings(
+      startSurahId: segment.surahId,
+      startVerse: segment.ayahNumber,
+      endSurahId: segment.surahId,
+      endVerse: endVerse,
+      reciter: reciterIdentifier,
+    );
+
+    await startListening(settings);
   }
 
   Future<void> startListening(PlaybackSettings settings) async {
@@ -837,6 +880,7 @@ class SttController extends ChangeNotifier {
                 WordStatus.processing;
             _currentHighlightKey = currentKey;
             _currentHighlightWordIdx = layoutWordIndex;
+            _wordStatusRevision++; // ✅ NEW: Sync UI
             /* print(
               '   ✨ Highlighted word $layoutWordIndex in ${currentAyat.surah_id}:${currentAyat.ayah}',
             ); */
@@ -846,6 +890,7 @@ class SttController extends ChangeNotifier {
             );
           }
 
+          _wordStatusRevision++; // ✅ NEW: Trigger rebuild for UI
           notifyListeners();
         }
       });
@@ -855,6 +900,7 @@ class SttController extends ChangeNotifier {
 
       _isRecording = true;
       _hideUnreadAyat = false;
+      _wordStatusRevision++; // ✅ Sync UI
 
       appLogger.log('LISTENING', 'Listening mode started successfully');
       notifyListeners();
@@ -2023,11 +2069,11 @@ class SttController extends ChangeNotifier {
   }
 
   void updatePageCache(int page, List<MushafPageLine> lines) {
-    // ✅ OPTIMIZED: Update cache WITHOUT notifyListeners
-    // UI will update on next natural rebuild cycle
     pageCache[page] = lines;
+    
+    // ✅ NEW: Precompute geometry immediately so highlights are ready
+    _precomputeGeometryForPage(page);
 
-    // ✅ Only notify if this is current visible page
     if (page == _currentPage || page == _listViewCurrentPage) {
       notifyListeners();
     }
@@ -2056,6 +2102,22 @@ class SttController extends ChangeNotifier {
     }
   }
 
+  double? _viewportHeight;
+
+  /// ✅ VIEWPORT TRACKING: Set the height for geometry precomputation
+  void setViewportHeight(double height) {
+    if (_viewportHeight == height) return;
+    _viewportHeight = height;
+    
+    // If height changed, recompute
+    if (pageCache.isNotEmpty) {
+       for (final page in pageCache.keys.toList()) {
+         _precomputeGeometryForPage(page);
+       }
+       notifyListeners(); // ✅ NEW: Trigger UI update
+    }
+  }
+
   /// ✅ VIEWPORT TRACKING: Set the width for geometry precomputation
   void setViewportWidth(double width) {
     if (_viewportWidth == width) return;
@@ -2066,6 +2128,7 @@ class SttController extends ChangeNotifier {
        for (final page in pageCache.keys.toList()) {
          _precomputeGeometryForPage(page);
        }
+       notifyListeners(); // ✅ NEW: Trigger UI update
     }
   }
 
@@ -2108,55 +2171,204 @@ class SttController extends ChangeNotifier {
     final Map<String, List<Rect>> allWordBounds = {};
 
     for (final line in lines) {
-       if (line.lineType != 'ayah' || line.ayahSegments == null) continue;
+      if (line.lineType != 'ayah' || line.ayahSegments == null) continue;
 
-       // 1. Reconstruct logical spans for this line
-       final fontFamily = _mushafLayout.isGlyphBased ? 'p$pageNumber' : 'IndoPak-Nastaleeq';
-       // We use a dummy fontSize here, but it must be proportional
-       const double baseFontSize = 24.0; 
-       
-       final rawSpans = AyahCharMapper.buildStaticLineSpans(
-         line, 
-         fontFamily, 
-         baseFontSize: baseFontSize
-       );
+      // ✅ SYNC WITH UI: Replicate MushafRenderer.calculateLayoutConfig logic
+      final screenWidth = _viewportWidth!;
+      final screenHeight = _viewportHeight ?? (screenWidth * 2.15); // Fallback if height not set yet
+      
+      double horizontalPadding = 0.0;
+      double fontSizeMultiplier = 0.055;
+      double targetLineHeight = screenHeight * 0.05; // Matches MushafRenderer.lineHeight
+      bool isIndopak = !_mushafLayout.isGlyphBased;
 
-       // ⚠️ DO NOT apply justification hack here - it contains WidgetSpan
-       // which requires BuildContext unavailable during background precomputation.
-       // Raw spans are sufficient for measuring word bounding boxes.
-       final spans = rawSpans;
-       final availableWidth = _viewportWidth!; 
+      if (isIndopak) {
+        if (pageNumber == 1 || pageNumber == 2) {
+          horizontalPadding = screenWidth * 0.05;
+          fontSizeMultiplier = 0.070;
+          targetLineHeight = screenHeight * 0.060;
+        } else {
+          horizontalPadding = 0.0;
+          fontSizeMultiplier = 0.0630;
+          targetLineHeight = screenHeight * 0.050;
+        }
+      } else {
+        if (pageNumber == 1 || pageNumber == 2) {
+          horizontalPadding = screenWidth * 0.05;
+          fontSizeMultiplier = 0.062;
+          targetLineHeight = screenHeight * 0.060;
+        } else {
+          horizontalPadding = 0.0;
+          fontSizeMultiplier = 0.060;
+          targetLineHeight = screenHeight * 0.050;
+        }
+      }
 
-       // 2. Measure using TextPainter
-       final tp = TextPainter(
-         text: TextSpan(children: spans),
-         textDirection: TextDirection.rtl,
-         textAlign: line.isCentered ? TextAlign.center : TextAlign.justify,
-       );
-       
-       tp.layout(maxWidth: availableWidth);
+      final double availableWidth = screenWidth - (horizontalPadding * 2) - 2.0;
+      double calculatedFontSize = screenWidth * fontSizeMultiplier;
 
+      // ✅ MATCH UI CAP: MushafRenderer.calculateLayoutConfig caps font at 85% of height
+      final maxFontSizeByHeight = targetLineHeight * 0.85; 
+      if (calculatedFontSize > maxFontSizeByHeight) {
+        calculatedFontSize = maxFontSizeByHeight;
+      }
 
-       // 3. Harvest Bounding Boxes
-       for (final segment in line.ayahSegments!) {
-          final AyahCharMap? charMap = segment.charMap as AyahCharMap?;
-          if (charMap == null) continue;
+      final double lineHForGeometry = targetLineHeight;
 
-          for (final word in segment.words) {
-             try {
-               final (start, end) = charMap.getSegmentRange(word.wordNumber, word.wordNumber);
-               final boxes = tp.getBoxesForSelection(
-                 TextSelection(baseOffset: start, extentOffset: end)
-               );
-               
-               final key = PageGeometry.getWordKey(segment.surahId, segment.ayahNumber, word.wordNumber);
-               allWordBounds[key] = boxes.map((b) => b.toRect()).toList();
-             } catch (_) {}
+      // ⚠️ SYNC WITH UI: Replicate the word-by-word rendering loop
+      final renderUnits = <_GeometryRenderUnit>[];
+      double sumUnitWidths = 0;
+      final fontFamily = _mushafLayout.isGlyphBased ? 'p$pageNumber' : 'IndoPak-Nastaleeq';
+
+      final sortedGeometrySegments = List<AyahSegment>.from(line.ayahSegments ?? []);
+      sortedGeometrySegments.sort((a, b) {
+        if (a.surahId != b.surahId) return a.surahId.compareTo(b.surahId);
+        return a.ayahNumber.compareTo(b.ayahNumber);
+      });
+
+      for (final segment in sortedGeometrySegments) {
+        for (final word in segment.words) {
+          final isLastWord = segment.isEndOfAyah && word == segment.words.last;
+          
+          // Standard scale logic from user's current mushaf_view.dart (1.0 default for effectiveFontSize)
+          final effectiveFontSize = calculatedFontSize;
+
+          double wWidth = 0;
+          if (isLastWord) {
+            // Matches UI: effectiveFontSize * 1.1 + 2.0 (margins)
+            wWidth = effectiveFontSize * 1.1 + 2.0; 
+          } else {
+            final markerStripper = RegExp(r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}]');
+            final cleanText = word.text.replaceAll(markerStripper, '');
+            
+            final double textHeight = (pageNumber == 1 || pageNumber == 2) ? 1.5 : (isIndopak ? 1.6 : 1.8);
+
+            final tpWord = TextPainter(
+              text: TextSpan(
+                text: cleanText,
+                style: TextStyle(
+                  fontSize: effectiveFontSize, 
+                  fontFamily: fontFamily,
+                  height: textHeight,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+              textDirection: TextDirection.rtl,
+              maxLines: 1,
+            )..layout();
+            wWidth = tpWord.width;
           }
-       }
+
+          // ✅ MERGE LOGIC: Mirror the user's "MERGE WITH PREVIOUS WORD" logic
+          if (isLastWord) {
+            if (renderUnits.isNotEmpty) {
+              final lastUnit = renderUnits.removeLast();
+              sumUnitWidths -= lastUnit.totalWidth; 
+              
+              renderUnits.add(_GeometryRenderUnit(
+                segment: segment,
+                wordNumbers: [...lastUnit.wordNumbers, word.wordNumber],
+                wordWidth: lastUnit.wordWidth, 
+                markerWidth: wWidth, 
+              ));
+              sumUnitWidths += (lastUnit.wordWidth + wWidth);
+            } else {
+              // One-word Ayah: Marker is the only thing in the unit
+              renderUnits.add(_GeometryRenderUnit(
+                segment: segment,
+                wordNumbers: [word.wordNumber],
+                wordWidth: 0, 
+                markerWidth: wWidth, 
+              ));
+              sumUnitWidths += wWidth;
+            }
+          } else {
+            renderUnits.add(_GeometryRenderUnit(
+              segment: segment,
+              wordNumbers: [word.wordNumber],
+              wordWidth: wWidth,
+              markerWidth: 0,
+            ));
+            sumUnitWidths += wWidth;
+          }
+        }
+      }
+
+      if (renderUnits.isNotEmpty) {
+        // ✅ UI LOGIC PARITY: Center if isCentered OR only one unit present
+        if (line.isCentered || renderUnits.length == 1) {
+          double currentX = (availableWidth + sumUnitWidths) / 2;
+
+          for (final unit in renderUnits) {
+            // ✅ TIGHT FIT: Match text height (1.5-1.8) to hug font bounds
+            final textHeight = (pageNumber == 1 || pageNumber == 2) ? 1.5 : 1.8;
+            final hUniform = calculatedFontSize * textHeight; 
+            // Push down slightly to align with text baseline
+            final yUniform = (lineHForGeometry - hUniform) / 2 + (calculatedFontSize * 0.1);
+
+            if (unit.markerWidth > 0) {
+              final ornamentScale = (pageNumber == 1 || pageNumber == 2) ? 1.6 : 1.9;
+              final visualMarkerWidth = calculatedFontSize * ornamentScale;
+              final centerXMarker = (currentX - unit.wordWidth) - (unit.markerWidth / 2);
+              final markerLeft = centerXMarker - (visualMarkerWidth / 2);
+              
+              // ✅ FUSED: Word and Marker rects slightly overlap (0.5px) to close tiny white gaps
+              final markerRect = Rect.fromLTWH(markerLeft - 0.5, yUniform, visualMarkerWidth + 1.0, hUniform);
+              final textRect = Rect.fromLTWH(currentX - unit.wordWidth - 0.5, yUniform, unit.wordWidth + 1.0, hUniform);
+
+              for (final wordNum in unit.wordNumbers) {
+                final key = PageGeometry.getWordKey(line.lineNumber, unit.segment.surahId, unit.segment.ayahNumber, wordNum);
+                allWordBounds[key] = [textRect, markerRect];
+              }
+            } else {
+              for (final wordNum in unit.wordNumbers) {
+                final key = PageGeometry.getWordKey(line.lineNumber, unit.segment.surahId, unit.segment.ayahNumber, wordNum);
+                allWordBounds[key] = [Rect.fromLTWH(currentX - unit.wordWidth - 0.5, yUniform, unit.wordWidth + 1.0, hUniform)];
+              }
+            }
+            currentX -= unit.totalWidth;
+          }
+        } else {
+          // Justified: Replicate Row(mainAxisAlignment: MainAxisAlignment.spaceBetween)
+          final double gap = (availableWidth - sumUnitWidths) / (renderUnits.length - 1);
+          
+          double currentX = availableWidth; // RTL
+          for (final unit in renderUnits) {
+            final textHeight = (pageNumber == 1 || pageNumber == 2) ? 1.5 : 1.8;
+            final hUniform = calculatedFontSize * textHeight;
+            final yUniform = (lineHForGeometry - hUniform) / 2 + (calculatedFontSize * 0.1);
+
+            if (unit.markerWidth > 0) {
+              final ornamentScale = (pageNumber == 1 || pageNumber == 2) ? 1.6 : 1.9;
+              final visualMarkerWidth = calculatedFontSize * ornamentScale;
+              final centerXMarker = (currentX - unit.wordWidth) - (unit.markerWidth / 2);
+              final markerLeft = centerXMarker - (visualMarkerWidth / 2);
+
+              final markerRect = Rect.fromLTWH(markerLeft - 0.5, yUniform, visualMarkerWidth + 1.0, hUniform);
+              final textRect = Rect.fromLTWH(currentX - unit.wordWidth - 0.5, yUniform, unit.wordWidth + 1.0, hUniform);
+
+              for (final wordNum in unit.wordNumbers) {
+                final key = PageGeometry.getWordKey(line.lineNumber, unit.segment.surahId, unit.segment.ayahNumber, wordNum);
+                allWordBounds[key] = [textRect, markerRect];
+              }
+            } else {
+              for (final wordNum in unit.wordNumbers) {
+                final key = PageGeometry.getWordKey(line.lineNumber, unit.segment.surahId, unit.segment.ayahNumber, wordNum);
+                allWordBounds[key] = [Rect.fromLTWH(currentX - unit.wordWidth - 0.5, yUniform, unit.wordWidth + 1.0, hUniform)];
+              }
+            }
+            currentX -= (unit.totalWidth + gap);
+          }
+        }
+      }
     }
 
+    final isNewComputation = !_geometryCache.containsKey(pageNumber);
     _geometryCache[pageNumber] = PageGeometry(wordBounds: allWordBounds);
+    
+    if (allWordBounds.isNotEmpty && isNewComputation) {
+       // print('📍 [GEOMETRY] Computed ${allWordBounds.length} word bounds for Page $pageNumber ($_viewportWidth px)');
+    }
   }
 
   void toggleUIVisibility() {
@@ -2167,6 +2379,87 @@ class SttController extends ChangeNotifier {
   void toggleHideUnread() {
     _hideUnreadAyat = !_hideUnreadAyat;
     notifyListeners();
+  }
+
+  /// ✅ MUSHAF LONG-PRESS: Map touch coordinate to Ayah and show options
+  void handleMushafLongPress(
+    BuildContext context,
+    int pageNumber,
+    MushafPageLine line,
+    Offset localPosition,
+  ) {
+    final geometry = _geometryCache[pageNumber];
+    if (geometry == null) return;
+
+    // ✅ LINE-ISOLATED HIT-TEST: Use "line:surah:ayah:word" key format
+    final linePrefix = '${line.lineNumber}:';
+
+    // Search for a word at this position
+    for (var entry in geometry.wordBounds.entries) {
+      final key = entry.key; 
+      
+      // ✅ Only check words belonging to THIS specific line
+      if (!key.startsWith(linePrefix)) continue;
+
+      final boxes = entry.value;
+
+      for (var rect in boxes) {
+        // Simple hit test with small buffer
+        if (rect.inflate(4.0).contains(localPosition)) {
+          final parts = key.split(':');
+          final targetSurahId = int.parse(parts[1]); // ✅ Corrected for line-aware key
+          final targetAyahNum = int.parse(parts[2]); // ✅ Corrected
+          final targetWordIdx = int.parse(parts[3]) - 1; // 1-based to 0-based
+
+          // ✅ NEW: Set as current highlight for visual feedback
+          _currentHighlightKey = '$targetSurahId:$targetAyahNum';
+          _currentHighlightWordIdx = targetWordIdx;
+          _wordStatusRevision++;
+          notifyListeners();
+
+          // Find the segment for this ayah in the current line
+          final segment = line.ayahSegments?.firstWhere(
+            (s) => s.surahId == targetSurahId && s.ayahNumber == targetAyahNum,
+            orElse: () => line.ayahSegments!.first,
+          );
+
+          if (segment != null) {
+            final name = _metadataCache.getSurah(targetSurahId)?['name_simple'] ?? 'Surah';
+            AyahOptionsSheet.show(context, segment, name).then((_) {
+              // ✅ Clear highlight when modal closed (unless recording/listening)
+              if (!_isRecording && !_isListeningMode) {
+                _currentHighlightKey = null;
+                _wordStatusRevision++;
+                notifyListeners();
+              }
+            });
+          }
+          return;
+        }
+      }
+    }
+  }
+
+  void handleListViewLongPress(
+    BuildContext context,
+    AyahSegment segment,
+  ) {
+    final surahName = _metadataCache.getSurah(segment.surahId)?['name_simple'] ?? 'Surah';
+    
+    // ✅ NEW: Highlight this ayah visually for feedback
+    _currentHighlightKey = '${segment.surahId}:${segment.ayahNumber}';
+    _currentHighlightWordIdx = 0;
+    _wordStatusRevision++;
+    notifyListeners();
+
+    AyahOptionsSheet.show(context, segment, surahName).then((_) {
+      // ✅ Clear highlight when modal closed
+      if (!_isRecording && !_isListeningMode) {
+        _currentHighlightKey = null;
+        _wordStatusRevision++;
+        notifyListeners();
+      }
+    });
   }
 
   Future<void> toggleQuranMode() async {
@@ -2538,6 +2831,12 @@ class SttController extends ChangeNotifier {
           _wordStatusMap[processingKey] = {};
         _wordStatusMap[processingKey]![processingWordIndex] =
             WordStatus.processing;
+        
+        // ✅ NEW: Update highlight state for UI pulsing
+        _currentHighlightKey = processingKey;
+        _currentHighlightWordIdx = processingWordIndex;
+        _wordStatusRevision++; 
+        
         notifyListeners();
         break;
 
@@ -2648,6 +2947,9 @@ class SttController extends ChangeNotifier {
           if (currentNextStatus == null ||
               currentNextStatus == WordStatus.pending) {
             _wordStatusMap[feedbackKey]![nextWordIndex] = WordStatus.processing;
+            _currentHighlightKey = feedbackKey;
+            _currentHighlightWordIdx = nextWordIndex;
+            
             _currentWords[nextWordIndex] = WordFeedback(
               text: _currentWords[nextWordIndex].text,
               status: WordStatus.processing,
@@ -2657,6 +2959,7 @@ class SttController extends ChangeNotifier {
           }
         }
 
+        _wordStatusRevision++; // ✅ NEW: Trigger rebuild for UI
         notifyListeners();
         break;
 
@@ -2739,11 +3042,16 @@ class SttController extends ChangeNotifier {
           }
           // Set word 0 to processing (blue)
           _wordStatusMap[nextAyahKey]![0] = WordStatus.processing;
+          
+          _currentHighlightKey = nextAyahKey;
+          _currentHighlightWordIdx = 0;
+          
           print(
             '🔵 STT: Ayah complete! Set first word of next ayah to processing - $nextAyahKey[0]',
           );
         }
 
+        _wordStatusRevision++; // ✅ NEW: Trigger rebuild
         notifyListeners();
         break;
 
@@ -3426,6 +3734,7 @@ class SttController extends ChangeNotifier {
       } else {
         print('   Keeping wordStatusMap (resuming session: $resumeSessionId)');
       }
+      _wordStatusRevision++; // ✅ NEW: Sync UI
       _expectedAyah = 1;
       _sessionId = resumeSessionId; // ? Use existing session_id if resuming
       _errorMessage = '';
@@ -3800,4 +4109,20 @@ class PageDisplayData {
       juzNumber: 1,
     );
   }
+}
+
+// ✅ Helper for geometry precomputation (matches UI rendering units)
+class _GeometryRenderUnit {
+  final AyahSegment segment;
+  final List<int> wordNumbers;
+  final double wordWidth;
+  final double markerWidth;
+  double get totalWidth => wordWidth + markerWidth;
+
+  _GeometryRenderUnit({
+    required this.segment,
+    required this.wordNumbers,
+    required this.wordWidth,
+    required this.markerWidth,
+  });
 }

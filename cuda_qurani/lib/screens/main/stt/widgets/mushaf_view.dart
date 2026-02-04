@@ -447,7 +447,8 @@ class MushafPageContent extends StatelessWidget {
     // ✅ HARDENING: Record viewport width for coordinate mapping
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (context.mounted) {
-        controller.setViewportWidth(layoutConfig.availableWidth);
+        controller.setViewportWidth(screenWidth);
+        controller.setViewportHeight(screenHeight);
       }
     });
 
@@ -664,13 +665,14 @@ class _JustifiedAyahLine extends StatelessWidget {
 
     // ⚡️ ULTIMATE OPTIMIZATION: Rebuild ONLY if the active highlight is on THIS line
     final lineHighlightState = context.select<SttController, String>((c) {
+      final revision = c.wordStatusRevision;
       if (c.currentHighlightKey == null || !lineAyahKeys.contains(c.currentHighlightKey)) {
         final hasAnyActive = lineAyahKeys.any((key) => 
           c.wordStatusMap[key]?.values.any((s) => s != WordStatus.pending) ?? false
         );
-        return hasAnyActive ? 'has_status' : 'none';
+        return '${hasAnyActive ? 'has_status' : 'none'}:$revision';
       }
-      return '${c.currentHighlightKey}:${c.currentHighlightWordIdx}';
+      return '${c.currentHighlightKey}:${c.currentHighlightWordIdx}:$revision';
     });
 
     final controller = context.read<SttController>();
@@ -855,31 +857,40 @@ class _JustifiedAyahLine extends StatelessWidget {
       }
     }
 
-    // ✅ Build stack with highlights
-    return Stack(
-      children: [
-        RepaintBoundary(
-          key: ValueKey('static_line_${pageNumber}_${line.lineNumber}'),
-          child: MushafRenderer.renderJustifiedLine(
-            wordSpans: spans,
-            isCentered: line.isCentered,
-            availableWidth: layoutConfig.availableWidth,
-            context: context,
-            allowOverflow: false,
-            customLineHeight: layoutConfig.lineHeight,
-            useFittedBox: layoutConfig.useFittedBox,
-          ),
-        ),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: _WordHighlightOverlay(
-              line: line,
-              pageNumber: pageNumber,
-              layoutConfig: layoutConfig,
+    // ✅ Build stack with highlights and interaction
+    return GestureDetector(
+      onLongPressStart: (details) => controller.handleMushafLongPress(
+        context,
+        pageNumber,
+        line,
+        details.localPosition,
+      ),
+      behavior: HitTestBehavior.opaque, // ✅ FIX: Ensure entire line area is touch-responsive
+      child: Stack(
+        children: [
+          RepaintBoundary(
+            key: ValueKey('static_line_${pageNumber}_${line.lineNumber}'),
+            child: MushafRenderer.renderJustifiedLine(
+              wordSpans: spans,
+              isCentered: line.isCentered,
+              availableWidth: layoutConfig.availableWidth,
+              context: context,
+              allowOverflow: false,
+              customLineHeight: layoutConfig.lineHeight,
+              useFittedBox: layoutConfig.useFittedBox,
             ),
           ),
-        ),
-      ],
+          Positioned.fill(
+            child: IgnorePointer(
+              child: _WordHighlightOverlay(
+                line: line,
+                pageNumber: pageNumber,
+                layoutConfig: layoutConfig,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -911,15 +922,8 @@ class _WordHighlightOverlay extends StatelessWidget {
       return '${c.currentHighlightKey}:${c.currentHighlightWordIdx}';
     });
 
-    // Hash of statuses on THIS line for efficient rebuilds
-    final statusHash = context.select<SttController, int>((c) {
-      int hash = 0;
-      for (final segment in line.ayahSegments!) {
-        final status = c.wordStatusMap[segment.verseKey];
-        if (status != null) hash ^= status.hashCode;
-      }
-      return hash;
-    });
+    // ✅ NEW: Use revision counter to detect map changes (O(1))
+    final revision = context.select<SttController, int>((c) => c.wordStatusRevision);
 
     final controller = context.read<SttController>();
     
@@ -930,8 +934,8 @@ class _WordHighlightOverlay extends StatelessWidget {
         controller: controller,
         correctColor: AppColors.getCorrect(context).withValues(alpha: 0.4),
         incorrectColor: AppColors.getIncorrect(context).withValues(alpha: 0.4),
-        infoColor: AppColors.getInfo(context).withValues(alpha: 0.4),
-        primaryColor: AppColors.getPrimary(context).withValues(alpha: 0.1),
+        infoColor: AppColors.getInfo(context).withValues(alpha: 0.3),
+        primaryColor: AppColors.getPrimary(context).withValues(alpha: 0.2),
       ),
     );
   }
@@ -971,6 +975,8 @@ class _WordHighlightPainter extends CustomPainter {
       final statuses = wordStatusMap[key];
       if (statuses == null && key != highlightKey) continue;
 
+      final Set<Rect> ayahRectsToDraw = {};
+
       for (final word in segment.words) {
         final wordIdx = word.wordNumber - 1;
         final status = statuses?[wordIdx];
@@ -978,24 +984,47 @@ class _WordHighlightPainter extends CustomPainter {
         Color? highlightColor;
         if (status != null && status != WordStatus.pending) {
           highlightColor = _getHighlightColor(status);
-        } else if (key == highlightKey && highlightWordIdx == wordIdx) {
+        } else if (key == highlightKey) {
           highlightColor = primaryColor;
         }
 
         if (highlightColor != null) {
-          final geometryKey = PageGeometry.getWordKey(segment.surahId, segment.ayahNumber, word.wordNumber);
+          final geometryKey = PageGeometry.getWordKey(line.lineNumber, segment.surahId, segment.ayahNumber, word.wordNumber);
           final rects = geometry.wordBounds[geometryKey];
 
           if (rects != null) {
             paint.color = highlightColor;
             for (final rect in rects) {
-              canvas.drawRRect(
-                RRect.fromRectAndRadius(rect, const Radius.circular(4)),
-                paint,
-              );
+              // Collect unique rects to avoid double-drawing alpha overlap (causing "thickness/darkening")
+              ayahRectsToDraw.add(rect);
             }
           }
         }
+      }
+
+      // Draw all collected unique rects for this Ayah as a SINGLE continuous block
+      if (ayahRectsToDraw.isNotEmpty) {
+        double minL = double.infinity;
+        double minT = double.infinity;
+        double maxR = double.negativeInfinity;
+        double maxB = double.negativeInfinity;
+
+        for (final rect in ayahRectsToDraw) {
+          if (rect.left < minL) minL = rect.left;
+          if (rect.top < minT) minT = rect.top;
+          if (rect.right > maxR) maxR = rect.right;
+          if (rect.bottom > maxB) maxB = rect.bottom;
+        }
+
+        final fusedRect = Rect.fromLTRB(minL, minT, maxR, maxB);
+        
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            fusedRect.inflate(0.5), 
+            const Radius.circular(8), // ⚡️ PREMIUM: Softer, more rounded corners
+          ),
+          paint,
+        );
       }
     }
   }

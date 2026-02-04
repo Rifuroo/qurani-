@@ -123,9 +123,9 @@ class ListeningAudioService {
             'segments': verse['segments'],
           });
 
-          print(
-            '  Ã¢Å“â€¦ Added: Surah ${localInfo['surah_id']} Ayah ${localInfo['ayah_number']} (Global #$globalAyahNum)',
-          );
+          /* print(
+            '  ✅ Added: Surah ${localInfo['surah_id']} Ayah ${localInfo['ayah_number']} (Global #$globalAyahNum)',
+          ); */
         }
       }
     }
@@ -166,9 +166,11 @@ Future<void> _playNextTrack() async {
       _isPlaying = false;
       _isPaused = false;
       await _player.stop();
-      _currentVerseController?.add(
-        VerseReference(surahId: -999, verseNumber: -999),
-      );
+      if (!(_currentVerseController?.isClosed ?? true)) {
+        _currentVerseController?.add(
+          VerseReference(surahId: -999, verseNumber: -999),
+        );
+      }
       print('Ã¢Å“â€¦ Listening mode fully stopped');
     }
     return;

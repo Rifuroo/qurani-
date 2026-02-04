@@ -278,5 +278,5 @@ class PageGeometry {
   
   PageGeometry({required this.wordBounds});
 
-  static String getWordKey(int surah, int ayah, int word) => '$surah:$ayah:$word';
+  static String getWordKey(int line, int surah, int ayah, int word) => '$line:$surah:$ayah:$word';
 }
