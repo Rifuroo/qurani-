@@ -46,25 +46,11 @@ class AyahOptionsSheet extends StatelessWidget {
       // height: screenHeight * 0.5, // ❌ Remove fixed height to allow shrink-wrap
       decoration: BoxDecoration(
         color: AppColors.getSurface(context),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
       ),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min, // ✅ Shrink to fit content
           children: [
-            // Handle
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.getBorderLight(context),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
 
             // Header Row: [36:3] Ya-Sin - Verse 3 [X]
             Padding(
