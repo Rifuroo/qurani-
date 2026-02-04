@@ -42,11 +42,8 @@ class AyahOptionsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     
-    return Container(
-      // height: screenHeight * 0.5, // ❌ Remove fixed height to allow shrink-wrap
-      decoration: BoxDecoration(
-        color: AppColors.getSurface(context),
-      ),
+    return Material(
+      color: AppColors.getSurface(context),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min, // ✅ Shrink to fit content
