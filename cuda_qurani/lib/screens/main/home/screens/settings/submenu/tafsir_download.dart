@@ -1,6 +1,8 @@
 // lib/screens/main/home/screens/settings/submenu/tafsir_download.dart
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cuda_qurani/services/quran_resource_service.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
 
@@ -16,11 +18,28 @@ class TafsirDownloadPage extends StatefulWidget {
 
 class _TafsirDownloadPageState extends State<TafsirDownloadPage> {
   Map<String, dynamic> _translations = {};
+  final Map<String, bool> _downloadedTafsirs = {};
 
   @override
   void initState() {
     super.initState();
     _loadTranslations();
+    _checkDownloads();
+  }
+
+  Future<void> _checkDownloads() async {
+    for (var entry in _availableTafsirs.entries) {
+      for (var tafsir in entry.value) {
+        final isDownloaded = await Provider.of<QuranResourceService>(context, listen: false).isDownloaded(
+          'tafsir',
+          tafsir['name']!,
+          tafsir['language']!,
+        );
+        setState(() {
+          _downloadedTafsirs['${tafsir['id']}_${tafsir['name']}'] = isDownloaded;
+        });
+      }
+    }
   }
 
   Future<void> _loadTranslations() async {
@@ -35,80 +54,47 @@ class _TafsirDownloadPageState extends State<TafsirDownloadPage> {
   final Map<String, bool> _expandedLanguages = {};
 
   // Available tafsirs grouped by language
+  // NOTE: Added 'id' to matches what we have in assets
   final Map<String, List<Map<String, String>>> _availableTafsirs = {
     'العربية': [
-      {'name': 'Tafsir Al-Jalalayn', 'language': 'العربية'},
-      {'name': 'Tafsir Ibn Kathir', 'language': 'العربية'},
-      {'name': 'Tafsir Al-Tabari', 'language': 'العربية'},
-      {'name': 'Tafsir Al-Qurtubi', 'language': 'العربية'},
-      {'name': 'Tafsir Al-Sa\'di', 'language': 'العربية'},
+      {'id': '23', 'name': 'Tafseer Al-Qurtubi', 'language': 'العربية'},
+      {'id': '37', 'name': 'Tafsir Al-Tabari', 'language': 'العربية'},
+      {'id': '38', 'name': 'Tafsir Al-Muyassar', 'language': 'العربية'},
+      {'id': '523', 'name': 'Tafsir Jalalayn', 'language': 'العربية'},
     ],
     'English': [
-      {
-        'name': 'A Brief Explanation of the Glorious Quran',
-        'language': 'English',
-      },
-      {'name': 'Tafsir Ibn Kathir', 'language': 'English'},
-      {'name': 'Tazkirul Quran', 'language': 'English'},
-      {'name': 'Ma\'ariful Qur\'an', 'language': 'English'},
+      {'id': '35', 'name': 'Tafsir Ibn Kathir', 'language': 'English'},
+      {'id': '34', 'name': 'Maarif-ul-Quran', 'language': 'English'},
+      {'id': '42', 'name': 'Tazkirul Quran', 'language': 'English'},
+      {'id': '266', 'name': 'Al-Mukhtasar', 'language': 'English'},
     ],
     'Bahasa Indonesia': [
-      {'name': 'Tafsir Al-Saadi', 'language': 'Bahasa Indonesia'},
-      {
-        'name': 'Al-Mukhtasar in Interpreting the Noble Quran',
-        'language': 'Bahasa Indonesia',
-      },
+      {'id': '503', 'name': 'Tafsir As-Saadi', 'language': 'Bahasa Indonesia'},
+      {'id': '260', 'name': 'Al-Mukhtasar', 'language': 'Bahasa Indonesia'},
+      {'id': '41', 'name': 'Tafsir Jalalayn', 'language': 'Bahasa Indonesia'},
     ],
     'বাংলা': [
-      {'name': 'Tafsir Ahsanul Bayaan', 'language': 'বাংলা'},
-      {'name': 'Tafsir Abu Bakr Zakaria', 'language': 'বাংলা'},
+      {'id': '32', 'name': 'Ahsanul Bayaan', 'language': 'বাংলা'},
+      {'id': '33', 'name': 'Abu Bakr Zakaria', 'language': 'বাংলা'},
     ],
     'اردو': [
-      {'name': 'Tafheem-ul-Quran', 'language': 'اردو'},
-      {'name': 'Tafsir Ahsanul Bayan', 'language': 'اردو'},
-    ],
-    'Türkçe': [
-      {'name': 'Elmalılı Hamdi Yazır Tefsiri', 'language': 'Türkçe'},
-    ],
-    'فارسی': [
-      {'name': 'Tafsir Noor', 'language': 'فارسی'},
-      {'name': 'Tafsir Nemooneh', 'language': 'فارسی'},
-    ],
-    'Français': [
-      {'name': 'Tafsir Al-Sa\'di', 'language': 'Français'},
-    ],
-    'Русский': [
-      {'name': 'Tafsir Al-Muntakhab', 'language': 'Русский'},
-    ],
-    'Español': [
-      {'name': 'Tafsir Al-Muyassar', 'language': 'Español'},
-    ],
-    'Italiano': [
-      {'name': 'Tafsir Al-Jalalayn', 'language': 'Italiano'},
-    ],
-    'অসমীয়া': [
-      {'name': 'Tafsir Ahsanul Bayaan', 'language': 'অসমীয়া'},
+      {'id': '29', 'name': 'Bayan ul Quran', 'language': 'اردو'},
+      {'id': '30', 'name': 'Tafsir Ibn Kathir', 'language': 'اردو'},
     ],
     'Bosanski': [
-      {'name': 'Tefsir Ibn Kesir', 'language': 'Bosanski'},
+      {'id': '252', 'name': 'Tefsir Ibn Kesir', 'language': 'Bosanski'},
     ],
-    '日本語': [
-      {'name': 'Tafsir Al-Muyassar', 'language': '日本語'},
+    'Русский': [
+      {'id': '262', 'name': 'Al-Mukhtasar', 'language': 'Русский'},
+      {'id': '307', 'name': 'Tafsir Ibne Kathir', 'language': 'Русский'},
+      {'id': '36', 'name': 'Tafseer Al Saddi', 'language': 'Русский'},
     ],
-    'Khmer': [
-      {'name': 'Tafsir Al-Muyassar', 'language': 'Khmer'},
+    'Türkçe': [
+      {'id': '306', 'name': 'Tafsir Ibne Kathir', 'language': 'Türkçe'},
+      {'id': '258', 'name': 'Al-Mukhtasar', 'language': 'Türkçe'},
     ],
     'Kurdî': [
-      {'name': 'Tefsîra Quranê', 'language': 'Kurdî'},
-    ],
-    'മലയാളം': [
-      {'name': 'Tafsir Cheriyamudam Abdul Hammed', 'language': 'മലയാളം'},
-    ],
-    'Tagalog': [
-      {'name': 'Tafsir Al-Muyassar', 'language': 'Tagalog'},
-    ],
-    'Tiếng Việt': [
-      {'name': 'Tafsir Al-Muyassar', 'language': 'Tiếng Việt'},
+      {'id': '40', 'name': 'Rebar Kurdish Tafsir', 'language': 'Kurdî'},
     ],
   };
 
@@ -119,15 +105,34 @@ class _TafsirDownloadPageState extends State<TafsirDownloadPage> {
     AppHaptics.selection();
   }
 
-  void _downloadTafsir(String name, String language) {
-    // TODO: Implement download logic
+  void _downloadTafsir(String id, String name, String language) async {
+    final resourceService = Provider.of<QuranResourceService>(context, listen: false);
+    final key = '${id}_$name';
+    
+    final sanitizedName = name.replaceAll(' ', '_').replaceAll('/', '_').replaceAll("'", "").replaceAll('"', '').replaceAll(':', '');
+    final sanitizedLang = language.replaceAll(' ', '_').replaceAll('/', '_');
+
+    if (_downloadedTafsirs[key] == true) {
+      resourceService.loadTafsir(id, '${sanitizedName}_$sanitizedLang');
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Selected Tafsir: $name'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // Real download logic (simulated/actual via service)
     AppHaptics.light();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Downloading: $name'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    await resourceService.downloadResource('tafsir', id, name, language);
+    
+    // Auto-load after download
+    resourceService.loadTafsir(id, '${sanitizedName}_$sanitizedLang');
+
+    // Refresh status after download
+    _checkDownloads();
   }
 
   Widget _buildAvailableDownloadsSection() {
@@ -181,36 +186,39 @@ class _TafsirDownloadPageState extends State<TafsirDownloadPage> {
       ),
       child: Column(
         children: [
-          InkWell(
-            onTap: () => _toggleLanguageExpansion(language),
-            borderRadius: BorderRadius.circular(
-              AppDesignSystem.radiusMedium * s * 0.9,
-            ),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppDesignSystem.space16 * s * 0.9,
-                vertical: AppDesignSystem.space16 * s * 0.9,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _toggleLanguageExpansion(language),
+              borderRadius: BorderRadius.circular(
+                AppDesignSystem.radiusMedium * s * 0.9,
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      language,
-                      style: TextStyle(
-                        fontSize: 16 * s * 0.9,
-                        fontWeight: AppTypography.regular,
-                        color: AppColors.getTextPrimary(context),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppDesignSystem.space16 * s * 0.9,
+                  vertical: AppDesignSystem.space16 * s * 0.9,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        language,
+                        style: TextStyle(
+                          fontSize: 16 * s * 0.9,
+                          fontWeight: AppTypography.regular,
+                          color: AppColors.getTextPrimary(context),
+                        ),
                       ),
                     ),
-                  ),
-                  Icon(
-                    isExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    size: 24 * s * 0.9,
-                    color: AppColors.getTextSecondary(context),
-                  ),
-                ],
+                    Icon(
+                      isExpanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      size: 24 * s * 0.9,
+                      color: AppColors.getTextSecondary(context),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -227,7 +235,7 @@ class _TafsirDownloadPageState extends State<TafsirDownloadPage> {
 
               return Column(
                 children: [
-                  _buildTafsirItem(tafsir['name']!, tafsir['language']!),
+                  _buildTafsirItem(tafsir['id']!, tafsir['name']!, tafsir['language']!),
                   if (!isLast)
                     Divider(
                       height: 1,
@@ -243,58 +251,81 @@ class _TafsirDownloadPageState extends State<TafsirDownloadPage> {
     );
   }
 
-  Widget _buildTafsirItem(String name, String language) {
+  Widget _buildTafsirItem(String id, String name, String language) {
     final s = AppDesignSystem.getScaleFactor(context);
+    final resourceService = Provider.of<QuranResourceService>(context);
+    final key = '${id}_$name';
+    final isDownloaded = _downloadedTafsirs[key] ?? false;
+    final isSelected = resourceService.selectedTafsirId == id;
+    final downloadProgress = resourceService.downloadProgress[key];
+    final isDownloading = downloadProgress != null;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppDesignSystem.space16 * s * 0.9,
-        vertical: AppDesignSystem.space16 * s * 0.9,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 16 * s * 0.9,
-                    fontWeight: AppTypography.regular,
-                    color: AppColors.getTextPrimary(context),
-                  ),
-                ),
-                SizedBox(height: 4 * s * 0.9),
-                Text(
-                  language,
-                  style: TextStyle(
-                    fontSize: 14 * s * 0.9,
-                    fontWeight: AppTypography.regular,
-                    color: AppColors.getTextSecondary(context),
-                  ),
-                ),
-              ],
-            ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isDownloading ? null : () => _downloadTafsir(id, name, language),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppDesignSystem.space16 * s * 0.9,
+            vertical: AppDesignSystem.space16 * s * 0.9,
           ),
-          InkWell(
-            onTap: () => _downloadTafsir(name, language),
-            borderRadius: BorderRadius.circular(20 * s * 0.9),
-            child: Container(
-              width: 40 * s * 0.9,
-              height: 40 * s * 0.9,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.getTextPrimary(context),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 16 * s * 0.9,
+                        fontWeight: isSelected ? AppTypography.bold : AppTypography.regular,
+                        color: isSelected ? AppColors.getPrimary(context) : AppColors.getTextPrimary(context),
+                      ),
+                    ),
+                    SizedBox(height: 4 * s * 0.9),
+                    Text(
+                      language,
+                      style: TextStyle(
+                        fontSize: 14 * s * 0.9,
+                        fontWeight: AppTypography.regular,
+                        color: AppColors.getTextSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Icon(
-                Icons.arrow_downward,
-                size: 20 * s * 0.9,
-                color: AppColors.getSurface(context),
+              Container(
+                width: 40 * s * 0.9,
+                height: 40 * s * 0.9,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDownloading 
+                      ? AppColors.getPrimary(context).withValues(alpha: 0.1)
+                      : (isDownloaded 
+                          ? (isSelected ? AppColors.getPrimary(context) : AppColors.getPrimary(context).withValues(alpha: 0.2))
+                          : AppColors.getBorderLight(context).withValues(alpha: 0.5)),
+                ),
+                child: isDownloading
+                    ? Padding(
+                        padding: const EdgeInsets.all(10.0),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          value: (downloadProgress == 0.0) ? null : downloadProgress,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.getPrimary(context)),
+                        ),
+                      )
+                    : Icon(
+                        isDownloaded ? Icons.check : Icons.arrow_downward,
+                        size: 20 * s * 0.9,
+                        color: isDownloaded 
+                            ? (isSelected ? Colors.white : AppColors.getPrimary(context))
+                            : AppColors.getTextSecondary(context),
+                      ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

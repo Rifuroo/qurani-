@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
-import 'package:cuda_qurani/screens/main/stt/widgets/translation_placeholder_view.dart';
+import 'package:cuda_qurani/screens/main/stt/widgets/ayah_detail_view.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/tafsir_placeholder_view.dart';
+import 'package:cuda_qurani/screens/main/stt/widgets/translation_placeholder_view.dart';
 import '../data/models.dart';
+import '../services/quran_service.dart';
 
 class AyahOptionsSheet extends StatelessWidget {
   final AyahSegment segment;
@@ -19,6 +21,7 @@ class AyahOptionsSheet extends StatelessWidget {
   static Future<void> show(BuildContext context, AyahSegment segment, String surahName) {
     // Set selection highlight in controller
     final sttController = context.read<SttController>();
+    final quranService = context.read<QuranService>();
     sttController.setSelectedAyahForOptions(segment);
 
     return showModalBottomSheet(
@@ -29,6 +32,7 @@ class AyahOptionsSheet extends StatelessWidget {
       builder: (context) => MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: sttController),
+          Provider.value(value: quranService),
         ],
         child: AyahOptionsSheet(segment: segment, surahName: surahName),
       ),
@@ -114,16 +118,30 @@ class AyahOptionsSheet extends StatelessWidget {
                   label: 'Translations',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TranslationPlaceholderView(
-                          surahId: segment.surahId,
-                          ayahNumber: segment.ayahNumber,
-                          surahName: surahName,
+                    try {
+                      final sttController = Provider.of<SttController>(context, listen: false);
+                      final quranService = Provider.of<QuranService>(context, listen: false);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MultiProvider(
+                            providers: [
+                              ChangeNotifierProvider.value(value: sttController),
+                              Provider.value(value: quranService),
+                            ],
+                            child: TranslationPlaceholderView(
+                              segment: segment,
+                              surahName: surahName,
+                            ),
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    } catch (e) {
+                      print('Error navigating to TranslationPlaceholderView: $e');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Unable to load translation view')),
+                      );
+                    }
                   },
                 ),
                 const Divider(height: 1, thickness: 0.5),
@@ -133,16 +151,30 @@ class AyahOptionsSheet extends StatelessWidget {
                   label: 'Tafsir',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TafsirPlaceholderView(
-                          surahId: segment.surahId,
-                          ayahNumber: segment.ayahNumber,
-                          surahName: surahName,
+                    try {
+                      final sttController = Provider.of<SttController>(context, listen: false);
+                      final quranService = Provider.of<QuranService>(context, listen: false);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MultiProvider(
+                            providers: [
+                              ChangeNotifierProvider.value(value: sttController),
+                              Provider.value(value: quranService),
+                            ],
+                            child: TafsirPlaceholderView(
+                              segment: segment,
+                              surahName: surahName,
+                            ),
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    } catch (e) {
+                      print('Error navigating to TafsirPlaceholderView: $e');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Unable to load tafsir view')),
+                      );
+                    }
                   },
                 ),
                 const Divider(height: 1, thickness: 0.5),

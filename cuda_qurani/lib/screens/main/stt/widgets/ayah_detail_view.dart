@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
+import 'package:cuda_qurani/services/quran_resource_service.dart';
+import 'package:provider/provider.dart';
 import '../data/models.dart';
 
 /// A detailed view for a specific Ayah, allowing users to read Tafsir and Translations.
@@ -31,6 +33,7 @@ class _AyahDetailViewState extends State<AyahDetailView> {
   @override
   Widget build(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
+    final resourceService = Provider.of<QuranResourceService>(context);
 
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
@@ -113,40 +116,55 @@ class _AyahDetailViewState extends State<AyahDetailView> {
                    ),
                    SizedBox(height: AppDesignSystem.space24 * s),
                    
-                   // Info Section Header
-                   Row(
-                     children: [
-                       Container(
-                         width: 4,
-                         height: 18 * s,
-                         decoration: BoxDecoration(
-                           color: AppColors.getPrimary(context),
-                           borderRadius: BorderRadius.circular(2),
-                         ),
-                       ),
-                       SizedBox(width: AppDesignSystem.space10 * s),
-                       Text(
-                         _mode == 'tafsir' ? 'Tafsir Jalalayn' : 'Terjemahan Kemenag',
-                         style: TextStyle(
-                           fontSize: 14 * s,
-                           fontWeight: FontWeight.bold,
-                           color: AppColors.getPrimary(context),
-                           letterSpacing: 0.5,
-                         ),
-                       ),
-                     ],
-                   ),
-                   SizedBox(height: AppDesignSystem.space16 * s),
+                   // Info Section Header & Real Content Text
+                   FutureBuilder<String?>(
+                     future: _mode == 'tafsir' 
+                        ? resourceService.getTafsirText(widget.segment.surahId, widget.segment.ayahNumber)
+                        : resourceService.getTranslationText(widget.segment.surahId, widget.segment.ayahNumber),
+                     builder: (context, snapshot) {
+                        final content = snapshot.data;
+                        final sourceName = _mode == 'tafsir' 
+                            ? (resourceService.selectedTafsirName ?? 'Tafsir Jalalayn')
+                            : (resourceService.selectedTranslationName ?? 'Translation');
 
-                   // Content Text Placeholders
-                   if (_mode == 'tafsir') 
-                     _buildPlaceholderContent(
-                       "Tafsir Al-Jalalayn adalah kitab tafsir Al-Qur'an terkenal yang awalnya disusun oleh Jalaluddin al-Mahalli dan kemudian dilanjutkan oleh muridnya, Jalaluddin as-Suyuthi. \n\n[Placeholder] Tafsir untuk ayat ini akan ditampilkan di sini setelah database diintegrasikan sepenuhnya. Konten ini akan mencakup penjelasan makna, asbabun nuzul (jika ada), dan hikmah yang terkandung dalam ayat tersebut."
-                     )
-                   else
-                     _buildPlaceholderContent(
-                       "Sesungguhnya Kami telah memberikan kepadamu nikmat yang banyak. Maka dirikanlah shalat karena Tuhanmu; dan berkorbanlah. Sesungguhnya orang-orang yang membenci kamu dialah yang terputus. \n\n[Placeholder] Terjemahan resmi dari Kemenag RI atau sumber lain akan ditampilkan di sini."
-                     ),
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: CircularProgressIndicator(),
+                          ));
+                        }
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 18 * s,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.getPrimary(context),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                SizedBox(width: AppDesignSystem.space10 * s),
+                                Text(
+                                  sourceName,
+                                  style: TextStyle(
+                                    fontSize: 14 * s,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.getPrimary(context),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: AppDesignSystem.space16 * s),
+                            _buildContentArea(content ?? "Resource not selected or downloaded. Please go to Settings > Downloads to select a resource."),
+                          ],
+                        );
+                     },
+                   ),
                    
                    SizedBox(height: AppDesignSystem.space40 * s),
                 ],
@@ -187,7 +205,7 @@ class _AyahDetailViewState extends State<AyahDetailView> {
     );
   }
 
-  Widget _buildPlaceholderContent(String text) {
+  Widget _buildContentArea(String text) {
     final s = AppDesignSystem.getScaleFactor(context);
     return Text(
       text,

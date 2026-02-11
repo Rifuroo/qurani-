@@ -26,6 +26,7 @@ import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/providers/premium_provider.dart';
 import 'package:cuda_qurani/providers/theme_provider.dart';
 import 'package:cuda_qurani/providers/reminder_provider.dart';
+import 'services/quran_resource_service.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 
 // Global flags to track initialization
@@ -191,11 +192,9 @@ class MainApp extends StatelessWidget {
           create: (_) => PremiumProvider()..initialize(),
           lazy: false,
         ),
-        ChangeNotifierProvider(
-          create: (_) => ReminderProvider()..initialize(),
-          lazy: false,
-        ),
+        ChangeNotifierProvider(create: (_) => ReminderProvider()..initialize(), lazy: false),
         ChangeNotifierProvider(create: (_) => RecitationProvider(), lazy: true),
+        ChangeNotifierProvider(create: (_) => QuranResourceService(), lazy: false),
       ],
       child: Consumer2<LanguageProvider, ThemeProvider>(
         builder: (context, languageProvider, themeProvider, child) {
