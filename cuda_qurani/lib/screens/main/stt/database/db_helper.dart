@@ -13,6 +13,7 @@ enum DBType {
   uthmani,
   indopak_15,
   indopak_wbw,
+  mutashabihat,
 }
 
 class DBHelper {
@@ -56,6 +57,10 @@ class DBHelper {
       DBType.indopak_wbw: {
         "asset": "assets/indopak/indopak-nastaleeq-word-by-word.db",
         "name": "indopak-nastaleeq-word-by-word.db",
+      },
+      DBType.mutashabihat: {
+        "asset": "assets/data/matching-ayah.db",
+        "name": "matching-ayah.db",
       },
     };
 
@@ -149,6 +154,7 @@ class DBHelper {
       DBType.qpc_v2_wbw: "qpc-v2.db",
       DBType.qpc_v2_layout: "qpc-v2-15-lines.db",
       DBType.uthmani: "uthmani.db",
+      DBType.mutashabihat: "matching-ayah.db",
     };
 
     final dbPath = await getDatabasesPath();

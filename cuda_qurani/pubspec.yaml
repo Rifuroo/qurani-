@@ -147,6 +147,9 @@ flutter:
     - assets/data/uthmani.db
     - assets/data/
     - assets/data/quran-metadata-juz.sqlite
+    - assets/data/phrases.json
+    - assets/data/phrase_verses.json
+    - assets/data/matching-ayah.db
 
     - assets/QPCv2/
     - assets/QPCv2/qpc-v2.db

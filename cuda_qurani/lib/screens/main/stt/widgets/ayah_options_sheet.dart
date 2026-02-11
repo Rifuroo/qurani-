@@ -5,8 +5,10 @@ import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/ayah_detail_view.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/tafsir_placeholder_view.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/translation_placeholder_view.dart';
+import 'package:cuda_qurani/screens/main/stt/widgets/similarity_list_view.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
+import '../services/mutashabihat_service.dart';
 
 class AyahOptionsSheet extends StatelessWidget {
   final AyahSegment segment;
@@ -189,14 +191,62 @@ class AyahOptionsSheet extends StatelessWidget {
                   context,
                   icon: Icons.layers_outlined,
                   label: 'Similar phrases',
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    Navigator.pop(context);
+                    try {
+                      final sttController = Provider.of<SttController>(context, listen: false);
+                      final quranService = Provider.of<QuranService>(context, listen: false);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MultiProvider(
+                            providers: [
+                              ChangeNotifierProvider.value(value: sttController),
+                              Provider.value(value: quranService),
+                            ],
+                            child: SimilarityListView(
+                              segment: segment,
+                              surahName: surahName,
+                              isUniqueMode: false,
+                            ),
+                          ),
+                        ),
+                      );
+                    } catch (e) {
+                      print('Error navigating to SimilarityListView: $e');
+                    }
+                  },
                 ),
                 const Divider(height: 1, thickness: 0.5),
                 _buildCompactOption(
                   context,
                   icon: Icons.format_list_bulleted_outlined,
                   label: 'No similar verses',
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    Navigator.pop(context);
+                    try {
+                      final sttController = Provider.of<SttController>(context, listen: false);
+                      final quranService = Provider.of<QuranService>(context, listen: false);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MultiProvider(
+                            providers: [
+                              ChangeNotifierProvider.value(value: sttController),
+                              Provider.value(value: quranService),
+                            ],
+                            child: SimilarityListView(
+                              segment: segment,
+                              surahName: surahName,
+                              isUniqueMode: true,
+                            ),
+                          ),
+                        ),
+                      );
+                    } catch (e) {
+                      print('Error navigating to SimilarityListView (Unique): $e');
+                    }
+                  },
                 ),
                 const Divider(height: 1, thickness: 0.5),
                 _buildCompactOption(

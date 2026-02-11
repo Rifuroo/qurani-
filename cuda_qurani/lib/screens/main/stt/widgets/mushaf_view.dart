@@ -6,6 +6,7 @@ import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
+import 'package:cuda_qurani/services/global_ayat_services.dart';
 
 import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import '../data/models.dart';
@@ -663,16 +664,35 @@ class _JustifiedAyahLine extends StatelessWidget {
     // Select ONLY the word status for the current active highlight if it belongs to this line
     final lineAyahKeys = line.ayahSegments?.map((s) => '${s.surahId}:${s.ayahNumber}').toSet() ?? {};
 
-    // ⚡️ ULTIMATE OPTIMIZATION: Rebuild ONLY if the active highlight is on THIS line
+    // ⚡️ ULTIMATE OPTIMIZATION: Rebuild ONLY if the active highlight OR selection is on THIS line
     final lineHighlightState = context.select<SttController, String>((c) {
+      // ✅ 1. Check Reading/Listening Highlight
       final revision = c.wordStatusRevision;
+      
+      // ✅ 2. Check Selection Highlight (Deep Link / Similar Phrase)
+      final navigatedAyahId = c.navigatedAyahId;
+      final selectedAyahId = c.selectedAyahForOptions?.id;
+
+      // Check if any segment in this line matches the selection
+      bool hasSelection = false;
+      if (navigatedAyahId != null || selectedAyahId != null) {
+        hasSelection = lineAyahKeys.any((key) {
+           final parts = key.split(':');
+           final surahId = int.parse(parts[0]);
+           final ayahNum = int.parse(parts[1]);
+           final globalId = GlobalAyatService.toGlobalAyat(surahId, ayahNum);
+           return globalId == navigatedAyahId || globalId == selectedAyahId;
+        });
+      }
+
       if (c.currentHighlightKey == null || !lineAyahKeys.contains(c.currentHighlightKey)) {
         final hasAnyActive = lineAyahKeys.any((key) => 
           c.wordStatusMap[key]?.values.any((s) => s != WordStatus.pending) ?? false
         );
-        return '${hasAnyActive ? 'has_status' : 'none'}:$revision';
+        // Combine state: highlight status + selection status
+        return '${hasAnyActive ? 'has_status' : 'none'}:$revision:$hasSelection';
       }
-      return '${c.currentHighlightKey}:${c.currentHighlightWordIdx}:$revision';
+      return '${c.currentHighlightKey}:${c.currentHighlightWordIdx}:$revision:$hasSelection';
     });
 
     final controller = context.read<SttController>();
@@ -744,11 +764,22 @@ class _JustifiedAyahLine extends StatelessWidget {
         final hasActiveHighlight = wordStatusMap[wordStatusKey]?.values
             .any((s) => s == WordStatus.processing) ?? false;
 
-        if (isCurrentAyat && 
-            wordBg == Colors.transparent && 
-            hasActiveHighlight &&
-            (isListeningMode || isRecording)) {
-          wordBg = AppColors.getPrimary(context).withValues(alpha: 0.1);
+        // ✅ NEW: Navigated Highlight (Persistent) & Selection Highlight
+        final isNavigatedHighlight = controller.navigatedAyahId == 
+            GlobalAyatService.toGlobalAyat(segment.surahId, segment.ayahNumber);
+        
+        // ✅ NEW: Long-Press Selection Highlight
+        final isSelected = controller.selectedAyahForOptions?.id == 
+            GlobalAyatService.toGlobalAyat(segment.surahId, segment.ayahNumber);
+
+        if (wordBg == Colors.transparent) {
+            if (isNavigatedHighlight || isSelected) {
+                wordBg = AppColors.getPrimary(context).withValues(alpha: 0.1); 
+            } else if (isCurrentAyat && 
+                hasActiveHighlight &&
+                (isListeningMode || isRecording)) {
+                wordBg = AppColors.getPrimary(context).withValues(alpha: 0.1);
+            }
         }
 
         // Opacity logic

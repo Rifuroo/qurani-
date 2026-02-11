@@ -28,6 +28,7 @@ import 'package:cuda_qurani/core/widgets/achievement_popup.dart';
 import 'package:cuda_qurani/providers/premium_provider.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/ayah_options_sheet.dart';
 import 'package:cuda_qurani/models/premium_features.dart';
+import 'package:cuda_qurani/screens/main/stt/services/mutashabihat_service.dart';
 
 class SttController extends ChangeNotifier {
   // Core State
@@ -55,6 +56,21 @@ class SttController extends ChangeNotifier {
   
   // ✅ NEW: Highlight specific ayah (from deep link)
   final int? highlightAyahId;
+  
+  // ✅ NEW: Navigated/Highlighted Ayah State (Persistent)
+  int? _navigatedAyahId;
+  int? get navigatedAyahId => _navigatedAyahId;
+
+  void onAyahNavigated(int ayahId) {
+    _navigatedAyahId = ayahId;
+    notifyListeners();
+  }
+
+  void clearNavigatedAyah() {
+    if (_navigatedAyahId == null) return;
+    _navigatedAyahId = null;
+    notifyListeners();
+  }
 
   // ✅ Granular Context State
   int? _activeSurahId;
@@ -264,6 +280,7 @@ class SttController extends ChangeNotifier {
 
   // Services
   final QuranService _sqliteService = QuranService();
+  final MutashabihatService _mutashabihatService = MutashabihatService();
   final AppLogger appLogger = AppLogger();
   final SupabaseService _supabaseService = SupabaseService(); // ? NEW
   final AuthService _authService = AuthService(); // ? NEW
@@ -545,6 +562,7 @@ class SttController extends ChangeNotifier {
 
     try {
       await _sqliteService.initialize();
+      await _mutashabihatService.initialize();
 
       _mushafLayout = _sqliteService.currentLayout;
       appLogger.log(
@@ -1843,6 +1861,49 @@ class SttController extends ChangeNotifier {
     }
   }
 
+  /// ✅ NEW: Jump to a specific verse, handling both Mushaf and List views
+  // ✅ NEW: Jump to a specific verse, handling both Mushaf and List views
+  Future<void> jumpToAyah(int surahId, int ayahNumber) async {
+    final page = await _sqliteService.getPageForAyah(
+      surahId,
+      ayahNumber,
+      isQuranMode: _isQuranMode,
+    );
+    final globalId = GlobalAyatService.toGlobalAyat(surahId, ayahNumber);
+
+    appLogger.log(
+      'NAV',
+      '🎯 Jumping to Ayah $surahId:$ayahNumber (Page $page, GlobalId $globalId)',
+    );
+
+    // Set highlight target
+    _navigatedAyahId = globalId;
+    
+    // Auto-clear highlight after 8 seconds (long enough to see, but not forever)
+    Future.delayed(const Duration(seconds: 8), () {
+      if (_navigatedAyahId == globalId) {
+        clearNavigatedAyah();
+      }
+    });
+
+    _topVerseId = globalId;
+    _topVersePage = page;
+
+    if (_isQuranMode) {
+      navigateToPage(page);
+    } else {
+      // For List View
+      _listViewCurrentPage = page;
+      // Also update top verse tracking properties so AppBar updates
+      _activeSurahId = surahId;
+      _activeAyahNumber = ayahNumber;
+      _updateSurahNameForPageSync(page);
+      notifyListeners();
+    }
+  }
+
+
+
   /// ? NEW: Lightweight navigation for listening mode (NO full reload)
   Future<void> _navigateToPageForListening(
     int targetPage,
@@ -2373,6 +2434,9 @@ class SttController extends ChangeNotifier {
 
   void toggleUIVisibility() {
     _isUIVisible = !_isUIVisible;
+    // ✅ UX ENMANCEMENT: Tapping screen clears persistent highlight & selection
+    if (_navigatedAyahId != null) clearNavigatedAyah();
+    if (_selectedAyahForOptions != null) clearSelectedAyahForOptions();
     notifyListeners();
   }
 

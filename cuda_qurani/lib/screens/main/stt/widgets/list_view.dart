@@ -861,6 +861,8 @@ class _CompleteAyahWidget extends StatelessWidget {
           hideUnreadAyat: controller.hideUnreadAyat,
           isListeningMode: controller.isListeningMode,
           isHighlighted: controller.currentHighlightKey == wordStatusKey,
+          isNavigatedHighlight: controller.navigatedAyahId == segment.id,
+          isSelected: controller.selectedAyahForOptions?.id == segment.id, // ✅ NEW
         );
       },
       shouldRebuild: (prev, next) => prev != next,
@@ -920,17 +922,28 @@ class _CompleteAyahWidget extends StatelessWidget {
                 ),
               Directionality(
                 textDirection: TextDirection.rtl,
-                child: Wrap(
-                  alignment: WrapAlignment.start,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 1,
-                  runSpacing: 4,
-                  children: _buildWords(
-                    context,
-                    segment,
-                    state,
-                    screenWidth,
-                    screenHeight,
+                child: Container(
+                  decoration: BoxDecoration(
+                     color: (state.isNavigatedHighlight || state.isSelected) 
+                        ? AppColors.getPrimary(context).withValues(alpha: 0.1) 
+                        : Colors.transparent,
+                     borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: (state.isNavigatedHighlight || state.isSelected) 
+                      ? const EdgeInsets.symmetric(horizontal: 4, vertical: 2)
+                      : EdgeInsets.zero,
+                  child: Wrap(
+                    alignment: WrapAlignment.start,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 1,
+                    runSpacing: 4,
+                    children: _buildWords(
+                      context,
+                      segment,
+                      state,
+                      screenWidth,
+                      screenHeight,
+                    ),
                   ),
                 ),
               ),
@@ -1156,6 +1169,8 @@ class _AyahState {
   final bool hideUnreadAyat;
   final bool isListeningMode;
   final bool isHighlighted;
+  final bool isNavigatedHighlight;
+  final bool isSelected; // ✅ NEW FIELD
 
   const _AyahState({
     required this.isCurrentAyat,
@@ -1163,6 +1178,8 @@ class _AyahState {
     required this.hideUnreadAyat,
     required this.isListeningMode,
     required this.isHighlighted,
+    required this.isNavigatedHighlight,
+    required this.isSelected, // ✅ NEW
   });
 
   @override
@@ -1173,6 +1190,8 @@ class _AyahState {
           hideUnreadAyat == other.hideUnreadAyat &&
           isListeningMode == other.isListeningMode &&
           isHighlighted == other.isHighlighted &&
+          isNavigatedHighlight == other.isNavigatedHighlight &&
+          isSelected == other.isSelected && // ✅ NEW
           _mapEquals(wordStatusMap, other.wordStatusMap);
 
   @override
@@ -1181,6 +1200,8 @@ class _AyahState {
     hideUnreadAyat,
     isListeningMode,
     isHighlighted,
+    isNavigatedHighlight,
+    isSelected, // ✅ NEW
     wordStatusMap,
   );
 
