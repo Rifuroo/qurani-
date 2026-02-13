@@ -1,4 +1,5 @@
 ﻿// lib\screens\main\stt\widgets\quran_widgets.dart
+import 'dart:async';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
@@ -321,11 +322,18 @@ class QuranBottomBar extends StatefulWidget {
   State<QuranBottomBar> createState() => _QuranBottomBarState();
 }
 
-class _QuranBottomBarState extends State<QuranBottomBar> {
+class _QuranBottomBarState extends State<QuranBottomBar>
+    with SingleTickerProviderStateMixin {
   double _dragPosition = 0.0;
   String? _activeMode;
   bool _isDragging = false;
   DateTime _lastActivityTime = DateTime.now();
+
+  // Wiggle animation for idle hint
+  late AnimationController _wiggleController;
+  late Animation<double> _wiggleAnimation;
+  Timer? _idleTimer;
+  bool _isWiggling = false;
 
   Map<String, dynamic> _translations = {};
 
@@ -342,11 +350,50 @@ class _QuranBottomBarState extends State<QuranBottomBar> {
   void initState() {
     super.initState();
     _loadTranslations();
+
+    // Wiggle: gentle sine-wave oscillation
+    _wiggleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _wiggleAnimation = Tween<double>(begin: -0.06, end: 0.06).animate(
+      CurvedAnimation(parent: _wiggleController, curve: Curves.easeInOut),
+    );
+    _wiggleController.addListener(() {
+      if (mounted && _isWiggling) setState(() {});
+    });
+
+    // Start idle timer on launch
+    _scheduleIdleWiggle();
   }
 
   @override
   void dispose() {
+    _wiggleController.dispose();
+    _idleTimer?.cancel();
     super.dispose();
+  }
+
+  void _scheduleIdleWiggle() {
+    _idleTimer?.cancel();
+    _idleTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && !_isDragging && _activeMode == null && _dragPosition == 0.0) {
+        _startWiggle();
+      }
+    });
+  }
+
+  void _startWiggle() {
+    if (_isWiggling) return;
+    _isWiggling = true;
+    _wiggleController.repeat(reverse: true);
+  }
+
+  void _stopWiggle() {
+    if (!_isWiggling) return;
+    _isWiggling = false;
+    _wiggleController.stop();
+    _wiggleController.reset();
   }
 
   void _handleDragUpdate(
@@ -375,6 +422,7 @@ class _QuranBottomBarState extends State<QuranBottomBar> {
 
     // ✅ Single setState for smooth drag
     if (mounted) {
+      _stopWiggle();
       setState(() {
         _isDragging = true;
         _dragPosition = newPosition;
@@ -397,6 +445,7 @@ class _QuranBottomBarState extends State<QuranBottomBar> {
       setState(() {
         _isDragging = false;
       });
+      _scheduleIdleWiggle();
     }
 
     // ✅ Handle drag actions
@@ -529,13 +578,13 @@ class _QuranBottomBarState extends State<QuranBottomBar> {
     SttController controller,
     bool isListening,
     bool isRecording,
+    bool isPaused,
     double iconSize,
   ) {
     IconData icon;
     String keyState;
 
     if (isListening) {
-      final isPaused = controller.isPaused;
       icon = isPaused ? Icons.play_arrow : Icons.pause;
       keyState = 'listen_${isPaused ? 'paused' : 'playing'}';
     } else if (isRecording) {
@@ -572,6 +621,7 @@ class _QuranBottomBarState extends State<QuranBottomBar> {
     final isUIVisible = context.select<SttController, bool>((c) => c.isUIVisible);
     final isListening = context.select<SttController, bool>((c) => c.isListeningMode);
     final isRecording = context.select<SttController, bool>((c) => c.isRecording);
+    final isPaused = context.select<SttController, bool>((c) => c.isPaused);
 
     // ✅ Force center when session becomes active
     final isSessionActive = isListening || isRecording;
@@ -582,6 +632,7 @@ class _QuranBottomBarState extends State<QuranBottomBar> {
     // Update activity time when active
     if (isSessionActive || _isDragging || _activeMode != null) {
       _lastActivityTime = DateTime.now();
+      _stopWiggle();
     }
 
     // Reset active mode if session ended
@@ -607,10 +658,11 @@ class _QuranBottomBarState extends State<QuranBottomBar> {
     final labelSize = screenWidth * 0.032;
     final bottomOffset = screenHeight * 0.057;
 
-    // ✅ Defensive: final position forced to 0 if session active
+    // ✅ Compute position: forced 0 when active, wiggle offset when idle
+    final double wiggleOffset = _isWiggling ? _wiggleAnimation.value : 0.0;
     final effectivePosition = (isSessionActive || _activeMode != null) && !_isDragging
         ? 0.0
-        : _dragPosition;
+        : (_dragPosition + wiggleOffset).clamp(-1.0, 1.0);
 
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
@@ -736,7 +788,7 @@ class _QuranBottomBarState extends State<QuranBottomBar> {
                           ),
                         ),
 
-                        // ✅ Sliding Thumb — direct Positioned (no AnimatedPositioned)
+                        // ✅ Sliding Thumb — direct Positioned + ripple
                         Positioned(
                           left: ((trackWidth / 2) - (thumbSize / 2)) +
                               (effectivePosition * (trackWidth / 2 - thumbSize / 2)),
@@ -744,45 +796,43 @@ class _QuranBottomBarState extends State<QuranBottomBar> {
                             scale: _isDragging ? 1.12 : 1.0,
                             duration: const Duration(milliseconds: 150),
                             curve: Curves.easeOut,
-                            child: GestureDetector(
-                              onTap: () => _handleCenterButtonTap(controller),
-                              child: Container(
-                                width: thumbSize,
-                                height: thumbSize,
-                                decoration: BoxDecoration(
-                                  color: _getThumbColor(isListening, isRecording),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _getThumbColor(
+                            child: Material(
+                              color: _getThumbColor(isListening, isRecording),
+                              shape: const CircleBorder(),
+                              elevation: _isDragging ? 8 : 4,
+                              shadowColor: _getThumbColor(
+                                isListening,
+                                isRecording,
+                              ).withValues(alpha: 0.4),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                splashColor: Colors.white.withValues(alpha: 0.3),
+                                highlightColor: Colors.white.withValues(alpha: 0.1),
+                                onTap: () => _handleCenterButtonTap(controller),
+                                child: SizedBox(
+                                  width: thumbSize,
+                                  height: thumbSize,
+                                  child: Center(
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      switchInCurve: Curves.easeOut,
+                                      switchOutCurve: Curves.easeIn,
+                                      transitionBuilder: (child, animation) {
+                                        return ScaleTransition(
+                                          scale: animation,
+                                          child: FadeTransition(
+                                            opacity: animation,
+                                            child: child,
+                                          ),
+                                        );
+                                      },
+                                      child: _buildThumbIcon(
+                                        controller,
                                         isListening,
                                         isRecording,
-                                      ).withOpacity(0.4),
-                                      blurRadius: _isDragging ? 16 : 12,
-                                      spreadRadius: _isDragging ? 2 : 0,
-                                      offset: Offset(0, _isDragging ? 3 : 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 200),
-                                    switchInCurve: Curves.easeOut,
-                                    switchOutCurve: Curves.easeIn,
-                                    transitionBuilder: (child, animation) {
-                                      return ScaleTransition(
-                                        scale: animation,
-                                        child: FadeTransition(
-                                          opacity: animation,
-                                          child: child,
-                                        ),
-                                      );
-                                    },
-                                    child: _buildThumbIcon(
-                                      controller,
-                                      isListening,
-                                      isRecording,
-                                      iconSize,
+                                        isPaused,
+                                        iconSize,
+                                      ),
                                     ),
                                   ),
                                 ),
