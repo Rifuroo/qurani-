@@ -1,4 +1,4 @@
-// lib\screens\main\stt\widgets\quran_widgets.dart
+﻿// lib\screens\main\stt\widgets\quran_widgets.dart
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
@@ -321,14 +321,11 @@ class QuranBottomBar extends StatefulWidget {
   State<QuranBottomBar> createState() => _QuranBottomBarState();
 }
 
-class _QuranBottomBarState extends State<QuranBottomBar>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _slideController;
-  late Animation<double> _slideAnimation;
-
+class _QuranBottomBarState extends State<QuranBottomBar> {
   double _dragPosition = 0.0;
   String? _activeMode;
   bool _isDragging = false;
+  DateTime _lastActivityTime = DateTime.now();
 
   Map<String, dynamic> _translations = {};
 
@@ -345,19 +342,10 @@ class _QuranBottomBarState extends State<QuranBottomBar>
   void initState() {
     super.initState();
     _loadTranslations();
-    _slideController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _slideAnimation = CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    );
   }
 
   @override
   void dispose() {
-    _slideController.dispose();
     super.dispose();
   }
 
@@ -390,12 +378,13 @@ class _QuranBottomBarState extends State<QuranBottomBar>
       setState(() {
         _isDragging = true;
         _dragPosition = newPosition;
+        _lastActivityTime = DateTime.now();
       });
     }
   }
 
   Future<void> _handleDragEnd(SttController controller) async {
-    const threshold = 0.90;
+    const threshold = 0.85;
 
     // ✅ Store values before any async operations
     final dragPos = _dragPosition;
@@ -511,7 +500,6 @@ class _QuranBottomBarState extends State<QuranBottomBar>
         }
       });
     }
-    _slideController.reverse(from: 1.0);
   }
 
   Future<void> _handleCenterButtonTap(SttController controller) async {
@@ -579,30 +567,32 @@ class _QuranBottomBarState extends State<QuranBottomBar>
 
   @override
   Widget build(BuildContext context) {
-    // ✅ OPTIMIZATION: Read controller once, listen only to specific changes
-    final controller = context.read<SttController>(); // Changed from watch to read
-    
-    // Select specific properties to listen to
+    final controller = context.read<SttController>();
+
     final isUIVisible = context.select<SttController, bool>((c) => c.isUIVisible);
     final isListening = context.select<SttController, bool>((c) => c.isListeningMode);
     final isRecording = context.select<SttController, bool>((c) => c.isRecording);
 
-    // Only add post-frame callback if mode changed (checked via local state tracking if needed)
-    // But for now, we rely on the parent rebuild which is triggered by Selectors
-    
-    if (_activeMode == 'listen' && !isListening) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _resetToCenter(keepActiveMode: false);
-        }
-      });
+    // ✅ Force center when session becomes active
+    final isSessionActive = isListening || isRecording;
+    if (isSessionActive && _dragPosition != 0.0 && !_isDragging) {
+      _dragPosition = 0.0;
     }
 
+    // Update activity time when active
+    if (isSessionActive || _isDragging || _activeMode != null) {
+      _lastActivityTime = DateTime.now();
+    }
+
+    // Reset active mode if session ended
+    if (_activeMode == 'listen' && !isListening) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _resetToCenter(keepActiveMode: false);
+      });
+    }
     if (_activeMode == 'recite' && !isRecording) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _resetToCenter(keepActiveMode: false);
-        }
+        if (mounted) _resetToCenter(keepActiveMode: false);
       });
     }
 
@@ -616,6 +606,11 @@ class _QuranBottomBarState extends State<QuranBottomBar>
     final iconSize = screenWidth * 0.065;
     final labelSize = screenWidth * 0.032;
     final bottomOffset = screenHeight * 0.057;
+
+    // ✅ Defensive: final position forced to 0 if session active
+    final effectivePosition = (isSessionActive || _activeMode != null) && !_isDragging
+        ? 0.0
+        : _dragPosition;
 
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
@@ -631,7 +626,6 @@ class _QuranBottomBarState extends State<QuranBottomBar>
               Positioned(
                 bottom: bottomOffset,
                 child: GestureDetector(
-                  // ✅ Use onPanUpdate instead of onHorizontalDragUpdate for better control
                   onPanUpdate: (details) {
                     _handleDragUpdate(
                       details.delta.dx,
@@ -642,7 +636,6 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                   onPanEnd: (details) {
                     _handleDragEnd(controller);
                   },
-                  // ✅ Prevent gesture conflicts
                   behavior: HitTestBehavior.opaque,
                   child: Container(
                     width: trackWidth,
@@ -661,130 +654,136 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Left Label (Listen)
+                        // Left Label (Listen) with parallax
                         Positioned(
                           left: trackWidth * 0.08,
-                          child: IgnorePointer(
-                            child: AnimatedOpacity(
-                              duration: const Duration(milliseconds: 200),
-                              opacity: _dragPosition < -0.3 ? 1.0 : 0.4,
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.play_arrow_rounded,
-                                    size: iconSize * 0.9,
-                                    color: isListening
-                                        ? AppColors.getPrimary(context)
-                                        : AppColors.getTextPrimary(context),
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    _translations.isNotEmpty
-                                        ? LanguageHelper.tr(
-                                            _translations,
-                                            'bottom_bar.listen_text',
-                                          )
-                                        : 'Listen',
-                                    style: TextStyle(
-                                      fontSize: labelSize,
-                                      fontWeight: FontWeight.w600,
+                          child: Transform.translate(
+                            offset: Offset(-_dragPosition * 8, 0),
+                            child: IgnorePointer(
+                              child: AnimatedOpacity(
+                                duration: const Duration(milliseconds: 200),
+                                opacity: _dragPosition < -0.3 || isListening ? 1.0 : 0.4,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.play_arrow_rounded,
+                                      size: iconSize * 0.9,
                                       color: isListening
                                           ? AppColors.getPrimary(context)
                                           : AppColors.getTextPrimary(context),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _translations.isNotEmpty
+                                          ? LanguageHelper.tr(
+                                              _translations,
+                                              'bottom_bar.listen_text',
+                                            )
+                                          : 'Listen',
+                                      style: TextStyle(
+                                        fontSize: labelSize,
+                                        fontWeight: FontWeight.w600,
+                                        color: isListening
+                                            ? AppColors.getPrimary(context)
+                                            : AppColors.getTextPrimary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
 
-                        // Right Label (Recite)
+                        // Right Label (Recite) with parallax
                         Positioned(
                           right: trackWidth * 0.08,
-                          child: IgnorePointer(
-                            child: AnimatedOpacity(
-                              duration: const Duration(milliseconds: 200),
-                              opacity: _dragPosition > 0.3 ? 1.0 : 0.4,
-                              child: Row(
-                                children: [
-                                  Text(
-                                    _translations.isNotEmpty
-                                        ? LanguageHelper.tr(
-                                            _translations,
-                                            'bottom_bar.recite_text',
-                                          )
-                                        : 'Recite',
-                                    style: TextStyle(
-                                      fontSize: labelSize,
-                                      fontWeight: FontWeight.w600,
+                          child: Transform.translate(
+                            offset: Offset(-_dragPosition * 8, 0),
+                            child: IgnorePointer(
+                              child: AnimatedOpacity(
+                                duration: const Duration(milliseconds: 200),
+                                opacity: _dragPosition > 0.3 || isRecording ? 1.0 : 0.4,
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      _translations.isNotEmpty
+                                          ? LanguageHelper.tr(
+                                              _translations,
+                                              'bottom_bar.recite_text',
+                                            )
+                                          : 'Recite',
+                                      style: TextStyle(
+                                        fontSize: labelSize,
+                                        fontWeight: FontWeight.w600,
+                                        color: isRecording
+                                            ? AppColors.getError(context)
+                                            : AppColors.getTextPrimary(context),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Icon(
+                                      Icons.mic_rounded,
+                                      size: iconSize * 0.9,
                                       color: isRecording
                                           ? AppColors.getError(context)
                                           : AppColors.getTextPrimary(context),
                                     ),
-                                  ),
-                                  SizedBox(width: 6),
-                                  Icon(
-                                    Icons.mic_rounded,
-                                    size: iconSize * 0.9,
-                                    color: isRecording
-                                        ? AppColors.getError(context)
-                                        : AppColors.getTextPrimary(context),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
 
-                        // Sliding Thumb Button
-                        AnimatedPositioned(
-                          duration: _isDragging
-                              ? Duration.zero
-                              : const Duration(milliseconds: 400),
-                          curve: Curves.easeOutCubic,
-                          left:
-                              ((trackWidth / 2) - (thumbSize / 2)) +
-                              (_dragPosition *
-                                  (trackWidth / 2 - thumbSize / 2)),
-                          child: GestureDetector(
-                            onTap: () => _handleCenterButtonTap(controller),
-                            child: Container(
-                              width: thumbSize,
-                              height: thumbSize,
-                              decoration: BoxDecoration(
-                                color: _getThumbColor(isListening, isRecording),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _getThumbColor(
+                        // ✅ Sliding Thumb — direct Positioned (no AnimatedPositioned)
+                        Positioned(
+                          left: ((trackWidth / 2) - (thumbSize / 2)) +
+                              (effectivePosition * (trackWidth / 2 - thumbSize / 2)),
+                          child: AnimatedScale(
+                            scale: _isDragging ? 1.12 : 1.0,
+                            duration: const Duration(milliseconds: 150),
+                            curve: Curves.easeOut,
+                            child: GestureDetector(
+                              onTap: () => _handleCenterButtonTap(controller),
+                              child: Container(
+                                width: thumbSize,
+                                height: thumbSize,
+                                decoration: BoxDecoration(
+                                  color: _getThumbColor(isListening, isRecording),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _getThumbColor(
+                                        isListening,
+                                        isRecording,
+                                      ).withOpacity(0.4),
+                                      blurRadius: _isDragging ? 16 : 12,
+                                      spreadRadius: _isDragging ? 2 : 0,
+                                      offset: Offset(0, _isDragging ? 3 : 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    switchInCurve: Curves.easeOut,
+                                    switchOutCurve: Curves.easeIn,
+                                    transitionBuilder: (child, animation) {
+                                      return ScaleTransition(
+                                        scale: animation,
+                                        child: FadeTransition(
+                                          opacity: animation,
+                                          child: child,
+                                        ),
+                                      );
+                                    },
+                                    child: _buildThumbIcon(
+                                      controller,
                                       isListening,
                                       isRecording,
-                                    ).withOpacity(0.4),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
-                                  switchInCurve: Curves.easeOut,
-                                  switchOutCurve: Curves.easeIn,
-                                  transitionBuilder: (child, animation) {
-                                    return ScaleTransition(
-                                      scale: animation,
-                                      child: FadeTransition(
-                                        opacity: animation,
-                                        child: child,
-                                      ),
-                                    );
-                                  },
-                                  child: _buildThumbIcon(
-                                    controller,
-                                    isListening,
-                                    isRecording,
-                                    iconSize,
+                                      iconSize,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -797,7 +796,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                 ),
               ),
 
-              // Active Mode Indicator (Settings Button for Listen Mode)
+              // Settings Button for Listen Mode
               if (isListening && !_isDragging)
                 Positioned(
                   bottom: bottomOffset + trackHeight + 8,
@@ -859,6 +858,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
       ),
     );
   }
+
 
   Color _getThumbColor(bool isListening, bool isRecording) {
     if (isListening) return AppColors.getPrimary(context);
