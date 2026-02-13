@@ -53,10 +53,10 @@ class SttController extends ChangeNotifier {
 
   MushafLayout _mushafLayout = MushafLayout.qpc;
   MushafLayout get mushafLayout => _mushafLayout;
-  
+
   // ✅ NEW: Highlight specific ayah (from deep link)
   final int? highlightAyahId;
-  
+
   // ✅ NEW: Navigated/Highlighted Ayah State (Persistent)
   int? _navigatedAyahId;
   int? get navigatedAyahId => _navigatedAyahId;
@@ -91,7 +91,7 @@ class SttController extends ChangeNotifier {
     _topVersePage = pageNumber;
 
     // ✅ Track top verse only in List View (Mushaf View handles it via page)
-    if (_isQuranMode) return; 
+    if (_isQuranMode) return;
 
     // ✅ OPTIMIZATION: Instant Surah/Juz detection from global ayah ID (O(1))
     final context = GlobalAyatService.fromGlobalAyat(ayahId);
@@ -110,15 +110,14 @@ class SttController extends ChangeNotifier {
         _determinedSurahId != surahId ||
         currentData.juzNumber != juzNum ||
         currentData.pageNumber != pageNumber) {
-      
       _determinedSurahId = surahId;
-      
+
       // Load Surah metadata for AppBar (priority: Cache -> Background DB)
       final surahMeta = _metadataCache.getSurah(surahId);
       if (surahMeta != null) {
         _suratNameSimple = surahMeta['name_simple'] as String;
         _suratVersesCount = surahMeta['verses_count'].toString();
-        
+
         appBarNotifier.value = PageDisplayData(
           pageNumber: pageNumber,
           surahName: _suratNameSimple,
@@ -130,7 +129,7 @@ class SttController extends ChangeNotifier {
         _sqliteService.getChapterInfo(surahId).then((chapter) {
           _suratNameSimple = chapter.nameSimple;
           _suratVersesCount = chapter.versesCount.toString();
-          
+
           appBarNotifier.value = PageDisplayData(
             pageNumber: pageNumber,
             surahName: _suratNameSimple,
@@ -140,7 +139,6 @@ class SttController extends ChangeNotifier {
       }
     }
   }
-
 
   SttController({
     this.suratId,
@@ -177,7 +175,9 @@ class SttController extends ChangeNotifier {
     if (highlightAyahId != null) {
       _topVerseId = highlightAyahId;
       _topVersePage = pageId;
-      print('📍 SttController: Initialized synchronization anchor to Verse $highlightAyahId');
+      print(
+        '📍 SttController: Initialized synchronization anchor to Verse $highlightAyahId',
+      );
     }
   }
 
@@ -233,11 +233,15 @@ class SttController extends ChangeNotifier {
       _currentPage = newPage;
       _listViewCurrentPage = newPage;
       _topVerseId = resumeAyahId; // ✅ Persist for initialization jump
-      print('[LAYOUT_SWITCH] 📍 Mapped context to Page $_currentPage (Ayah $surahId:$ayahNumber)');
+      print(
+        '[LAYOUT_SWITCH] 📍 Mapped context to Page $_currentPage (Ayah $surahId:$ayahNumber)',
+      );
     } else {
       // Fallback: Clamp if no verse context
-      if (_currentPage > newLayout.totalPages) _currentPage = newLayout.totalPages;
-      if (_listViewCurrentPage > newLayout.totalPages) _listViewCurrentPage = newLayout.totalPages;
+      if (_currentPage > newLayout.totalPages)
+        _currentPage = newLayout.totalPages;
+      if (_listViewCurrentPage > newLayout.totalPages)
+        _listViewCurrentPage = newLayout.totalPages;
     }
 
     // ✅ STEP 7: Reload current page data
@@ -289,7 +293,6 @@ class SttController extends ChangeNotifier {
   bool _hasResumableSession = false;
   bool get hasResumableSession => _hasResumableSession;
 
-
   // ✅ DUAL-PHASE RENDERING STATE
   bool _isSwiping = false;
   Timer? _settleTimer;
@@ -316,7 +319,7 @@ class SttController extends ChangeNotifier {
 
   // Backend Integration - Recording & WebSocket
   final AudioService _audioService = AudioService();
-  
+
   // ✅ AYAH LONG-PRESS OPTIONS STATE
   AyahSegment? _selectedAyahForOptions;
   AyahSegment? get selectedAyahForOptions => _selectedAyahForOptions;
@@ -332,6 +335,7 @@ class SttController extends ChangeNotifier {
     _selectedAyahForOptions = null;
     notifyListeners();
   }
+
   late final WebSocketService _webSocketService;
   bool _isRecording = false;
   bool _isConnected = false;
@@ -427,12 +431,13 @@ class SttController extends ChangeNotifier {
     // ratio = (current - min) / (max - min)
     double ratio = 0.0;
     if (audioTotal > minWordIndex) {
-      ratio = (audioWordIndex - minWordIndex) /
+      ratio =
+          (audioWordIndex - minWordIndex) /
           (audioTotal - minWordIndex).toDouble();
     } else {
       // ✅ FIX Round 10: If only 1 audio word, stay at ratio 0.0 (first word)
       // This prevents jumping to the end-of-ayah symbol in QPC
-      ratio = 0.0; 
+      ratio = 0.0;
     }
 
     // Find the ayah in current page data
@@ -492,7 +497,7 @@ class SttController extends ChangeNotifier {
   final Map<int, PageGeometry> _geometryCache = {}; // ✅ NEW: Coordinate cache
   final MetadataCacheService _metadataCache = MetadataCacheService();
   double? _viewportWidth; // ✅ Screen width for geometry computation
-  
+
   Map<int, PageGeometry> get geometryCache => _geometryCache;
 
   bool _isPreloadingPages = false;
@@ -521,7 +526,7 @@ class SttController extends ChangeNotifier {
   bool get showLogs => _showLogs;
   int get currentPage => _currentPage;
   List<AyatData> get currentPageAyats => _currentPageAyats;
-  
+
   // ✅ ACCESSORS FOR MAPS
   Map<String, int> get ayahIndexMap => _ayahIndexMap;
   Map<String, int> get currentPageAyahIndexMap => _currentPageAyahIndexMap;
@@ -540,7 +545,8 @@ class SttController extends ChangeNotifier {
   bool get isListeningMode => _isListeningMode;
   PlaybackSettings? get playbackSettings => _playbackSettings;
   ListeningAudioService? get listeningAudioService => _listeningAudioService;
-  bool get isPaused => _listeningAudioService?.isPaused ?? false; // ✅ RELIABLE getter for UI
+  bool get isPaused =>
+      _listeningAudioService?.isPaused ?? false; // ✅ RELIABLE getter for UI
 
   // Word Status Tracking (O(1) optimization)
   final Map<String, int> _lastHighlightedIdx = {};
@@ -583,10 +589,15 @@ class SttController extends ChangeNotifier {
 
       // ✅ NEW: Highlight specific ayah if requested (Deep Link)
       if (highlightAyahId != null) {
-        final index = _currentPageAyats.indexWhere((a) => a.ayah == highlightAyahId);
+        final index = _currentPageAyats.indexWhere(
+          (a) => a.ayah == highlightAyahId,
+        );
         if (index != -1) {
           _currentAyatIndex = index;
-          appLogger.log('APP_INIT', 'Highlighting deep link ayah: $highlightAyahId (index $index)');
+          appLogger.log(
+            'APP_INIT',
+            'Highlighting deep link ayah: $highlightAyahId (index $index)',
+          );
         }
       }
 
@@ -623,14 +634,17 @@ class SttController extends ChangeNotifier {
 
   // ✅ NEW: Play specific Ayah (Start Listening from here)
   Future<void> playAyah(AyahSegment segment) async {
-    appLogger.log('AUDIO', 'Requesting playback for Surah ${segment.surahId}:${segment.ayahNumber}');
-    
+    appLogger.log(
+      'AUDIO',
+      'Requesting playback for Surah ${segment.surahId}:${segment.ayahNumber}',
+    );
+
     // Default to Mishari for now (TODO: User preference)
     const reciterIdentifier = 'mishari-alafasy';
-    
+
     // Get Surah stats to find endVerse (play until end of Surah)
     final surahMeta = MetadataCacheService().getSurah(segment.surahId);
-    final endVerse = surahMeta?['verses_count'] as int? ?? segment.ayahNumber; 
+    final endVerse = surahMeta?['verses_count'] as int? ?? segment.ayahNumber;
 
     final settings = PlaybackSettings(
       startSurahId: segment.surahId,
@@ -670,7 +684,6 @@ class SttController extends ChangeNotifier {
       _sessionId = null;
       _errorMessage = '';
 
-      
       // ? NEW: AUTO-NAVIGATE TO TARGET PAGE (OPTIMIZED)
       print('?? Checking if navigation needed...');
       int targetPage;
@@ -683,7 +696,7 @@ class SttController extends ChangeNotifier {
       } catch (e) {
         print('[DB] Error getting page number: $e');
         // Fallback: stay on current page if DB fails, don't force page 1
-        targetPage = _currentPage; 
+        targetPage = _currentPage;
       }
 
       print('   Current page: $_currentPage');
@@ -1077,7 +1090,7 @@ class SttController extends ChangeNotifier {
         print('[DB] Error getting page number (Juz $juzId): $e');
         page = 1; // Fallback
       }
-      
+
       appLogger.log(
         'NAV',
         'Juz $juzId starts at page $page (${surahNum}:${ayahNum})',
@@ -1097,7 +1110,7 @@ class SttController extends ChangeNotifier {
         print('[DB] Error getting page number (Surah $suratId): $e');
         page = 1; // Fallback
       }
-      
+
       appLogger.log('NAV', 'Surah $suratId starts at page $page');
       return page;
     }
@@ -1273,7 +1286,7 @@ class SttController extends ChangeNotifier {
               return a.surah_id.compareTo(b.surah_id);
             return a.ayah.compareTo(b.ayah);
           });
-          
+
           // ✅ Re-populate map after sort to ensure correct indices
           _ayahIndexMap.clear();
           for (int i = 0; i < _ayatList.length; i++) {
@@ -1297,11 +1310,12 @@ class SttController extends ChangeNotifier {
 
           // ? UI tetap tampilkan SEMUA ayat di page (layout mushaf lengkap)
           _currentPageAyats = allPageAyats;
-          
+
           // ✅ Populate current page map
           _currentPageAyahIndexMap.clear();
           for (int i = 0; i < _currentPageAyats.length; i++) {
-            _currentPageAyahIndexMap['${_currentPageAyats[i].surah_id}:${_currentPageAyats[i].ayah}'] = i;
+            _currentPageAyahIndexMap['${_currentPageAyats[i].surah_id}:${_currentPageAyats[i].ayah}'] =
+                i;
           }
 
           appLogger.log(
@@ -1436,13 +1450,13 @@ class SttController extends ChangeNotifier {
           surahIdForPage,
           isQuranMode: _isQuranMode,
         );
-        
+
         // ✅ Populate O(1) map
         _ayahIndexMap.clear();
         for (int i = 0; i < _ayatList.length; i++) {
           _ayahIndexMap['${_ayatList[i].surah_id}:${_ayatList[i].ayah}'] = i;
         }
-        
+
         appLogger.log('DATA_OPTIMIZED', 'Loaded ${_ayatList.length} ayats');
       }
 
@@ -1502,13 +1516,16 @@ class SttController extends ChangeNotifier {
       _lastLoadedAyatsPage = _currentPage;
 
       // ✅ WARMUP: Build spans for current page too
-      final fontFamily = _mushafLayout.isGlyphBased ? 'p$_currentPage' : 'IndoPak-Nastaleeq';
+      final fontFamily = _mushafLayout.isGlyphBased
+          ? 'p$_currentPage'
+          : 'IndoPak-Nastaleeq';
       warmupSpansForPage(_currentPage, fontFamily);
 
       // ✅ Populate current page map O(1)
       _currentPageAyahIndexMap.clear();
       for (int i = 0; i < _currentPageAyats.length; i++) {
-        _currentPageAyahIndexMap['${_currentPageAyats[i].surah_id}:${_currentPageAyats[i].ayah}'] = i;
+        _currentPageAyahIndexMap['${_currentPageAyats[i].surah_id}:${_currentPageAyats[i].ayah}'] =
+            i;
       }
 
       appLogger.log(
@@ -1590,13 +1607,16 @@ class SttController extends ChangeNotifier {
         if (serviceCache != null) {
           pageCache[page] = serviceCache;
           // Ensure spans/geometry are warmed up if not already
-          final fontFamily = _mushafLayout.isGlyphBased ? 'p$page' : 'IndoPak-Nastaleeq';
+          final fontFamily = _mushafLayout.isGlyphBased
+              ? 'p$page'
+              : 'IndoPak-Nastaleeq';
           warmupSpansForPage(page, fontFamily);
           continue;
         }
 
         final distance = (page - _currentPage).abs();
-        if (distance <= 10) { // Larger "immediate" range for faster startup
+        if (distance <= 10) {
+          // Larger "immediate" range for faster startup
           immediatePages.add(page);
         } else {
           backgroundPages.add(page);
@@ -1606,12 +1626,16 @@ class SttController extends ChangeNotifier {
       // ✅ STEP 1: Load IMMEDIATE pages (parallel)
       if (immediatePages.isNotEmpty && !_stopPreloading) {
         try {
-          final batchResults = await _sqliteService.getMushafPageLinesBatch(immediatePages);
+          final batchResults = await _sqliteService.getMushafPageLinesBatch(
+            immediatePages,
+          );
           if (_isDisposed || _stopPreloading) return;
 
           for (final entry in batchResults.entries) {
             pageCache[entry.key] = entry.value;
-            final fontFamily = _mushafLayout.isGlyphBased ? 'p${entry.key}' : 'IndoPak-Nastaleeq';
+            final fontFamily = _mushafLayout.isGlyphBased
+                ? 'p${entry.key}'
+                : 'IndoPak-Nastaleeq';
             warmupSpansForPage(entry.key, fontFamily);
           }
         } catch (e) {
@@ -1643,7 +1667,9 @@ class SttController extends ChangeNotifier {
               for (final entry in batchResults.entries) {
                 pageCache[entry.key] = entry.value;
                 // ✅ WARMUP SPANS: Build spans in background
-                final fontFamily = _mushafLayout.isGlyphBased ? 'p${entry.key}' : 'IndoPak-Nastaleeq';
+                final fontFamily = _mushafLayout.isGlyphBased
+                    ? 'p${entry.key}'
+                    : 'IndoPak-Nastaleeq';
                 warmupSpansForPage(entry.key, fontFamily);
               }
 
@@ -1703,7 +1729,7 @@ class SttController extends ChangeNotifier {
       for (final key in keysToRemove) {
         pageCache.remove(key);
         _geometryCache.remove(key); // ✅ CRITICAL: Evict geometry too
-        
+
         // ✅ NEW: Evict prebuilt spans to release font references
         _prebuiltSpans.removeWhere((k, _) => k.startsWith('p${key}_'));
 
@@ -1739,16 +1765,14 @@ class SttController extends ChangeNotifier {
     _updateSurahNameForPageSync(newPage); // Load from cache (instant)
     updateVisiblePageQuiet(newPage); // Update AppBar notifier
 
-    // ✅ CRITICAL FIX: Stop listening mode when user manually navigates
-    if (_isListeningMode && _listeningAudioService != null) {
-      print('🛑 User navigated during listening - stopping listening mode...');
-      // Stop immediately (fire-and-forget, but set flag to prevent new sessions)
-      _isListeningMode =
-          false; // Set flag immediately to prevent race conditions
-      stopListening().catchError((e) {
-        print('⚠️ Error stopping listening during navigation: $e');
-        // Ensure flag is still false even if error occurs
-        _isListeningMode = false;
+    // ✅ BACKGROUND PLAY: Removed auto-stop for Listening mode.
+    // Audio will continue playing as the user browses the Mushaf.
+
+    // ✅ RECORDING SECURITY: Stop recording when user navigates to a different page.
+    if (_isRecording) {
+      print('🛑 User navigated during recording - automatically stopping...');
+      stopRecording().catchError((e) {
+        print('⚠️ Error stopping recording during navigation: $e');
       });
     }
 
@@ -1878,7 +1902,7 @@ class SttController extends ChangeNotifier {
 
     // Set highlight target
     _navigatedAyahId = globalId;
-    
+
     // Auto-clear highlight after 8 seconds (long enough to see, but not forever)
     Future.delayed(const Duration(seconds: 8), () {
       if (_navigatedAyahId == globalId) {
@@ -1901,8 +1925,6 @@ class SttController extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-
 
   /// ? NEW: Lightweight navigation for listening mode (NO full reload)
   Future<void> _navigateToPageForListening(
@@ -2055,7 +2077,10 @@ class SttController extends ChangeNotifier {
                 'Updated to: $_suratNameSimple (Page $pageNumber) - FROM PAGE CACHE',
               );
               // ✅ Update AppBar Notifier
-              final juzNum = _sqliteService.calculateJuzAccurate(surahId, firstSegment.ayahNumber);
+              final juzNum = _sqliteService.calculateJuzAccurate(
+                surahId,
+                firstSegment.ayahNumber,
+              );
               appBarNotifier.value = PageDisplayData(
                 pageNumber: pageNumber,
                 surahName: _suratNameSimple,
@@ -2085,7 +2110,10 @@ class SttController extends ChangeNotifier {
             'Updated to: $_suratNameSimple (from ayats)',
           );
           // ✅ Update AppBar Notifier
-          final juzNum = _sqliteService.calculateJuzAccurate(surahId, firstAyat.ayah);
+          final juzNum = _sqliteService.calculateJuzAccurate(
+            surahId,
+            firstAyat.ayah,
+          );
           appBarNotifier.value = PageDisplayData(
             pageNumber: pageNumber,
             surahName: _suratNameSimple,
@@ -2114,7 +2142,10 @@ class SttController extends ChangeNotifier {
             'Updated to: $_suratNameSimple (loaded from DB)',
           );
           // ✅ Update AppBar Notifier
-          final juzNum = _sqliteService.calculateJuzAccurate(surahId, firstSegment.ayahNumber);
+          final juzNum = _sqliteService.calculateJuzAccurate(
+            surahId,
+            firstSegment.ayahNumber,
+          );
           appBarNotifier.value = PageDisplayData(
             pageNumber: pageNumber,
             surahName: _suratNameSimple,
@@ -2131,7 +2162,7 @@ class SttController extends ChangeNotifier {
 
   void updatePageCache(int page, List<MushafPageLine> lines) {
     pageCache[page] = lines;
-    
+
     // ✅ NEW: Precompute geometry immediately so highlights are ready
     _precomputeGeometryForPage(page);
 
@@ -2169,13 +2200,13 @@ class SttController extends ChangeNotifier {
   void setViewportHeight(double height) {
     if (_viewportHeight == height) return;
     _viewportHeight = height;
-    
+
     // If height changed, recompute
     if (pageCache.isNotEmpty) {
-       for (final page in pageCache.keys.toList()) {
-         _precomputeGeometryForPage(page);
-       }
-       notifyListeners(); // ✅ NEW: Trigger UI update
+      for (final page in pageCache.keys.toList()) {
+        _precomputeGeometryForPage(page);
+      }
+      notifyListeners(); // ✅ NEW: Trigger UI update
     }
   }
 
@@ -2183,13 +2214,13 @@ class SttController extends ChangeNotifier {
   void setViewportWidth(double width) {
     if (_viewportWidth == width) return;
     _viewportWidth = width;
-    
+
     // If width changed, we need to recompute geometry for already cached pages
     if (pageCache.isNotEmpty) {
-       for (final page in pageCache.keys.toList()) {
-         _precomputeGeometryForPage(page);
-       }
-       notifyListeners(); // ✅ NEW: Trigger UI update
+      for (final page in pageCache.keys.toList()) {
+        _precomputeGeometryForPage(page);
+      }
+      notifyListeners(); // ✅ NEW: Trigger UI update
     }
   }
 
@@ -2198,9 +2229,9 @@ class SttController extends ChangeNotifier {
     if (_isDisposed) return;
     final lines = pageCache[pageNumber];
     if (lines == null || lines.isEmpty) return;
-    
+
     // ✅ Use a default base font size if not available
-    const double baseFontSize = 24.0; 
+    const double baseFontSize = 24.0;
 
     bool anyNew = false;
     for (int i = 0; i < lines.length; i++) {
@@ -2215,10 +2246,10 @@ class SttController extends ChangeNotifier {
       );
       anyNew = true;
     }
-    
+
     // ✅ NEW: Trigger geometry precomputation if width is known
     _precomputeGeometryForPage(pageNumber);
-    
+
     if (anyNew) {
       // print('🔥 Warmed up spans for page $pageNumber');
     }
@@ -2236,11 +2267,14 @@ class SttController extends ChangeNotifier {
 
       // ✅ SYNC WITH UI: Replicate MushafRenderer.calculateLayoutConfig logic
       final screenWidth = _viewportWidth!;
-      final screenHeight = _viewportHeight ?? (screenWidth * 2.15); // Fallback if height not set yet
-      
+      final screenHeight =
+          _viewportHeight ??
+          (screenWidth * 2.15); // Fallback if height not set yet
+
       double horizontalPadding = 0.0;
       double fontSizeMultiplier = 0.055;
-      double targetLineHeight = screenHeight * 0.05; // Matches MushafRenderer.lineHeight
+      double targetLineHeight =
+          screenHeight * 0.05; // Matches MushafRenderer.lineHeight
       bool isIndopak = !_mushafLayout.isGlyphBased;
 
       if (isIndopak) {
@@ -2269,7 +2303,7 @@ class SttController extends ChangeNotifier {
       double calculatedFontSize = screenWidth * fontSizeMultiplier;
 
       // ✅ MATCH UI CAP: MushafRenderer.calculateLayoutConfig caps font at 85% of height
-      final maxFontSizeByHeight = targetLineHeight * 0.85; 
+      final maxFontSizeByHeight = targetLineHeight * 0.85;
       if (calculatedFontSize > maxFontSizeByHeight) {
         calculatedFontSize = maxFontSizeByHeight;
       }
@@ -2279,9 +2313,13 @@ class SttController extends ChangeNotifier {
       // ⚠️ SYNC WITH UI: Replicate the word-by-word rendering loop
       final renderUnits = <_GeometryRenderUnit>[];
       double sumUnitWidths = 0;
-      final fontFamily = _mushafLayout.isGlyphBased ? 'p$pageNumber' : 'IndoPak-Nastaleeq';
+      final fontFamily = _mushafLayout.isGlyphBased
+          ? 'p$pageNumber'
+          : 'IndoPak-Nastaleeq';
 
-      final sortedGeometrySegments = List<AyahSegment>.from(line.ayahSegments ?? []);
+      final sortedGeometrySegments = List<AyahSegment>.from(
+        line.ayahSegments ?? [],
+      );
       sortedGeometrySegments.sort((a, b) {
         if (a.surahId != b.surahId) return a.surahId.compareTo(b.surahId);
         return a.ayahNumber.compareTo(b.ayahNumber);
@@ -2290,25 +2328,29 @@ class SttController extends ChangeNotifier {
       for (final segment in sortedGeometrySegments) {
         for (final word in segment.words) {
           final isLastWord = segment.isEndOfAyah && word == segment.words.last;
-          
+
           // Standard scale logic from user's current mushaf_view.dart (1.0 default for effectiveFontSize)
           final effectiveFontSize = calculatedFontSize;
 
           double wWidth = 0;
           if (isLastWord) {
             // Matches UI: effectiveFontSize * 1.1 + 2.0 (margins)
-            wWidth = effectiveFontSize * 1.1 + 2.0; 
+            wWidth = effectiveFontSize * 1.1 + 2.0;
           } else {
-            final markerStripper = RegExp(r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}]');
+            final markerStripper = RegExp(
+              r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}]',
+            );
             final cleanText = word.text.replaceAll(markerStripper, '');
-            
-            final double textHeight = (pageNumber == 1 || pageNumber == 2) ? 1.5 : (isIndopak ? 1.6 : 1.8);
+
+            final double textHeight = (pageNumber == 1 || pageNumber == 2)
+                ? 1.5
+                : (isIndopak ? 1.6 : 1.8);
 
             final tpWord = TextPainter(
               text: TextSpan(
                 text: cleanText,
                 style: TextStyle(
-                  fontSize: effectiveFontSize, 
+                  fontSize: effectiveFontSize,
                   fontFamily: fontFamily,
                   height: textHeight,
                   fontWeight: FontWeight.normal,
@@ -2324,32 +2366,38 @@ class SttController extends ChangeNotifier {
           if (isLastWord) {
             if (renderUnits.isNotEmpty) {
               final lastUnit = renderUnits.removeLast();
-              sumUnitWidths -= lastUnit.totalWidth; 
-              
-              renderUnits.add(_GeometryRenderUnit(
-                segment: segment,
-                wordNumbers: [...lastUnit.wordNumbers, word.wordNumber],
-                wordWidth: lastUnit.wordWidth, 
-                markerWidth: wWidth, 
-              ));
+              sumUnitWidths -= lastUnit.totalWidth;
+
+              renderUnits.add(
+                _GeometryRenderUnit(
+                  segment: segment,
+                  wordNumbers: [...lastUnit.wordNumbers, word.wordNumber],
+                  wordWidth: lastUnit.wordWidth,
+                  markerWidth: wWidth,
+                ),
+              );
               sumUnitWidths += (lastUnit.wordWidth + wWidth);
             } else {
               // One-word Ayah: Marker is the only thing in the unit
-              renderUnits.add(_GeometryRenderUnit(
-                segment: segment,
-                wordNumbers: [word.wordNumber],
-                wordWidth: 0, 
-                markerWidth: wWidth, 
-              ));
+              renderUnits.add(
+                _GeometryRenderUnit(
+                  segment: segment,
+                  wordNumbers: [word.wordNumber],
+                  wordWidth: 0,
+                  markerWidth: wWidth,
+                ),
+              );
               sumUnitWidths += wWidth;
             }
           } else {
-            renderUnits.add(_GeometryRenderUnit(
-              segment: segment,
-              wordNumbers: [word.wordNumber],
-              wordWidth: wWidth,
-              markerWidth: 0,
-            ));
+            renderUnits.add(
+              _GeometryRenderUnit(
+                segment: segment,
+                wordNumbers: [word.wordNumber],
+                wordWidth: wWidth,
+                markerWidth: 0,
+              ),
+            );
             sumUnitWidths += wWidth;
           }
         }
@@ -2363,59 +2411,122 @@ class SttController extends ChangeNotifier {
           for (final unit in renderUnits) {
             // ✅ TIGHT FIT: Match text height (1.5-1.8) to hug font bounds
             final textHeight = (pageNumber == 1 || pageNumber == 2) ? 1.5 : 1.8;
-            final hUniform = calculatedFontSize * textHeight; 
+            final hUniform = calculatedFontSize * textHeight;
             // Push down slightly to align with text baseline
-            final yUniform = (lineHForGeometry - hUniform) / 2 + (calculatedFontSize * 0.1);
+            final yUniform =
+                (lineHForGeometry - hUniform) / 2 + (calculatedFontSize * 0.1);
 
             if (unit.markerWidth > 0) {
-              final ornamentScale = (pageNumber == 1 || pageNumber == 2) ? 1.6 : 1.9;
+              final ornamentScale = (pageNumber == 1 || pageNumber == 2)
+                  ? 1.6
+                  : 1.9;
               final visualMarkerWidth = calculatedFontSize * ornamentScale;
-              final centerXMarker = (currentX - unit.wordWidth) - (unit.markerWidth / 2);
+              final centerXMarker =
+                  (currentX - unit.wordWidth) - (unit.markerWidth / 2);
               final markerLeft = centerXMarker - (visualMarkerWidth / 2);
-              
+
               // ✅ FUSED: Word and Marker rects slightly overlap (0.5px) to close tiny white gaps
-              final markerRect = Rect.fromLTWH(markerLeft - 0.5, yUniform, visualMarkerWidth + 1.0, hUniform);
-              final textRect = Rect.fromLTWH(currentX - unit.wordWidth - 0.5, yUniform, unit.wordWidth + 1.0, hUniform);
+              final markerRect = Rect.fromLTWH(
+                markerLeft - 0.5,
+                yUniform,
+                visualMarkerWidth + 1.0,
+                hUniform,
+              );
+              final textRect = Rect.fromLTWH(
+                currentX - unit.wordWidth - 0.5,
+                yUniform,
+                unit.wordWidth + 1.0,
+                hUniform,
+              );
 
               for (final wordNum in unit.wordNumbers) {
-                final key = PageGeometry.getWordKey(line.lineNumber, unit.segment.surahId, unit.segment.ayahNumber, wordNum);
+                final key = PageGeometry.getWordKey(
+                  line.lineNumber,
+                  unit.segment.surahId,
+                  unit.segment.ayahNumber,
+                  wordNum,
+                );
                 allWordBounds[key] = [textRect, markerRect];
               }
             } else {
               for (final wordNum in unit.wordNumbers) {
-                final key = PageGeometry.getWordKey(line.lineNumber, unit.segment.surahId, unit.segment.ayahNumber, wordNum);
-                allWordBounds[key] = [Rect.fromLTWH(currentX - unit.wordWidth - 0.5, yUniform, unit.wordWidth + 1.0, hUniform)];
+                final key = PageGeometry.getWordKey(
+                  line.lineNumber,
+                  unit.segment.surahId,
+                  unit.segment.ayahNumber,
+                  wordNum,
+                );
+                allWordBounds[key] = [
+                  Rect.fromLTWH(
+                    currentX - unit.wordWidth - 0.5,
+                    yUniform,
+                    unit.wordWidth + 1.0,
+                    hUniform,
+                  ),
+                ];
               }
             }
             currentX -= unit.totalWidth;
           }
         } else {
           // Justified: Replicate Row(mainAxisAlignment: MainAxisAlignment.spaceBetween)
-          final double gap = (availableWidth - sumUnitWidths) / (renderUnits.length - 1);
-          
+          final double gap =
+              (availableWidth - sumUnitWidths) / (renderUnits.length - 1);
+
           double currentX = availableWidth; // RTL
           for (final unit in renderUnits) {
             final textHeight = (pageNumber == 1 || pageNumber == 2) ? 1.5 : 1.8;
             final hUniform = calculatedFontSize * textHeight;
-            final yUniform = (lineHForGeometry - hUniform) / 2 + (calculatedFontSize * 0.1);
+            final yUniform =
+                (lineHForGeometry - hUniform) / 2 + (calculatedFontSize * 0.1);
 
             if (unit.markerWidth > 0) {
-              final ornamentScale = (pageNumber == 1 || pageNumber == 2) ? 1.6 : 1.9;
+              final ornamentScale = (pageNumber == 1 || pageNumber == 2)
+                  ? 1.6
+                  : 1.9;
               final visualMarkerWidth = calculatedFontSize * ornamentScale;
-              final centerXMarker = (currentX - unit.wordWidth) - (unit.markerWidth / 2);
+              final centerXMarker =
+                  (currentX - unit.wordWidth) - (unit.markerWidth / 2);
               final markerLeft = centerXMarker - (visualMarkerWidth / 2);
 
-              final markerRect = Rect.fromLTWH(markerLeft - 0.5, yUniform, visualMarkerWidth + 1.0, hUniform);
-              final textRect = Rect.fromLTWH(currentX - unit.wordWidth - 0.5, yUniform, unit.wordWidth + 1.0, hUniform);
+              final markerRect = Rect.fromLTWH(
+                markerLeft - 0.5,
+                yUniform,
+                visualMarkerWidth + 1.0,
+                hUniform,
+              );
+              final textRect = Rect.fromLTWH(
+                currentX - unit.wordWidth - 0.5,
+                yUniform,
+                unit.wordWidth + 1.0,
+                hUniform,
+              );
 
               for (final wordNum in unit.wordNumbers) {
-                final key = PageGeometry.getWordKey(line.lineNumber, unit.segment.surahId, unit.segment.ayahNumber, wordNum);
+                final key = PageGeometry.getWordKey(
+                  line.lineNumber,
+                  unit.segment.surahId,
+                  unit.segment.ayahNumber,
+                  wordNum,
+                );
                 allWordBounds[key] = [textRect, markerRect];
               }
             } else {
               for (final wordNum in unit.wordNumbers) {
-                final key = PageGeometry.getWordKey(line.lineNumber, unit.segment.surahId, unit.segment.ayahNumber, wordNum);
-                allWordBounds[key] = [Rect.fromLTWH(currentX - unit.wordWidth - 0.5, yUniform, unit.wordWidth + 1.0, hUniform)];
+                final key = PageGeometry.getWordKey(
+                  line.lineNumber,
+                  unit.segment.surahId,
+                  unit.segment.ayahNumber,
+                  wordNum,
+                );
+                allWordBounds[key] = [
+                  Rect.fromLTWH(
+                    currentX - unit.wordWidth - 0.5,
+                    yUniform,
+                    unit.wordWidth + 1.0,
+                    hUniform,
+                  ),
+                ];
               }
             }
             currentX -= (unit.totalWidth + gap);
@@ -2426,9 +2537,9 @@ class SttController extends ChangeNotifier {
 
     final isNewComputation = !_geometryCache.containsKey(pageNumber);
     _geometryCache[pageNumber] = PageGeometry(wordBounds: allWordBounds);
-    
+
     if (allWordBounds.isNotEmpty && isNewComputation) {
-       // print('📍 [GEOMETRY] Computed ${allWordBounds.length} word bounds for Page $pageNumber ($_viewportWidth px)');
+      // print('📍 [GEOMETRY] Computed ${allWordBounds.length} word bounds for Page $pageNumber ($_viewportWidth px)');
     }
   }
 
@@ -2460,8 +2571,8 @@ class SttController extends ChangeNotifier {
 
     // Search for a word at this position
     for (var entry in geometry.wordBounds.entries) {
-      final key = entry.key; 
-      
+      final key = entry.key;
+
       // ✅ Only check words belonging to THIS specific line
       if (!key.startsWith(linePrefix)) continue;
 
@@ -2471,7 +2582,9 @@ class SttController extends ChangeNotifier {
         // Simple hit test with small buffer
         if (rect.inflate(4.0).contains(localPosition)) {
           final parts = key.split(':');
-          final targetSurahId = int.parse(parts[1]); // ✅ Corrected for line-aware key
+          final targetSurahId = int.parse(
+            parts[1],
+          ); // ✅ Corrected for line-aware key
           final targetAyahNum = int.parse(parts[2]); // ✅ Corrected
           final targetWordIdx = int.parse(parts[3]) - 1; // 1-based to 0-based
 
@@ -2488,7 +2601,9 @@ class SttController extends ChangeNotifier {
           );
 
           if (segment != null) {
-            final name = _metadataCache.getSurah(targetSurahId)?['name_simple'] ?? 'Surah';
+            final name =
+                _metadataCache.getSurah(targetSurahId)?['name_simple'] ??
+                'Surah';
             AyahOptionsSheet.show(context, segment, name).then((_) {
               // ✅ Clear highlight when modal closed (unless recording/listening)
               if (!_isRecording && !_isListeningMode) {
@@ -2504,12 +2619,10 @@ class SttController extends ChangeNotifier {
     }
   }
 
-  void handleListViewLongPress(
-    BuildContext context,
-    AyahSegment segment,
-  ) {
-    final surahName = _metadataCache.getSurah(segment.surahId)?['name_simple'] ?? 'Surah';
-    
+  void handleListViewLongPress(BuildContext context, AyahSegment segment) {
+    final surahName =
+        _metadataCache.getSurah(segment.surahId)?['name_simple'] ?? 'Surah';
+
     // ✅ NEW: Highlight this ayah visually for feedback
     _currentHighlightKey = '${segment.surahId}:${segment.ayahNumber}';
     _currentHighlightWordIdx = 0;
@@ -2542,10 +2655,14 @@ class SttController extends ChangeNotifier {
       if (pageLines != null && pageLines.isNotEmpty) {
         // Find the first line that contains ayah segments
         final firstAyahLine = pageLines.firstWhere(
-          (l) => l.lineType == 'ayah' && l.ayahSegments != null && l.ayahSegments!.isNotEmpty,
+          (l) =>
+              l.lineType == 'ayah' &&
+              l.ayahSegments != null &&
+              l.ayahSegments!.isNotEmpty,
           orElse: () => pageLines.first,
         );
-        if (firstAyahLine.ayahSegments != null && firstAyahLine.ayahSegments!.isNotEmpty) {
+        if (firstAyahLine.ayahSegments != null &&
+            firstAyahLine.ayahSegments!.isNotEmpty) {
           targetAyahId = firstAyahLine.ayahSegments!.first.id;
         }
       }
@@ -2555,26 +2672,35 @@ class SttController extends ChangeNotifier {
 
       // ✅ OPTIMIZATION: Use cached _topVersePage if available (Synchronous)
       if (_topVersePage != null) {
-         targetPage = _topVersePage!;
-         appLogger.log('MODE_TOGGLE', 'Used cached _topVersePage: $targetPage');
+        targetPage = _topVersePage!;
+        appLogger.log('MODE_TOGGLE', 'Used cached _topVersePage: $targetPage');
       } else if (targetAyahId != null) {
         // Fallback: Calculate page from verse (only if cache missing)
         final surahId = targetAyahId! ~/ 1000;
         final ayahNumber = targetAyahId! % 1000;
         // This await is the only potential delay, but it's rare now
-        final mappedPage = await _sqliteService.getPageForAyah(surahId, ayahNumber);
+        final mappedPage = await _sqliteService.getPageForAyah(
+          surahId,
+          ayahNumber,
+        );
         targetPage = mappedPage;
       }
     }
 
-    appLogger.log('MODE_TOGGLE', 'Target page after toggle: $targetPage, Target Ayah: $targetAyahId');
+    appLogger.log(
+      'MODE_TOGGLE',
+      'Target page after toggle: $targetPage, Target Ayah: $targetAyahId',
+    );
 
     // ✅ Persist targetAyahId so the view can read it during initialization jump
     _topVerseId = targetAyahId;
 
     // ✅ CRITICAL FIX: Pre-load page data BEFORE mode toggle to prevent visual glitch
     if (!pageCache.containsKey(targetPage)) {
-      appLogger.log('MODE_TOGGLE', 'Pre-loading page $targetPage before switch...');
+      appLogger.log(
+        'MODE_TOGGLE',
+        'Pre-loading page $targetPage before switch...',
+      );
       final lines = await _sqliteService.getMushafPageLines(targetPage);
       pageCache[targetPage] = lines;
     }
@@ -2596,7 +2722,10 @@ class SttController extends ChangeNotifier {
           appLogger.log('MODE_TOGGLE', 'Synced currentAyatIndex to $index');
         } else {
           _currentAyatIndex = -1;
-          appLogger.log('MODE_TOGGLE', 'Reset currentAyatIndex for silent mode');
+          appLogger.log(
+            'MODE_TOGGLE',
+            'Reset currentAyatIndex for silent mode',
+          );
         }
       }
     }
@@ -2895,12 +3024,12 @@ class SttController extends ChangeNotifier {
           _wordStatusMap[processingKey] = {};
         _wordStatusMap[processingKey]![processingWordIndex] =
             WordStatus.processing;
-        
+
         // ✅ NEW: Update highlight state for UI pulsing
         _currentHighlightKey = processingKey;
         _currentHighlightWordIdx = processingWordIndex;
-        _wordStatusRevision++; 
-        
+        _wordStatusRevision++;
+
         notifyListeners();
         break;
 
@@ -3013,7 +3142,7 @@ class SttController extends ChangeNotifier {
             _wordStatusMap[feedbackKey]![nextWordIndex] = WordStatus.processing;
             _currentHighlightKey = feedbackKey;
             _currentHighlightWordIdx = nextWordIndex;
-            
+
             _currentWords[nextWordIndex] = WordFeedback(
               text: _currentWords[nextWordIndex].text,
               status: WordStatus.processing,
@@ -3106,10 +3235,10 @@ class SttController extends ChangeNotifier {
           }
           // Set word 0 to processing (blue)
           _wordStatusMap[nextAyahKey]![0] = WordStatus.processing;
-          
+
           _currentHighlightKey = nextAyahKey;
           _currentHighlightWordIdx = 0;
-          
+
           print(
             '🔵 STT: Ayah complete! Set first word of next ayah to processing - $nextAyahKey[0]',
           );
@@ -3975,17 +4104,20 @@ class SttController extends ChangeNotifier {
         if (surahMeta != null) {
           surahName = surahMeta['name_simple'] ?? surahName;
         }
-        juzNum = _sqliteService.calculateJuzAccurate(_activeSurahId!, _activeAyahNumber ?? 1);
+        juzNum = _sqliteService.calculateJuzAccurate(
+          _activeSurahId!,
+          _activeAyahNumber ?? 1,
+        );
       } else {
         // Priority: Metadata Cache (Instant fallback by page)
         final surahIds = _metadataCache.getSurahIdsForPage(pageNumber);
         if (surahIds.isNotEmpty) {
           final surahId = surahIds.first;
-          
+
           // ✅ SYNC Granular Context (so PlaybackSettings can use it instantly)
           _activeSurahId = surahId;
           _activeAyahNumber = 1; // Default to first verse of surah on this page
-          
+
           final surahMeta = _metadataCache.getSurah(surahId);
           if (surahMeta != null) {
             surahName = surahMeta['name_simple'] ?? surahName;

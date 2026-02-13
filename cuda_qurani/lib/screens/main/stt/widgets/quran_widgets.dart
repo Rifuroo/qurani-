@@ -334,6 +334,7 @@ class _QuranBottomBarState extends State<QuranBottomBar>
   late Animation<double> _wiggleAnimation;
   Timer? _idleTimer;
   bool _isWiggling = false;
+  bool _isSessionActive = false; // Tracks listening/recording state
 
   Map<String, dynamic> _translations = {};
 
@@ -351,13 +352,13 @@ class _QuranBottomBarState extends State<QuranBottomBar>
     super.initState();
     _loadTranslations();
 
-    // Wiggle: gentle sine-wave oscillation
+    // Wiggle: slow breathing oscillation
     _wiggleController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1500),
     );
-    _wiggleAnimation = Tween<double>(begin: -0.06, end: 0.06).animate(
-      CurvedAnimation(parent: _wiggleController, curve: Curves.easeInOut),
+    _wiggleAnimation = Tween<double>(begin: -0.04, end: 0.04).animate(
+      CurvedAnimation(parent: _wiggleController, curve: Curves.easeInOutSine),
     );
     _wiggleController.addListener(() {
       if (mounted && _isWiggling) setState(() {});
@@ -376,15 +377,19 @@ class _QuranBottomBarState extends State<QuranBottomBar>
 
   void _scheduleIdleWiggle() {
     _idleTimer?.cancel();
-    _idleTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted && !_isDragging && _activeMode == null && _dragPosition == 0.0) {
+    _idleTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted &&
+          !_isDragging &&
+          _activeMode == null &&
+          _dragPosition == 0.0 &&
+          !_isSessionActive) {
         _startWiggle();
       }
     });
   }
 
   void _startWiggle() {
-    if (_isWiggling) return;
+    if (_isWiggling || _isSessionActive) return;
     _isWiggling = true;
     _wiggleController.repeat(reverse: true);
   }
@@ -409,14 +414,14 @@ class _QuranBottomBarState extends State<QuranBottomBar>
     double newPosition = _dragPosition + (delta / maxWidth);
 
     // ✅ Apply constraints based on mode
-    if (isListening && !isPaused) {
-      // Playing: only allow left drag (listen settings)
+    if (isRecording) {
+      // Recording: block ALL drag — user must tap center to stop
+      return;
+    } else if (isListening && !isPaused) {
+      // Playing: only allow left drag (re-open settings)
       newPosition = newPosition.clamp(-1.0, 0.0);
-    } else if (isRecording) {
-      // Recording: only allow right drag (but will reset anyway)
-      newPosition = newPosition.clamp(0.0, 1.0);
     } else {
-      // Idle/Paused: free drag
+      // Idle / Paused: free drag both directions
       newPosition = newPosition.clamp(-1.0, 1.0);
     }
 
@@ -548,6 +553,8 @@ class _QuranBottomBarState extends State<QuranBottomBar>
           _activeMode = null;
         }
       });
+      // Re-schedule wiggle after reset (if session ended)
+      if (!keepActiveMode) _scheduleIdleWiggle();
     }
   }
 
@@ -618,19 +625,28 @@ class _QuranBottomBarState extends State<QuranBottomBar>
   Widget build(BuildContext context) {
     final controller = context.read<SttController>();
 
-    final isUIVisible = context.select<SttController, bool>((c) => c.isUIVisible);
-    final isListening = context.select<SttController, bool>((c) => c.isListeningMode);
-    final isRecording = context.select<SttController, bool>((c) => c.isRecording);
+    final isUIVisible = context.select<SttController, bool>(
+      (c) => c.isUIVisible,
+    );
+    final isListening = context.select<SttController, bool>(
+      (c) => c.isListeningMode,
+    );
+    final isRecording = context.select<SttController, bool>(
+      (c) => c.isRecording,
+    );
     final isPaused = context.select<SttController, bool>((c) => c.isPaused);
 
-    // ✅ Force center when session becomes active
-    final isSessionActive = isListening || isRecording;
-    if (isSessionActive && _dragPosition != 0.0 && !_isDragging) {
+    // ✅ Track session state for wiggle guard (includes paused)
+    _isSessionActive = isListening || isRecording;
+
+    // Force center only when actively playing/recording (NOT when paused)
+    final shouldLockCenter = isRecording || (isListening && !isPaused);
+    if (shouldLockCenter && _dragPosition != 0.0 && !_isDragging) {
       _dragPosition = 0.0;
     }
 
-    // Update activity time when active
-    if (isSessionActive || _isDragging || _activeMode != null) {
+    // Stop wiggle when any session is active (including paused)
+    if (_isSessionActive || _isDragging || _activeMode != null) {
       _lastActivityTime = DateTime.now();
       _stopWiggle();
     }
@@ -658,9 +674,10 @@ class _QuranBottomBarState extends State<QuranBottomBar>
     final labelSize = screenWidth * 0.032;
     final bottomOffset = screenHeight * 0.057;
 
-    // ✅ Compute position: forced 0 when active, wiggle offset when idle
+    // ✅ Compute position: forced 0 when actively playing/recording, free when paused/idle
     final double wiggleOffset = _isWiggling ? _wiggleAnimation.value : 0.0;
-    final effectivePosition = (isSessionActive || _activeMode != null) && !_isDragging
+    final effectivePosition =
+        (shouldLockCenter || _activeMode != null) && !_isDragging
         ? 0.0
         : (_dragPosition + wiggleOffset).clamp(-1.0, 1.0);
 
@@ -711,10 +728,15 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                           left: trackWidth * 0.08,
                           child: Transform.translate(
                             offset: Offset(-_dragPosition * 8, 0),
-                            child: IgnorePointer(
+                            child: GestureDetector(
+                              onTap: isRecording
+                                  ? null
+                                  : () => _activateMode('listen', controller),
                               child: AnimatedOpacity(
                                 duration: const Duration(milliseconds: 200),
-                                opacity: _dragPosition < -0.3 || isListening ? 1.0 : 0.4,
+                                opacity: _dragPosition < -0.3 || isListening
+                                    ? 1.0
+                                    : 0.4,
                                 child: Row(
                                   children: [
                                     Icon(
@@ -752,10 +774,15 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                           right: trackWidth * 0.08,
                           child: Transform.translate(
                             offset: Offset(-_dragPosition * 8, 0),
-                            child: IgnorePointer(
+                            child: GestureDetector(
+                              onTap: isRecording || (isListening && !isPaused)
+                                  ? null
+                                  : () => _activateMode('recite', controller),
                               child: AnimatedOpacity(
                                 duration: const Duration(milliseconds: 200),
-                                opacity: _dragPosition > 0.3 || isRecording ? 1.0 : 0.4,
+                                opacity: _dragPosition > 0.3 || isRecording
+                                    ? 1.0
+                                    : 0.4,
                                 child: Row(
                                   children: [
                                     Text(
@@ -790,8 +817,10 @@ class _QuranBottomBarState extends State<QuranBottomBar>
 
                         // ✅ Sliding Thumb — direct Positioned + ripple
                         Positioned(
-                          left: ((trackWidth / 2) - (thumbSize / 2)) +
-                              (effectivePosition * (trackWidth / 2 - thumbSize / 2)),
+                          left:
+                              ((trackWidth / 2) - (thumbSize / 2)) +
+                              (effectivePosition *
+                                  (trackWidth / 2 - thumbSize / 2)),
                           child: AnimatedScale(
                             scale: _isDragging ? 1.12 : 1.0,
                             duration: const Duration(milliseconds: 150),
@@ -806,15 +835,21 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                               ).withValues(alpha: 0.4),
                               child: InkWell(
                                 customBorder: const CircleBorder(),
-                                splashColor: Colors.white.withValues(alpha: 0.3),
-                                highlightColor: Colors.white.withValues(alpha: 0.1),
+                                splashColor: Colors.white.withValues(
+                                  alpha: 0.3,
+                                ),
+                                highlightColor: Colors.white.withValues(
+                                  alpha: 0.1,
+                                ),
                                 onTap: () => _handleCenterButtonTap(controller),
                                 child: SizedBox(
                                   width: thumbSize,
                                   height: thumbSize,
                                   child: Center(
                                     child: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 200),
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
                                       switchInCurve: Curves.easeOut,
                                       switchOutCurve: Curves.easeIn,
                                       transitionBuilder: (child, animation) {
@@ -908,7 +943,6 @@ class _QuranBottomBarState extends State<QuranBottomBar>
       ),
     );
   }
-
 
   Color _getThumbColor(bool isListening, bool isRecording) {
     if (isListening) return AppColors.getPrimary(context);
