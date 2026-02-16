@@ -39,11 +39,11 @@ class _SimilarityListViewState extends State<SimilarityListView> {
 
   void _navigateToAyah(int surahId, int ayahNumber) async {
     if (surahId < 1 || surahId > 114) return;
-    
+
     setState(() => _isLoading = true);
-    
+
     String surahName = _currentSurahName;
-    
+
     // If surah changed, fetch new surah name
     if (surahId != _currentSurahId) {
       try {
@@ -70,11 +70,8 @@ class _SimilarityListViewState extends State<SimilarityListView> {
       appBar: _buildAppBar(context),
       body: Column(
         children: [
-          if (_isLoading)
-            const LinearProgressIndicator(),
-          Expanded(
-            child: _buildBody(context),
-          ),
+          if (_isLoading) const LinearProgressIndicator(),
+          Expanded(child: _buildBody(context)),
           _buildBottomNavigation(context),
         ],
       ),
@@ -116,17 +113,18 @@ class _SimilarityListViewState extends State<SimilarityListView> {
 
   Widget _buildBody(BuildContext context) {
     final mutashabihatService = MutashabihatService();
-    
+
     return FutureBuilder<Map<String, dynamic>>(
       future: _getData(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         final data = snapshot.data ?? {};
         final String verseText = data['verseText'] ?? '';
-        final List<SimilarVerseReference> similarities = data['similarities'] ?? [];
+        final List<SimilarVerseReference> similarities =
+            data['similarities'] ?? [];
         final List<MutashabihatPhrase> phrases = data['phrases'] ?? [];
 
         return ListView(
@@ -135,7 +133,10 @@ class _SimilarityListViewState extends State<SimilarityListView> {
             // Current Verse Header
             if (verseText.isNotEmpty) ...[
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 24,
+                  horizontal: 8,
+                ),
                 child: Text(
                   verseText,
                   textAlign: TextAlign.right,
@@ -163,7 +164,7 @@ class _SimilarityListViewState extends State<SimilarityListView> {
                 ),
               )
             else ...[
-               Padding(
+              Padding(
                 padding: const EdgeInsets.only(bottom: 16, left: 8),
                 child: Text(
                   'Similar verses',
@@ -174,14 +175,17 @@ class _SimilarityListViewState extends State<SimilarityListView> {
                   ),
                 ),
               ),
-              ...similarities.map((sim) => _buildSimilarVerseCard(context, sim)),
+              ...similarities.map(
+                (sim) => _buildSimilarVerseCard(context, sim),
+              ),
               const SizedBox(height: 24),
             ],
 
             // Phrases Section
             if (phrases.isNotEmpty) ...[
-              if (similarities.isNotEmpty) // Extra heading if phrases follow verses
-                 Padding(
+              if (similarities
+                  .isNotEmpty) // Extra heading if phrases follow verses
+                Padding(
                   padding: const EdgeInsets.only(bottom: 16, left: 8),
                   child: Text(
                     'Similar phrases',
@@ -194,7 +198,7 @@ class _SimilarityListViewState extends State<SimilarityListView> {
                 ),
               ...phrases.map((phrase) => _buildPhraseCard(context, phrase)),
             ],
-            
+
             if (similarities.isEmpty && phrases.isEmpty)
               _buildUniqueView(context),
           ],
@@ -205,24 +209,38 @@ class _SimilarityListViewState extends State<SimilarityListView> {
 
   Future<Map<String, dynamic>> _getData() async {
     final service = MutashabihatService();
-    final currentText = await service.getVerseText(_currentSurahId, _currentAyahNumber);
-    final similarities = await service.getSimilarPhrases(_currentSurahId, _currentAyahNumber);
-    final phrases = await service.getPhrasesForVerse(_currentSurahId, _currentAyahNumber);
-    
+    final currentText = await service.getVerseText(
+      _currentSurahId,
+      _currentAyahNumber,
+    );
+    final results = await service.getSimilarVerses(
+      widget.segment.surahId,
+      widget.segment.ayahNumber,
+    );
+    final phrases = await service.getPhrasesForVerse(
+      _currentSurahId,
+      _currentAyahNumber,
+    );
+
     return {
       'verseText': currentText,
-      'similarities': similarities,
+      'similarities': results,
       'phrases': phrases,
     };
   }
 
-  Widget _buildSimilarVerseCard(BuildContext context, SimilarVerseReference sim) {
-     return Card(
+  Widget _buildSimilarVerseCard(
+    BuildContext context,
+    SimilarVerseReference sim,
+  ) {
+    return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.getBorderLight(context).withOpacity(0.5)),
+        side: BorderSide(
+          color: AppColors.getBorderLight(context).withOpacity(0.5),
+        ),
       ),
       child: InkWell(
         onTap: () {
@@ -232,7 +250,9 @@ class _SimilarityListViewState extends State<SimilarityListView> {
             Navigator.pop(context);
           } catch (e) {
             debugPrint('Error jumping to ayah: $e');
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigation error')));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Navigation error')));
           }
         },
         borderRadius: BorderRadius.circular(12),
@@ -253,7 +273,10 @@ class _SimilarityListViewState extends State<SimilarityListView> {
                   ),
                   Text(
                     'Score: ${sim.score}%',
-                    style: TextStyle(fontSize: 12, color: AppColors.getTextSecondary(context)),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.getTextSecondary(context),
+                    ),
                   ),
                 ],
               ),
@@ -267,10 +290,43 @@ class _SimilarityListViewState extends State<SimilarityListView> {
                   height: 1.6,
                 ),
               ),
+              const SizedBox(height: 8),
+              _buildLazyTransliteration(context, sim.surah, sim.ayah),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLazyTransliteration(
+    BuildContext context,
+    int surahId,
+    int ayahNumber,
+  ) {
+    return FutureBuilder<String?>(
+      future: MutashabihatService().getTransliteration(surahId, ayahNumber),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 4,
+            width: 100,
+            child: LinearProgressIndicator(),
+          );
+        }
+
+        final text = snapshot.data;
+        if (text == null || text.isEmpty) return const SizedBox.shrink();
+
+        return Text(
+          text,
+          style: TextStyle(
+            fontSize: 13,
+            fontStyle: FontStyle.italic,
+            color: AppColors.getTextSecondary(context).withOpacity(0.8),
+          ),
+        );
+      },
     );
   }
 
@@ -280,7 +336,9 @@ class _SimilarityListViewState extends State<SimilarityListView> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.getBorderLight(context).withOpacity(0.5)),
+        side: BorderSide(
+          color: AppColors.getBorderLight(context).withOpacity(0.5),
+        ),
       ),
       child: InkWell(
         onTap: () {
@@ -317,7 +375,10 @@ class _SimilarityListViewState extends State<SimilarityListView> {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.chevron_right, color: AppColors.getTextSecondary(context).withOpacity(0.5)),
+              Icon(
+                Icons.chevron_right,
+                color: AppColors.getTextSecondary(context).withOpacity(0.5),
+              ),
             ],
           ),
         ),
@@ -326,7 +387,7 @@ class _SimilarityListViewState extends State<SimilarityListView> {
   }
 
   void _showVersesForPhrase(BuildContext context, MutashabihatPhrase phrase) {
-     showModalBottomSheet(
+    showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.getBackground(context),
@@ -369,21 +430,24 @@ class _SimilarityListViewState extends State<SimilarityListView> {
                 itemBuilder: (context, index) {
                   final key = phrase.verseKeys[index];
                   return ListTile(
-                    title: Text(key, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      key,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () {
                       final parts = key.split(':');
                       final s = int.parse(parts[0]);
                       final a = int.parse(parts[1]);
-                      
+
                       try {
                         final controller = this.context.read<SttController>();
                         controller.jumpToAyah(s, a);
                         Navigator.pop(context); // Close sheet
                         Navigator.pop(this.context); // Close similarity view
                       } catch (e) {
-                         debugPrint('Error jumping to ayah from phrase: $e');
-                         Navigator.pop(context);
+                        debugPrint('Error jumping to ayah from phrase: $e');
+                        Navigator.pop(context);
                       }
                     },
                   );
@@ -402,7 +466,11 @@ class _SimilarityListViewState extends State<SimilarityListView> {
         padding: const EdgeInsets.symmetric(vertical: 64),
         child: Column(
           children: [
-            Icon(Icons.verified_outlined, size: 64, color: AppColors.getPrimary(context).withOpacity(0.5)),
+            Icon(
+              Icons.verified_outlined,
+              size: 64,
+              color: AppColors.getPrimary(context).withOpacity(0.5),
+            ),
             const SizedBox(height: 16),
             const Text(
               'Ayah Munfaridah',
@@ -425,7 +493,11 @@ class _SimilarityListViewState extends State<SimilarityListView> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
         color: AppColors.getSurface(context),
-        border: Border(top: BorderSide(color: AppColors.getBorderLight(context).withOpacity(0.5))),
+        border: Border(
+          top: BorderSide(
+            color: AppColors.getBorderLight(context).withOpacity(0.5),
+          ),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -445,10 +517,18 @@ class _SimilarityListViewState extends State<SimilarityListView> {
                 icon: Icons.chevron_left,
                 isLeft: true,
                 onTap: () {
-                  final globalIndex = GlobalAyatService.toGlobalAyat(_currentSurahId, _currentAyahNumber);
+                  final globalIndex = GlobalAyatService.toGlobalAyat(
+                    _currentSurahId,
+                    _currentAyahNumber,
+                  );
                   if (GlobalAyatService.isValid(globalIndex + 1)) {
-                    final nextData = GlobalAyatService.fromGlobalAyat(globalIndex + 1);
-                    _navigateToAyah(nextData['surah_id']!, nextData['ayah_number']!);
+                    final nextData = GlobalAyatService.fromGlobalAyat(
+                      globalIndex + 1,
+                    );
+                    _navigateToAyah(
+                      nextData['surah_id']!,
+                      nextData['ayah_number']!,
+                    );
                   } else {
                     _showEdgeCaseSnackBar('Reached the end of Al-Quran');
                   }
@@ -464,10 +544,18 @@ class _SimilarityListViewState extends State<SimilarityListView> {
                 icon: Icons.chevron_right,
                 isLeft: false,
                 onTap: () {
-                  final globalIndex = GlobalAyatService.toGlobalAyat(_currentSurahId, _currentAyahNumber);
+                  final globalIndex = GlobalAyatService.toGlobalAyat(
+                    _currentSurahId,
+                    _currentAyahNumber,
+                  );
                   if (GlobalAyatService.isValid(globalIndex - 1)) {
-                    final prevData = GlobalAyatService.fromGlobalAyat(globalIndex - 1);
-                    _navigateToAyah(prevData['surah_id']!, prevData['ayah_number']!);
+                    final prevData = GlobalAyatService.fromGlobalAyat(
+                      globalIndex - 1,
+                    );
+                    _navigateToAyah(
+                      prevData['surah_id']!,
+                      prevData['ayah_number']!,
+                    );
                   } else {
                     _showEdgeCaseSnackBar('First verse of Al-Fatihah');
                   }
@@ -480,7 +568,8 @@ class _SimilarityListViewState extends State<SimilarityListView> {
     );
   }
 
-  Widget _buildNavButton(BuildContext context, {
+  Widget _buildNavButton(
+    BuildContext context, {
     required String label,
     required IconData icon,
     required bool isLeft,
@@ -505,7 +594,12 @@ class _SimilarityListViewState extends State<SimilarityListView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (isLeft) Icon(icon, color: AppColors.getTextPrimary(context).withOpacity(0.7), size: 22),
+                if (isLeft)
+                  Icon(
+                    icon,
+                    color: AppColors.getTextPrimary(context).withOpacity(0.7),
+                    size: 22,
+                  ),
                 if (isLeft) const SizedBox(width: 8),
                 Text(
                   label,
@@ -517,7 +611,12 @@ class _SimilarityListViewState extends State<SimilarityListView> {
                   ),
                 ),
                 if (!isLeft) const SizedBox(width: 8),
-                if (!isLeft) Icon(icon, color: AppColors.getTextPrimary(context).withOpacity(0.7), size: 22),
+                if (!isLeft)
+                  Icon(
+                    icon,
+                    color: AppColors.getTextPrimary(context).withOpacity(0.7),
+                    size: 22,
+                  ),
               ],
             ),
           ),

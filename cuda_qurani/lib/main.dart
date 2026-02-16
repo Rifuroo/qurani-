@@ -91,10 +91,9 @@ Future<void> _initializeServicesInBackground() async {
     // });
 
     // Initialize Workmanager in background
-    Workmanager().initialize(
-      callbackDispatcher,
-      isInDebugMode: false,
-    ).then((_) {
+    Workmanager().initialize(callbackDispatcher, isInDebugMode: false).then((
+      _,
+    ) {
       // Register periodic task for widget update (every 6 hours)
       Workmanager().registerPeriodicTask(
         'update-widget-task',
@@ -110,6 +109,7 @@ Future<void> _initializeServicesInBackground() async {
     // Initialize in parallel for better performance
     await Future.wait([
       MushafSettingsService().initialize(),
+      QuranResourceService().initialize(),
       _initializeLanguageService(),
       _initializeListeningServices(),
     ]);
@@ -192,9 +192,15 @@ class MainApp extends StatelessWidget {
           create: (_) => PremiumProvider()..initialize(),
           lazy: false,
         ),
-        ChangeNotifierProvider(create: (_) => ReminderProvider()..initialize(), lazy: false),
+        ChangeNotifierProvider(
+          create: (_) => ReminderProvider()..initialize(),
+          lazy: false,
+        ),
         ChangeNotifierProvider(create: (_) => RecitationProvider(), lazy: true),
-        ChangeNotifierProvider(create: (_) => QuranResourceService(), lazy: false),
+        ChangeNotifierProvider(
+          create: (_) => QuranResourceService(),
+          lazy: false,
+        ),
       ],
       child: Consumer2<LanguageProvider, ThemeProvider>(
         builder: (context, languageProvider, themeProvider, child) {
@@ -272,7 +278,9 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
 
     try {
       final Uri? widgetUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
-      if (widgetUri != null && widgetUri.scheme == 'qurani' && widgetUri.host == 'ayah') {
+      if (widgetUri != null &&
+          widgetUri.scheme == 'qurani' &&
+          widgetUri.host == 'ayah') {
         final segments = widgetUri.pathSegments;
         if (segments.length >= 2) {
           final surahId = int.tryParse(segments[0]);
@@ -316,29 +324,32 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
       // Resolve page number now that DB is ready
       try {
         if (_isDatabaseInitialized && deepLinkAyahNum != null) {
-           // We need to retrieve the URI again to be sure, or store surahId
-           // Better to store surahId from the first check
-           final widgetUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
-           if (widgetUri != null) {
-              final surahId = int.tryParse(widgetUri.pathSegments[0]);
-              if (surahId != null) {
-                 targetPage = await LocalDatabaseService.getPageNumber(surahId, deepLinkAyahNum!);
-              }
-           }
+          // We need to retrieve the URI again to be sure, or store surahId
+          // Better to store surahId from the first check
+          final widgetUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
+          if (widgetUri != null) {
+            final surahId = int.tryParse(widgetUri.pathSegments[0]);
+            if (surahId != null) {
+              targetPage = await LocalDatabaseService.getPageNumber(
+                surahId,
+                deepLinkAyahNum!,
+              );
+            }
+          }
         }
       } catch (e) {
-         print('Deep Link Page Calc Error: $e');
+        print('Deep Link Page Calc Error: $e');
       }
     }
 
     // ✅ 4. Duration logic
     // If deep link, minimal delay only if not ready.
     if (!isDeepLinkLaunch) {
-       final elapsed = DateTime.now().difference(startTime);
-       const minSplashDuration = Duration(milliseconds: 2000);
-       if (elapsed < minSplashDuration) {
-         await Future.delayed(minSplashDuration - elapsed);
-       }
+      final elapsed = DateTime.now().difference(startTime);
+      const minSplashDuration = Duration(milliseconds: 2000);
+      if (elapsed < minSplashDuration) {
+        await Future.delayed(minSplashDuration - elapsed);
+      }
     }
 
     _startTarteelStylePreload();
@@ -355,7 +366,9 @@ class _InitialSplashScreenState extends State<InitialSplashScreen> {
           initialPageId: targetPage,
           highlightAyahId: deepLinkAyahNum,
         ),
-        transitionDuration: isDeepLinkLaunch ? Duration.zero : const Duration(milliseconds: 300), // Zero delay for deep link
+        transitionDuration: isDeepLinkLaunch
+            ? Duration.zero
+            : const Duration(milliseconds: 300), // Zero delay for deep link
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           if (isDeepLinkLaunch) return child; // No animation for deep link
           return FadeTransition(opacity: animation, child: child);

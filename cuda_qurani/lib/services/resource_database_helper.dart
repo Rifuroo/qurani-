@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -7,7 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
 class ResourceDatabaseHelper {
-  static final ResourceDatabaseHelper _instance = ResourceDatabaseHelper._internal();
+  static final ResourceDatabaseHelper _instance =
+      ResourceDatabaseHelper._internal();
   factory ResourceDatabaseHelper() => _instance;
   ResourceDatabaseHelper._internal();
 
@@ -17,7 +17,7 @@ class ResourceDatabaseHelper {
   Future<Database> getDatabase(String dbName, {String? category}) async {
     final docsDir = await getApplicationDocumentsDirectory();
     final path = join(docsDir.path, 'resources', '$dbName.db');
-    
+
     if (_db != null && _currentDbPath == path) {
       return _db!;
     }
@@ -55,7 +55,9 @@ class ResourceDatabaseHelper {
               text TEXT
             )
           ''');
-          await db.execute('CREATE INDEX idx_translation_ayah ON translation(ayah_key)');
+          await db.execute(
+            'CREATE INDEX idx_translation_ayah ON translation(ayah_key)',
+          );
         } else {
           // Fallback legacy schema
           await db.execute('''
@@ -73,9 +75,15 @@ class ResourceDatabaseHelper {
     return _db!;
   }
 
-  Future<void> insertBatch(String dbName, Map<String, dynamic> data, String category) async {
+  Future<void> insertBatch(
+    String dbName,
+    Map<String, dynamic> data,
+    String category,
+  ) async {
     final db = await getDatabase(dbName, category: category);
-    final String tableName = category == 'tafsir' ? 'tafsir' : (category == 'translation' ? 'translation' : 'resources');
+    final String tableName = category == 'tafsir'
+        ? 'tafsir'
+        : (category == 'translation' ? 'translation' : 'resources');
     final String idCol = tableName == 'resources' ? 'id' : 'ayah_key';
 
     await db.transaction((txn) async {
@@ -89,19 +97,16 @@ class ResourceDatabaseHelper {
         } else if (value is Map) {
           // Handle various JSON formats found in assets
           text = value['text'] ?? value['t']?.toString();
-          
+
           // If the JSON itself contains a pointer (e.g. "1:1"), we set it as groupKey
           if (text != null && text.contains(':') && text.length < 10) {
-             groupKey = text;
-             text = null; // Mark as empty to trigger pointer resolution later
+            groupKey = text;
+            text = null; // Mark as empty to trigger pointer resolution later
           }
         }
 
         if (text != null || groupKey != null) {
-          final Map<String, dynamic> row = {
-            idCol: key,
-            'text': text,
-          };
+          final Map<String, dynamic> row = {idCol: key, 'text': text};
           if (tableName == 'tafsir') {
             row['group_ayah_key'] = groupKey ?? key;
           }
@@ -112,7 +117,7 @@ class ResourceDatabaseHelper {
               row['ayah'] = int.tryParse(parts[1]);
             }
           }
-          
+
           batch.insert(
             tableName,
             row,
@@ -124,17 +129,23 @@ class ResourceDatabaseHelper {
     });
   }
 
-  Future<String?> getText(String dbName, String key, {bool isTafsir = false}) async {
+  Future<String?> getText(
+    String dbName,
+    String key, {
+    bool isTafsir = false,
+  }) async {
     final db = await getDatabase(dbName);
-    
+
     // 1. Determine table name and ID column
     String tableName = 'resources';
     String idCol = 'id';
-    
+
     // Probe for table existence
-    final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table'",
+    );
     final tableNames = tables.map((t) => t['name'] as String).toList();
-    
+
     if (isTafsir && tableNames.contains('tafsir')) {
       tableName = 'tafsir';
       idCol = 'ayah_key';
@@ -160,9 +171,11 @@ class ResourceDatabaseHelper {
 
     final entry = results.first;
     String? text = entry['text'] as String?;
-    
+
     // 3. Handle Tafsir group_ayah_key logic (Pointer resolution)
-    if (isTafsir && tableName == 'tafsir' && (text == null || text.trim().isEmpty)) {
+    if (isTafsir &&
+        tableName == 'tafsir' &&
+        (text == null || text.trim().isEmpty)) {
       final groupKey = entry['group_ayah_key'] as String?;
       if (groupKey != null && groupKey != key) {
         return await getText(dbName, groupKey, isTafsir: true);
@@ -182,13 +195,26 @@ class ResourceDatabaseHelper {
   Future<void> copyFromAssets(String assetPath, String dbName) async {
     final docsDir = await getApplicationDocumentsDirectory();
     final path = join(docsDir.path, 'resources', '$dbName.db');
-    
+
     // Ensure directory exists
     await Directory(dirname(path)).create(recursive: true);
-    
+
+    // IF the database is already open, close it before overwriting
+    if (_db != null && _currentDbPath == path) {
+      await _db!.close();
+      _db = null;
+      _currentDbPath = null;
+      debugPrint(
+        'Closed cached database handle for $dbName before re-staging.',
+      );
+    }
+
     // Load asset and write to file
     final data = await rootBundle.load(assetPath);
-    final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    final bytes = data.buffer.asUint8List(
+      data.offsetInBytes,
+      data.lengthInBytes,
+    );
     await File(path).writeAsBytes(bytes, flush: true);
     debugPrint('Successfully copied $assetPath to $path');
   }

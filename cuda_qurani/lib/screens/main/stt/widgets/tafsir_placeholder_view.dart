@@ -39,9 +39,13 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
     _currentSurahName = widget.surahName;
   }
 
-  void _navigateToAyah(SttController controller, int surahId, int ayahNumber) async {
+  void _navigateToAyah(
+    SttController controller,
+    int surahId,
+    int ayahNumber,
+  ) async {
     String surahName = _currentSurahName;
-    
+
     // If surah changed, fetch new surah name
     if (surahId != _currentSurahId) {
       final quranService = Provider.of<QuranService>(context, listen: false);
@@ -63,7 +67,7 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
   @override
   Widget build(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
-    
+
     // Try to get controller, but don't fail if not available
     SttController? controller;
     try {
@@ -71,7 +75,7 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
     } catch (e) {
       controller = null;
     }
-    
+
     // Try to get QuranService, but don't fail if not available
     QuranService? quranService;
     try {
@@ -79,10 +83,10 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
     } catch (e) {
       quranService = null;
     }
-    
+
     final resourceService = Provider.of<QuranResourceService>(context);
     final sourceName = resourceService.selectedTafsirName ?? 'Tafsir';
-    
+
     // ✅ FIX: Use Text-based fonts for Unicode text rendering
     // If layout is QPC (Glyph-based), use standard KFGQPC Text font
     // If layout is IndoPak, use IndoPak font
@@ -97,7 +101,10 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
         backgroundColor: AppColors.getSurface(context),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.getTextSecondary(context)),
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppColors.getTextSecondary(context),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Container(
@@ -135,25 +142,36 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
                   child: Directionality(
                     textDirection: TextDirection.rtl,
                     child: FutureBuilder<List<dynamic>>(
-                      future: Future.wait([
-                        quranService!.getAyahWords(
-                          _currentSurahId,
-                          _currentAyahNumber,
-                        ),
-                        quranService!.getPageForAyah(
-                          _currentSurahId,
-                          _currentAyahNumber,
-                        ),
-                      ]),
+                      future: quranService == null
+                          ? Future.value(<dynamic>[])
+                          : Future.wait([
+                              quranService.getAyahWords(
+                                _currentSurahId,
+                                _currentAyahNumber,
+                              ),
+                              quranService.getPageForAyah(
+                                _currentSurahId,
+                                _currentAyahNumber,
+                              ),
+                            ]),
                       builder: (context, snapshot) {
-                        if (snapshot.hasError) {
+                        if (snapshot.hasError ||
+                            (snapshot.connectionState == ConnectionState.done &&
+                                !snapshot.hasData &&
+                                quranService == null)) {
                           return Center(
-                            child: Text('Error loading ayah: ${snapshot.error}'),
+                            child: Text(
+                              quranService == null
+                                  ? 'Quran Service not found. Please restart app.'
+                                  : 'Error loading ayah: ${snapshot.error}',
+                            ),
                           );
                         }
 
                         if (!snapshot.hasData) {
-                          return const Center(child: CircularProgressIndicator());
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
                         }
 
                         final ayahWords = snapshot.data![0] as List<WordData>;
@@ -162,7 +180,8 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
                         // ✅ FIX: Use correct font based on layout and page number
                         // If layout is QPC (Glyph-based), use p{pageNumber}
                         // If layout is IndoPak, use IndoPak-Nastaleeq
-                        final isGlyphBased = controller?.mushafLayout.isGlyphBased ?? false;
+                        final isGlyphBased =
+                            controller?.mushafLayout.isGlyphBased ?? false;
                         final fontFamily = isGlyphBased
                             ? 'p$pageNumber'
                             : 'IndoPak-Nastaleeq';
@@ -177,108 +196,135 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
                     ),
                   ),
                 ),
-                  const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-                  // Tafsir Content + Group Info Banner
-                  FutureBuilder<String?>(
-                    future: resourceService.getTafsirText(_currentSurahId, _currentAyahNumber),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return Center(
+                // Tafsir Content + Group Info Banner
+                FutureBuilder<String?>(
+                  future: resourceService.getTafsirText(
+                    _currentSurahId,
+                    _currentAyahNumber,
+                  ),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          child: Text(
+                            'Error: ${snapshot.error}',
+                            style: TextStyle(
+                              color: AppColors.getError(context),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final content = snapshot.data;
+
+                    if (content == null) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            child: Text('Error: ${snapshot.error}', 
-                              style: TextStyle(color: AppColors.getError(context))),
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: CircularProgressIndicator(),
                           ),
                         );
                       }
+                      return _buildDownloadPrompt(context);
+                    }
 
-                      final content = snapshot.data;
-                      
-                      if (content == null) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 20),
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
-                        return _buildDownloadPrompt(context);
+                    // Parse natural group info if present
+                    String? groupRange;
+                    String cleanData = content;
+                    if (content.startsWith('GROUP_INFO|')) {
+                      final parts = content.split('|');
+                      if (parts.length >= 3) {
+                        groupRange = parts[1];
+                        cleanData = parts.sublist(2).join('|');
                       }
+                    }
 
-                      // Parse natural group info if present
-                      String? groupRange;
-                      String cleanData = content;
-                      if (content.startsWith('GROUP_INFO|')) {
-                        final parts = content.split('|');
-                        if (parts.length >= 3) {
-                          groupRange = parts[1];
-                          cleanData = parts.sublist(2).join('|');
-                        }
-                      }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Group Info Banner (Restored and Styled)
+                        if (groupRange != null)
+                          _buildGroupBanner(context, groupRange),
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Group Info Banner (Restored and Styled)
-                          if (groupRange != null)
-                            _buildGroupBanner(context, groupRange),
-                          
-                          const SizedBox(height: 12),
-                          
-                          RichText(
-                            textAlign: resourceService.selectedTafsirLanguage == 'العربية' || 
-                                           resourceService.selectedTafsirLanguage == 'اردو' ||
-                                           resourceService.selectedTafsirLanguage == 'فارسی'
-                                ? TextAlign.justify 
-                                : TextAlign.left,
-                            textDirection: resourceService.selectedTafsirLanguage == 'العربية' || 
-                                           resourceService.selectedTafsirLanguage == 'اردو' ||
-                                           resourceService.selectedTafsirLanguage == 'فارسی'
-                                ? TextDirection.rtl 
-                                : TextDirection.ltr,
-                            text: TextSpan(
-                              children: _parseHtmlToSpans(context, _cleanContent(cleanData, _currentAyahNumber)),
+                        const SizedBox(height: 12),
+
+                        RichText(
+                          textAlign:
+                              resourceService.selectedTafsirLanguage ==
+                                      'العربية' ||
+                                  resourceService.selectedTafsirLanguage ==
+                                      'اردو' ||
+                                  resourceService.selectedTafsirLanguage ==
+                                      'فارسی'
+                              ? TextAlign.justify
+                              : TextAlign.left,
+                          textDirection:
+                              resourceService.selectedTafsirLanguage ==
+                                      'العربية' ||
+                                  resourceService.selectedTafsirLanguage ==
+                                      'اردو' ||
+                                  resourceService.selectedTafsirLanguage ==
+                                      'فارسی'
+                              ? TextDirection.rtl
+                              : TextDirection.ltr,
+                          text: TextSpan(
+                            children: _parseHtmlToSpans(
+                              context,
+                              _cleanContent(cleanData, _currentAyahNumber),
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.getPrimary(context).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  sourceName,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.getPrimary(context),
-                                  ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.getPrimary(
+                                  context,
+                                ).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                sourceName,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.getPrimary(context),
                                 ),
                               ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 30),
-                  _buildTafsirSettingsCard(context),
-                ],
-              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 30),
+                _buildTafsirSettingsCard(context),
+              ],
             ),
-          
+          ),
+
           // Bottom Navigation
           if (controller != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
                 color: AppColors.getSurface(context),
-                border: Border(top: BorderSide(color: AppColors.getBorderLight(context).withOpacity(0.5))),
+                border: Border(
+                  top: BorderSide(
+                    color: AppColors.getBorderLight(context).withOpacity(0.5),
+                  ),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.03),
@@ -298,16 +344,23 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
                         isLeft: true, // Next on the left (RTL flow)
                         onTap: () {
                           // Global navigation using GlobalAyatService
-                          final globalIndex = GlobalAyatService.toGlobalAyat(_currentSurahId, _currentAyahNumber);
+                          final globalIndex = GlobalAyatService.toGlobalAyat(
+                            _currentSurahId,
+                            _currentAyahNumber,
+                          );
                           if (GlobalAyatService.isValid(globalIndex + 1)) {
-                            final nextData = GlobalAyatService.fromGlobalAyat(globalIndex + 1);
+                            final nextData = GlobalAyatService.fromGlobalAyat(
+                              globalIndex + 1,
+                            );
                             final nextSurah = nextData['surah_id']!;
                             final nextAyah = nextData['ayah_number']!;
-                            
+
                             _navigateToAyah(controller!, nextSurah, nextAyah);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Reached the end of Al-Quran')),
+                              const SnackBar(
+                                content: Text('Reached the end of Al-Quran'),
+                              ),
                             );
                           }
                         },
@@ -321,17 +374,24 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
                         icon: Icons.chevron_right,
                         isLeft: false, // Previous on the right (RTL flow)
                         onTap: () {
-                           // Global navigation using GlobalAyatService
-                          final globalIndex = GlobalAyatService.toGlobalAyat(_currentSurahId, _currentAyahNumber);
+                          // Global navigation using GlobalAyatService
+                          final globalIndex = GlobalAyatService.toGlobalAyat(
+                            _currentSurahId,
+                            _currentAyahNumber,
+                          );
                           if (GlobalAyatService.isValid(globalIndex - 1)) {
-                            final prevData = GlobalAyatService.fromGlobalAyat(globalIndex - 1);
+                            final prevData = GlobalAyatService.fromGlobalAyat(
+                              globalIndex - 1,
+                            );
                             final prevSurah = prevData['surah_id']!;
                             final prevAyah = prevData['ayah_number']!;
-                            
+
                             _navigateToAyah(controller!, prevSurah, prevAyah);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('First verse of Al-Fatihah')),
+                              const SnackBar(
+                                content: Text('First verse of Al-Fatihah'),
+                              ),
                             );
                           }
                         },
@@ -346,14 +406,15 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
     );
   }
 
-  Widget _buildNavButton(BuildContext context, {
+  Widget _buildNavButton(
+    BuildContext context, {
     required String label,
     required IconData icon,
     required bool isLeft,
     required VoidCallback onTap,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       height: 48,
       child: Material(
@@ -373,11 +434,11 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (isLeft) 
+                if (isLeft)
                   Icon(
-                    icon, 
-                    color: AppColors.getTextPrimary(context).withOpacity(0.7), 
-                    size: 22
+                    icon,
+                    color: AppColors.getTextPrimary(context).withOpacity(0.7),
+                    size: 22,
                   ),
                 if (isLeft) const SizedBox(width: 8),
                 Text(
@@ -390,11 +451,11 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
                   ),
                 ),
                 if (!isLeft) const SizedBox(width: 8),
-                if (!isLeft) 
+                if (!isLeft)
                   Icon(
-                    icon, 
-                    color: AppColors.getTextPrimary(context).withOpacity(0.7), 
-                    size: 22
+                    icon,
+                    color: AppColors.getTextPrimary(context).withOpacity(0.7),
+                    size: 22,
                   ),
               ],
             ),
@@ -440,7 +501,10 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.settings_outlined, color: AppColors.getTextSecondary(context)),
+                icon: Icon(
+                  Icons.settings_outlined,
+                  color: AppColors.getTextSecondary(context),
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -491,11 +555,16 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.settings_outlined, color: AppColors.getTextSecondary(context)),
+                icon: Icon(
+                  Icons.settings_outlined,
+                  color: AppColors.getTextSecondary(context),
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => TranslationDownloadPage()),
+                    MaterialPageRoute(
+                      builder: (_) => TranslationDownloadPage(),
+                    ),
                   );
                 },
               ),
@@ -511,8 +580,11 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.download_for_offline_outlined, 
-               size: 48, color: AppColors.getTextSecondary(context).withOpacity(0.5)),
+          Icon(
+            Icons.download_for_offline_outlined,
+            size: 48,
+            color: AppColors.getTextSecondary(context).withOpacity(0.5),
+          ),
           const SizedBox(height: 16),
           Text(
             'Tafsir not downloaded',
@@ -533,7 +605,9 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.getPrimary(context),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: const Text('Download Now'),
           ),
@@ -542,7 +616,7 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
     );
   }
 
-/// Helper function to render ayah text with mushaf-style formatting (NO numbering)
+  /// Helper function to render ayah text with mushaf-style formatting (NO numbering)
   Widget _buildMushafStyleAyah(
     BuildContext context,
     List<WordData> words,
@@ -554,29 +628,31 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
     final spans = <InlineSpan>[];
     // Strip all Quranic markers/digits/ornaments for clean text rendering in detail view
     // Aggressive list to catch all possible ornaments
-    final markerStripper = RegExp(r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}۝۞۩]');
-    
+    final markerStripper = RegExp(
+      r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}۝۞۩]',
+    );
+
     // ✅ FIX: Strip "Bismillah" from Method Text if present in first ayah of non-Fatihah
     // Bismillah usually appears as the first 4 words in some digital Mushaf data
     // Word 1: Bismi, 2: Allah, 3: Ar-Rahman, 4: Ar-Rahim
     int startIndex = 0;
     if (ayahNumber == 1 && _currentSurahId != 1 && words.length > 4) {
-       final firstWord = words[0].text.replaceAll(markerStripper, '').trim();
-       if (firstWord.startsWith('بِسْمِ') || firstWord.startsWith('بسم')) {
-         startIndex = 4; // Skip first 4 words (Bismillah)
-       }
+      final firstWord = words[0].text.replaceAll(markerStripper, '').trim();
+      if (firstWord.startsWith('بِسْمِ') || firstWord.startsWith('بسم')) {
+        startIndex = 4; // Skip first 4 words (Bismillah)
+      }
     }
 
     // Categorically skip the last word in detail views as it always contains the Ayah marker
     // as per user instruction: "lastword jangan ditampilkan"
     int limit = words.length > 1 ? words.length - 1 : words.length;
-    
+
     for (int i = startIndex; i < limit; i++) {
       final word = words[i];
       var cleanText = word.text.replaceAll(markerStripper, '').trim();
 
       if (cleanText.isEmpty) continue;
-      
+
       spans.add(
         TextSpan(
           text: cleanText + (i < limit - 1 ? ' ' : ''),
@@ -590,7 +666,7 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
         ),
       );
     }
-    
+
     return Container(
       width: double.infinity,
       child: RichText(
@@ -603,40 +679,55 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
 
   String _cleanContent(String raw, int ayahNumber) {
     if (raw.isEmpty) return raw;
-    
+
     String cleaned = raw;
-    
+
     // 0. Remove the lengthy preamble from the main scrolling area
-    cleaned = cleaned.replaceAll(RegExp(r'You are reading a tafsir of a group of verses from \d+:\d+ to \d+:\d+', caseSensitive: false), '');
-    cleaned = cleaned.replaceAll(RegExp(r'Anda sedang membaca tafsir kelompok ayat dari \d+:\d+ sampai \d+:\d+', caseSensitive: false), '');
-    
+    cleaned = cleaned.replaceAll(
+      RegExp(
+        r'You are reading a tafsir of a group of verses from \d+:\d+ to \d+:\d+',
+        caseSensitive: false,
+      ),
+      '',
+    );
+    cleaned = cleaned.replaceAll(
+      RegExp(
+        r'Anda sedang membaca tafsir kelompok ayat dari \d+:\d+ sampai \d+:\d+',
+        caseSensitive: false,
+      ),
+      '',
+    );
+
     // Maintain markers like (1) or 1. as "checkpoints" as requested by user
     // But clean up redundant leading "1:1 -" style prefixes
-    cleaned = cleaned.replaceAll(RegExp(r'^\s*\d+:\d+\s*[-]?\s*'), ''); 
-    
+    cleaned = cleaned.replaceAll(RegExp(r'^\s*\d+:\d+\s*[-]?\s*'), '');
+
     // 1. Strip references usually at the end or in middle
     // e.g. (Al-Fatihah: 1-7)
-    cleaned = cleaned.replaceAll(RegExp(r'[\(\[（][^:\]\)]+:\s*\d+[-\d]*[\)\]）]'), '');
-    
+    cleaned = cleaned.replaceAll(
+      RegExp(r'[\(\[（][^:\]\)]+:\s*\d+[-\d]*[\)\]）]'),
+      '',
+    );
+
     // 2. Housekeeping for HTML entities
     cleaned = cleaned.replaceAll('&nbsp;', ' ');
     cleaned = cleaned.replaceAll('&quot;', '"');
     cleaned = cleaned.replaceAll('&amp;', '&');
     cleaned = cleaned.replaceAll('&rsquo;', "'");
     cleaned = cleaned.replaceAll('&lsquo;', "'");
-    
+
     // Keep some HTML tags for rich rendering but clean up surrounding whitespace
     cleaned = cleaned.replaceAll(RegExp(r'>\s+<'), '><');
-    
+
     // 3. Collapse multiple spaces created by DB formatting
     cleaned = cleaned.replaceAll(RegExp(r'\s{2,}'), ' ');
-    
+
     return cleaned.trim();
   }
 
   Widget _buildGroupBanner(BuildContext context, String rangeText) {
     final isIndo = rangeText.toLowerCase().contains('sampai');
-    final message = isIndo 
+    final message = isIndo
         ? 'Tafsir kelompok $rangeText'
         : 'You are reading a tafsir of a group of $rangeText';
 
@@ -659,8 +750,8 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Icon(
-            Icons.info_outline_rounded, 
-            color: Color(0xFF137333), 
+            Icons.info_outline_rounded,
+            color: Color(0xFF137333),
             size: 24,
           ),
           const SizedBox(width: 16),
@@ -682,22 +773,22 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
 
   List<InlineSpan> _parseHtmlToSpans(BuildContext context, String text) {
     final spans = <InlineSpan>[];
-    
+
     // More robust stack-based parser for basic tags
     final regExp = RegExp(r'(<[^>]+>|[^<]+)');
     final matches = regExp.allMatches(text);
-    
+
     final styleStack = <TextStyle>[
       TextStyle(
         fontSize: 16,
         color: AppColors.getTextPrimary(context),
         height: 1.6,
-      )
+      ),
     ];
-    
+
     for (final match in matches) {
       final part = match.group(0)!;
-      
+
       if (part.startsWith('<')) {
         final tag = part.toLowerCase();
         if (tag == '<br>' || tag == '<br/>' || tag == '<br />') {
@@ -708,14 +799,27 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
           // Just skip start p or div
         } else if (part.startsWith('<span')) {
           TextStyle currentStyle = styleStack.last;
-          if (part.contains('class="green"') || part.contains('class="ht green"')) {
-            currentStyle = currentStyle.copyWith(color: const Color(0xFF2E7D32), fontWeight: FontWeight.w500);
+          if (part.contains('class="green"') ||
+              part.contains('class="ht green"')) {
+            currentStyle = currentStyle.copyWith(
+              color: const Color(0xFF2E7D32),
+              fontWeight: FontWeight.w500,
+            );
           } else if (part.contains('class="blue"')) {
-            currentStyle = currentStyle.copyWith(color: const Color(0xFF1976D2), fontWeight: FontWeight.w500);
+            currentStyle = currentStyle.copyWith(
+              color: const Color(0xFF1976D2),
+              fontWeight: FontWeight.w500,
+            );
           } else if (part.contains('class="brown"')) {
-            currentStyle = currentStyle.copyWith(color: const Color(0xFF795548), fontWeight: FontWeight.w500);
+            currentStyle = currentStyle.copyWith(
+              color: const Color(0xFF795548),
+              fontWeight: FontWeight.w500,
+            );
           } else if (part.contains('class="gray"')) {
-            currentStyle = currentStyle.copyWith(color: Colors.grey[600], fontStyle: FontStyle.italic);
+            currentStyle = currentStyle.copyWith(
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            );
           } else if (part.contains('class="bolder"')) {
             currentStyle = currentStyle.copyWith(fontWeight: FontWeight.bold);
           }
@@ -723,34 +827,40 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
         } else if (part.startsWith('</span>')) {
           if (styleStack.length > 1) styleStack.removeLast();
         } else if (part.startsWith('<sup')) {
-           styleStack.add(styleStack.last.copyWith(fontSize: 12, fontStyle: FontStyle.italic));
+          styleStack.add(
+            styleStack.last.copyWith(fontSize: 12, fontStyle: FontStyle.italic),
+          );
         } else if (part.startsWith('</sup>')) {
-           if (styleStack.length > 1) styleStack.removeLast();
+          if (styleStack.length > 1) styleStack.removeLast();
         }
       } else {
         // Check for verse markers like (1) or [1] or ornate brackets ﴿ ﴾
         final markerRegex = RegExp(r'(\(\d+\)|\[\d+\]|\d+\.|[﴿﴾])');
         final parts = part.split(markerRegex);
         final markerMatches = markerRegex.allMatches(part).toList();
-        
+
         for (int i = 0; i < parts.length; i++) {
           spans.add(TextSpan(text: parts[i], style: styleStack.last));
           if (i < markerMatches.length) {
             final matchText = markerMatches[i].group(0) ?? '';
             final isBracket = matchText == '﴿' || matchText == '﴾';
-            
-            spans.add(TextSpan(
-              text: matchText,
-              style: styleStack.last.copyWith(
-                color: isBracket ? const Color(0xFF2E7D32) : AppColors.getPrimary(context),
-                fontWeight: FontWeight.bold,
+
+            spans.add(
+              TextSpan(
+                text: matchText,
+                style: styleStack.last.copyWith(
+                  color: isBracket
+                      ? const Color(0xFF2E7D32)
+                      : AppColors.getPrimary(context),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ));
+            );
           }
         }
       }
     }
-    
+
     return spans;
   }
 }

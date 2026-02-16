@@ -140,6 +140,7 @@ flutter:
     - assets/images/qpc_preview.png
     - assets/data/tafsir/
     - assets/data/translation/
+    - assets/data/transliteration/
     - assets/images/indopak_preview_dark.png
     - assets/images/qpc_preview_dark.png
 
