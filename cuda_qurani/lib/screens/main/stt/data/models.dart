@@ -6,11 +6,7 @@ enum ReadingStatus { notRead, correct, error, skipped }
 
 enum MushafLineType { surahName, basmallah, ayah }
 
-enum TartibStatus {
-  unread,
-  correct, 
-  skipped, 
-}
+enum TartibStatus { unread, correct, skipped }
 
 class AyatData {
   final int surah_id;
@@ -62,6 +58,7 @@ class WordData {
   final int ayah;
   final int wordNumber;
   final String text;
+  final bool hasDigit; // ✅ PRECOMPUTED: true if matches RegExp(r'[٠-٩0-9]')
 
   WordData({
     required this.id,
@@ -70,16 +67,19 @@ class WordData {
     required this.ayah,
     required this.wordNumber,
     required this.text,
+    required this.hasDigit,
   });
 
   factory WordData.fromSqlite(Map<String, dynamic> row) {
+    final textStr = row['text'] as String;
     return WordData(
       id: row['id'] as int,
       location: row['location'] as String,
       surah: row['surah'] as int,
       ayah: row['ayah'] as int,
       wordNumber: row['word'] as int,
-      text: row['text'] as String,
+      text: textStr,
+      hasDigit: RegExp(r'[٠-٩0-9]').hasMatch(textStr),
     );
   }
 }
@@ -275,8 +275,39 @@ class PageGeometry {
   /// Key: "surahId:ayahNumber:wordNumber"
   /// Value: List of Rects (to support multi-line wrap if it ever happens at word level, but usually one rect)
   final Map<String, List<Rect>> wordBounds;
-  
+
   PageGeometry({required this.wordBounds});
 
-  static String getWordKey(int line, int surah, int ayah, int word) => '$line:$surah:$ayah:$word';
+  static String getWordKey(int line, int surah, int ayah, int word) =>
+      '$line:$surah:$ayah:$word';
+}
+
+/// ✅ NEW: Phase 2 Render Models
+/// Moves logic OUT of the build() method into a precomputed structure.
+class QuranPageRenderModel {
+  final int pageNumber;
+  final int juzNumber;
+  final List<QuranLineRenderModel> lines;
+
+  QuranPageRenderModel({
+    required this.pageNumber,
+    required this.juzNumber,
+    required this.lines,
+  });
+}
+
+abstract class QuranLineRenderModel {}
+
+class SurahNameLineModel extends QuranLineRenderModel {
+  final MushafPageLine line;
+  SurahNameLineModel(this.line);
+}
+
+class BasmallahLineModel extends QuranLineRenderModel {
+  BasmallahLineModel();
+}
+
+class AyahLineModel extends QuranLineRenderModel {
+  final AyahSegment segment;
+  AyahLineModel(this.segment);
 }

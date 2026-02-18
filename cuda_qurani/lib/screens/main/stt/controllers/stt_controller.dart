@@ -140,6 +140,9 @@ class SttController extends ChangeNotifier {
     }
   }
 
+  // ✅ Phase 7: Estimation methods removed — anchor-based architecture
+  // uses offset 0.0 by construction, no estimation needed.
+
   SttController({
     this.suratId,
     this.pageId,
@@ -211,6 +214,7 @@ class SttController extends ChangeNotifier {
 
     // ✅ STEP 5: Clear ALL caches
     pageCache.clear();
+    _renderCache.clear(); // ✅ Clear render cache
     _geometryCache.clear(); // ✅ Clear geometry cache
     _sqliteService.clearPageCache();
     _ayahIndexMap.clear();
@@ -218,6 +222,9 @@ class SttController extends ChangeNotifier {
     _prebuiltSpans.clear(); // ✅ Clear span cache
     _lastLoadedAyatsPage = null;
     _lastPreloadedPage = null;
+    await _metadataCache.rebuildForLayout(
+      newLayout,
+    ); // ✅ REBUILD METADATA MAPPING
 
     // ✅ STEP 6: Accurate Page Mapping (Verse-Centeric)
     // Instead of just clamping, we find the page for the verse we were looking at
@@ -316,6 +323,7 @@ class SttController extends ChangeNotifier {
   int _listViewCurrentPage = 1;
   bool _isDataLoaded = false;
   bool _isDisposed = false;
+  bool _isTransitioningMode = false; // ✅ NEW Phase 3: Input latency guard
   List<AyatData> _currentPageAyats = [];
   final ScrollController _scrollController = ScrollController();
 
@@ -429,6 +437,9 @@ class SttController extends ChangeNotifier {
     int ayahNumber, {
     int minWordIndex = 0,
   }) {
+    // ✅ Phase 3 GUARD: Return last stable index during mode transitions
+    if (_isTransitioningMode) return _lastClampedIndex;
+
     // Universal Ratio Calculation (Round 10)
     // ratio = (current - min) / (max - min)
     double ratio = 0.0;
@@ -442,15 +453,18 @@ class SttController extends ChangeNotifier {
       ratio = 0.0;
     }
 
-    // Find the ayah in current page data
-    final ayat = _currentPageAyats.firstWhere(
-      (a) => a.surah_id == surahId && a.ayah == ayahNumber,
-      orElse: () => _ayatList.firstWhere(
-        (a) => a.surah_id == surahId && a.ayah == ayahNumber,
-        orElse: () =>
-            _ayatList.isNotEmpty ? _ayatList.first : _currentPageAyats.first,
-      ),
-    );
+    // ✅ O(1) LOOKUP: Replace expensive firstWhere scans
+    final key = _wordKey(surahId, ayahNumber);
+    final currentPageIndex = _currentPageAyahIndexMap[key];
+    final globalIndex = _ayahIndexMap[key];
+
+    final ayat = currentPageIndex != null
+        ? _currentPageAyats[currentPageIndex]
+        : (globalIndex != null ? _ayatList[globalIndex] : null);
+
+    if (ayat == null) {
+      return 0; // Fallback
+    }
 
     // ✅ CRITICAL FIX Round 10: In QPC layout, the LAST word element is the Ayah Number symbol.
     // We MUST exclude it from the highlightable range.
@@ -461,6 +475,7 @@ class SttController extends ChangeNotifier {
 
     final mappedIndex = (ratio * layoutWordCount).floor();
     final clampedIndex = mappedIndex.clamp(0, layoutWordCount - 1);
+    _lastClampedIndex = clampedIndex; // ✅ Record for guard
 
     final logTag = _mushafLayout == MushafLayout.qpc ? 'QPC' : 'STT';
     print(
@@ -496,6 +511,7 @@ class SttController extends ChangeNotifier {
 
   // Page Pre-loading Cache
   final Map<int, List<MushafPageLine>> pageCache = {};
+  final Map<int, QuranPageRenderModel> _renderCache = {}; // ✅ NEW: Phase 2
   final Map<int, PageGeometry> _geometryCache = {}; // ✅ NEW: Coordinate cache
   final MetadataCacheService _metadataCache = MetadataCacheService();
   double? _viewportWidth; // ✅ Screen width for geometry computation
@@ -527,6 +543,8 @@ class SttController extends ChangeNotifier {
   bool get hideUnreadAyat => _hideUnreadAyat;
   bool get showLogs => _showLogs;
   int get currentPage => _currentPage;
+  bool get isDataLoaded => _isDataLoaded;
+  bool get isTransitioningMode => _isTransitioningMode; // ✅ NEW Phase 4
   List<AyatData> get currentPageAyats => _currentPageAyats;
 
   // ✅ ACCESSORS FOR MAPS
@@ -554,6 +572,7 @@ class SttController extends ChangeNotifier {
   final Map<String, int> _lastHighlightedIdx = {};
   String? _currentHighlightKey;
   int? _currentHighlightWordIdx;
+  int _lastClampedIndex = 0; // ✅ Tracking for transition guard
 
   String? get currentHighlightKey => _currentHighlightKey;
   int? get currentHighlightWordIdx => _currentHighlightWordIdx;
@@ -733,6 +752,9 @@ class SttController extends ChangeNotifier {
       _verseChangeSubscription = _listeningAudioService!.currentVerseStream?.listen((
         verse,
       ) async {
+        if (_isTransitioningMode)
+          return; // ✅ Phase 3 GUARD: Suppress during transition
+
         print(
           '?? [VERSE CHANGE] Now playing: ${verse.surahId}:${verse.verseNumber}',
         );
@@ -809,6 +831,9 @@ class SttController extends ChangeNotifier {
       _wordHighlightSubscription = _listeningAudioService!.wordHighlightStream?.listen((
         event, // 🔴 UPDATED: WordHighlight event
       ) {
+        if (_isTransitioningMode)
+          return; // ✅ Phase 3 GUARD: Suppress during transition
+
         final audioWordIndex = event.index;
         final audioTotal = event.total;
         // 🔇 Reduced verbose logging
@@ -924,7 +949,8 @@ class SttController extends ChangeNotifier {
           }
 
           _wordStatusRevision++; // ✅ NEW: Trigger rebuild for UI
-          notifyListeners();
+          if (!_isTransitioningMode)
+            notifyListeners(); // ✅ Suppress during transition
         }
       });
 
@@ -1274,6 +1300,9 @@ class SttController extends ChangeNotifier {
               ayahNum,
               isQuranMode: true,
             );
+            // ✅ PRE-SORT WORDS: Eliminate O(N log N) from build()
+            ayahWords.sort((a, b) => a.wordNumber.compareTo(b.wordNumber));
+
             final juz = _sqliteService.calculateJuzAccurate(surahId, ayahNum);
 
             _ayatList.add(
@@ -1297,11 +1326,11 @@ class SttController extends ChangeNotifier {
             return a.ayah.compareTo(b.ayah);
           });
 
-          // ✅ Re-populate map after sort to ensure correct indices
-          _ayahIndexMap.clear();
-          for (int i = 0; i < _ayatList.length; i++) {
-            _ayahIndexMap['${_ayatList[i].surah_id}:${_ayatList[i].ayah}'] = i;
-          }
+          // ✅ Atomic Sync
+          _syncAyahIndices();
+
+          // ✅ PRECOMPUTE RENDER MODEL: Eliminate O(N) map aggregation from build()
+          _precomputeRenderModel(pageNumber);
 
           // ? Simpan semua ayat page untuk UI rendering (layout mushaf)
           final allPageAyats = List<AyatData>.from(_ayatList);
@@ -1321,12 +1350,8 @@ class SttController extends ChangeNotifier {
           // ? UI tetap tampilkan SEMUA ayat di page (layout mushaf lengkap)
           _currentPageAyats = allPageAyats;
 
-          // ✅ Populate current page map
-          _currentPageAyahIndexMap.clear();
-          for (int i = 0; i < _currentPageAyats.length; i++) {
-            _currentPageAyahIndexMap['${_currentPageAyats[i].surah_id}:${_currentPageAyats[i].ayah}'] =
-                i;
-          }
+          // ✅ Atomic Sync Page Map
+          _syncCurrentPageAyahIndices();
 
           appLogger.log(
             'DATA',
@@ -1461,13 +1486,15 @@ class SttController extends ChangeNotifier {
           isQuranMode: _isQuranMode,
         );
 
-        // ✅ Populate O(1) map
-        _ayahIndexMap.clear();
-        for (int i = 0; i < _ayatList.length; i++) {
-          _ayahIndexMap['${_ayatList[i].surah_id}:${_ayatList[i].ayah}'] = i;
-        }
+        // ✅ Atomic Sync
+        _syncAyahIndices();
 
         appLogger.log('DATA_OPTIMIZED', 'Loaded ${_ayatList.length} ayats');
+      }
+
+      // ✅ PRE-SORT WORDS in _ayatList (if not already handled)
+      for (final ayah in _ayatList) {
+        ayah.words.sort((a, b) => a.wordNumber.compareTo(b.wordNumber));
       }
 
       // ? CRITICAL: Set to target page, NOT first page
@@ -1486,6 +1513,9 @@ class SttController extends ChangeNotifier {
         );
       }
 
+      // ✅ PRECOMPUTE RENDER MODEL
+      _precomputeRenderModel(targetPage);
+
       await _loadCurrentPageAyats();
       _isDataLoaded = true;
 
@@ -1501,6 +1531,23 @@ class SttController extends ChangeNotifier {
 
   // ✅ CRITICAL: Track last loaded page to prevent duplicate calls
   int? _lastLoadedAyatsPage;
+
+  // ✅ NEW: Atomic map synchronization for O(1) lookups
+  void _syncAyahIndices() {
+    _ayahIndexMap.clear();
+    for (int i = 0; i < _ayatList.length; i++) {
+      final a = _ayatList[i];
+      _ayahIndexMap['${a.surah_id}:${a.ayah}'] = i;
+    }
+  }
+
+  void _syncCurrentPageAyahIndices() {
+    _currentPageAyahIndexMap.clear();
+    for (int i = 0; i < _currentPageAyats.length; i++) {
+      final a = _currentPageAyats[i];
+      _currentPageAyahIndexMap['${a.surah_id}:${a.ayah}'] = i;
+    }
+  }
 
   Future<void> _loadCurrentPageAyats({bool skipNotify = false}) async {
     // ✅ OPTIMIZED: Prevent duplicate calls for same page
@@ -1532,12 +1579,8 @@ class SttController extends ChangeNotifier {
           : 'IndoPak-Nastaleeq';
       warmupSpansForPage(_currentPage, fontFamily);
 
-      // ✅ Populate current page map O(1)
-      _currentPageAyahIndexMap.clear();
-      for (int i = 0; i < _currentPageAyats.length; i++) {
-        _currentPageAyahIndexMap['${_currentPageAyats[i].surah_id}:${_currentPageAyats[i].ayah}'] =
-            i;
-      }
+      // ✅ Atomic Sync Page Map
+      _syncCurrentPageAyahIndices();
 
       appLogger.log(
         'DATA',
@@ -1755,6 +1798,92 @@ class SttController extends ChangeNotifier {
         }
       }
     }
+  }
+
+  // ✅ PHASE 2: Precompute render models to eliminate build() overhead
+  void _precomputeRenderModel(int pageNumber) {
+    if (_renderCache.containsKey(pageNumber)) return;
+
+    final lines = pageCache[pageNumber];
+    if (lines == null || lines.isEmpty) return;
+
+    final List<QuranLineRenderModel> renderLines = [];
+    final Map<String, List<WordData>> completeAyahs = {};
+    final Map<String, AyahSegment> ayahMetadataMap = {};
+    int? resolvedJuz;
+
+    // 1. First Pass: Aggregate and Sort
+    for (final line in lines) {
+      if (line.lineType == 'ayah' && line.ayahSegments != null) {
+        for (final segment in line.ayahSegments!) {
+          final key = '${segment.surahId}:${segment.ayahNumber}';
+          final words = segment.words;
+
+          // PRE-SORT words immediately if they aren't already
+          words.sort((a, b) => a.wordNumber.compareTo(b.wordNumber));
+
+          completeAyahs.putIfAbsent(key, () => []).addAll(words);
+          if (!ayahMetadataMap.containsKey(key)) {
+            ayahMetadataMap[key] = segment;
+          }
+
+          if (resolvedJuz == null) {
+            resolvedJuz = _sqliteService.calculateJuzAccurate(
+              segment.surahId,
+              segment.ayahNumber,
+            );
+          }
+        }
+      }
+    }
+
+    // 2. Second Pass: Build Ordered Line Models
+    final Set<String> renderedAyahs = {};
+    for (final line in lines) {
+      switch (line.lineType) {
+        case 'surah_name':
+          renderLines.add(SurahNameLineModel(line));
+          break;
+        case 'basmallah':
+          renderLines.add(BasmallahLineModel());
+          break;
+        case 'ayah':
+          if (line.ayahSegments != null) {
+            for (final segment in line.ayahSegments!) {
+              final key = '${segment.surahId}:${segment.ayahNumber}';
+              if (!renderedAyahs.contains(key)) {
+                renderedAyahs.add(key);
+
+                final allWords = completeAyahs[key]!;
+                final metadata = ayahMetadataMap[key]!;
+
+                final completeSegment = AyahSegment(
+                  surahId: metadata.surahId,
+                  ayahNumber: metadata.ayahNumber,
+                  words: allWords,
+                  isStartOfAyah: true,
+                  isEndOfAyah: true,
+                );
+                renderLines.add(AyahLineModel(completeSegment));
+              }
+            }
+          }
+          break;
+      }
+    }
+
+    _renderCache[pageNumber] = QuranPageRenderModel(
+      pageNumber: pageNumber,
+      juzNumber: resolvedJuz ?? 1,
+      lines: renderLines,
+    );
+  }
+
+  QuranPageRenderModel? getRenderModel(int pageNumber) {
+    if (!_renderCache.containsKey(pageNumber)) {
+      _precomputeRenderModel(pageNumber);
+    }
+    return _renderCache[pageNumber];
   }
 
   void navigateToPage(int newPage) {
@@ -2677,20 +2806,21 @@ class SttController extends ChangeNotifier {
   }
 
   Future<void> toggleQuranMode() async {
+    _isTransitioningMode = true; // ✅ Start transition lock
+
     appLogger.log(
       'MODE_TOGGLE',
-      'Switching from ${_isQuranMode ? "Mushaf" : "List"} to ${!_isQuranMode ? "Mushaf" : "List"}',
+      'OPTIMISTIC: Switching from ${_isQuranMode ? "Mushaf" : "List"} to ${!_isQuranMode ? "Mushaf" : "List"}',
     );
 
-    // ? STEP 1: Preserve current position
+    // 1. Capture anchors (Synchronous)
     int targetPage = _isQuranMode ? _currentPage : _listViewCurrentPage;
     int? targetAyahId;
 
     if (_isQuranMode) {
-      // Capture the first ayah of the current Mushaf page as the scroll target
+      // capture from Mushaf -> List
       final pageLines = pageCache[_currentPage];
       if (pageLines != null && pageLines.isNotEmpty) {
-        // Find the first line that contains ayah segments
         final firstAyahLine = pageLines.firstWhere(
           (l) =>
               l.lineType == 'ayah' &&
@@ -2698,120 +2828,81 @@ class SttController extends ChangeNotifier {
               l.ayahSegments!.isNotEmpty,
           orElse: () => pageLines.first,
         );
-        if (firstAyahLine.ayahSegments != null &&
-            firstAyahLine.ayahSegments!.isNotEmpty) {
-          targetAyahId = firstAyahLine.ayahSegments!.first.id;
-        }
+        targetAyahId = firstAyahLine.ayahSegments?.first.id;
       }
     } else {
-      // Going back to Mushaf
+      // capture from List -> Mushaf
       targetAyahId = _topVerseId;
-
-      // ✅ OPTIMIZATION: Use cached _topVersePage if available (Synchronous)
       if (_topVersePage != null) {
         targetPage = _topVersePage!;
-        appLogger.log('MODE_TOGGLE', 'Used cached _topVersePage: $targetPage');
-      } else if (targetAyahId != null) {
-        // Fallback: Calculate page from verse (only if cache missing)
-        final surahId = targetAyahId! ~/ 1000;
-        final ayahNumber = targetAyahId! % 1000;
-        // This await is the only potential delay, but it's rare now
-        final mappedPage = await _sqliteService.getPageForAyah(
-          surahId,
-          ayahNumber,
-        );
-        targetPage = mappedPage;
       }
     }
 
-    appLogger.log(
-      'MODE_TOGGLE',
-      'Target page after toggle: $targetPage, Target Ayah: $targetAyahId',
-    );
-
-    // ✅ Persist targetAyahId so the view can read it during initialization jump
     _topVerseId = targetAyahId;
 
-    // ✅ CRITICAL FIX: Pre-load page data BEFORE mode toggle to prevent visual glitch
-    if (!pageCache.containsKey(targetPage)) {
-      appLogger.log(
-        'MODE_TOGGLE',
-        'Pre-loading page $targetPage before switch...',
-      );
-      final lines = await _sqliteService.getMushafPageLines(targetPage);
-      pageCache[targetPage] = lines;
-    }
-
-    // ✅ STEP 2: Toggle mode flag AFTER data is ready
+    // 2. OPTIMISTIC STATE FLIP (Instant feedback)
     _isQuranMode = !_isQuranMode;
-
-    // ✅ SYNC: Ensure both variables are in sync for the new mode before first notify
     _currentPage = targetPage;
     _listViewCurrentPage = targetPage;
 
-    // ✅ SYNC: Ensure highlighting index matches the top verse ONLY if active
-    if (targetAyahId != null) {
+    // Sync highlight index optimistically if active
+    if (targetAyahId != null && (_isRecording || _isListeningMode)) {
       final index = _ayatList.indexWhere((a) => a.id == targetAyahId);
-      if (index >= 0) {
-        // Only highlight if currently record/listen, otherwise keep reset
-        if (_isRecording || _isListeningMode) {
-          _currentAyatIndex = index;
-          appLogger.log('MODE_TOGGLE', 'Synced currentAyatIndex to $index');
-        } else {
-          _currentAyatIndex = -1;
-          appLogger.log(
-            'MODE_TOGGLE',
-            'Reset currentAyatIndex for silent mode',
-          );
-        }
-      }
+      if (index >= 0) _currentAyatIndex = index;
     }
 
-    // ? IMMEDIATE: Notify UI of mode change (quick feedback)
+    // 3. TRIGGER ANIMATION INSTANTLY
     notifyListeners();
 
-    // ? STEP 3: Smart data loading (skip if already loaded)
-    if (!_isDataLoaded || _ayatList.isEmpty) {
-      appLogger.log('MODE_TOGGLE', 'Loading data (first time or empty)');
-      await _loadAyatDataOptimized(targetPage);
-    } else {
-      appLogger.log('MODE_TOGGLE', 'Skipping reload - data already loaded');
+    // 4. DEFER HEAVY HYDRATION (Internal lock handles safety)
+    // ignore: unawaited_futures
+    _hydrateAfterToggle(targetPage, targetAyahId);
+  }
 
-      // Just update current page without reloading
-      _currentPage = targetPage;
+  /// ✅ NEW Phase 3: Deferred Hydration Pipeline
+  Future<void> _hydrateAfterToggle(int targetPage, int? targetAyahId) async {
+    try {
+      appLogger.log(
+        'HYDRATION',
+        'Starting deferred hydration for page $targetPage',
+      );
 
-      // Update surah name for target page
-      // ignore: unawaited_futures
-      _updateSurahNameForPage(targetPage);
+      // Step 1: Ensure critical page cache
+      if (!pageCache.containsKey(targetPage)) {
+        final lines = await _sqliteService.getMushafPageLines(targetPage);
+        pageCache[targetPage] = lines;
+      }
 
-      // Load page-specific data if switching to mushaf
+      // Step 2: Hydrate List/Mushaf models
       if (_isQuranMode) {
-        await _loadCurrentPageAyats();
-
-        // ? IMPORTANT: Ensure page is in cache before switching
-        if (!pageCache.containsKey(targetPage)) {
-          appLogger.log(
-            'MODE_TOGGLE',
-            'Loading target page $targetPage to cache',
-          );
-          final lines = await _sqliteService.getMushafPageLines(targetPage);
-          pageCache[targetPage] = lines;
-          // Force UI refresh after cache load
-          notifyListeners();
+        // Load full Mushaf context
+        await _loadCurrentPageAyats(skipNotify: true);
+        _precomputeRenderModel(targetPage);
+      } else {
+        // Load List context
+        if (!_isDataLoaded || _ayatList.isEmpty) {
+          await _loadAyatDataOptimized(targetPage);
+        } else {
+          _updateSurahNameForPageSync(targetPage);
         }
-
-        // Preload adjacent pages
-        Future.microtask(() => _preloadAdjacentPagesAggressively());
       }
+
+      // Step 3: Resume background preloading after hydration
+      unawaited(Future.microtask(() => _preloadAdjacentPagesAggressively()));
+
+      // Step 4: Resume Sync & Clean Lock post-frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _isTransitioningMode = false;
+        notifyListeners(); // ✅ Phase 3: Final sync to catch any suppressed updates
+        appLogger.log(
+          'HYDRATION',
+          'Transition lock released for page $targetPage',
+        );
+      });
+    } catch (e) {
+      _isTransitioningMode = false;
+      appLogger.log('HYDRATION_ERROR', e.toString());
     }
-
-    // ? FINAL: Notify UI again after data ready
-    notifyListeners();
-
-    appLogger.log(
-      'MODE_TOGGLE',
-      'Toggle complete - now at page $_currentPage (${_isQuranMode ? "Mushaf" : "List"})',
-    );
   }
 
   void toggleLogs() {
@@ -3292,7 +3383,7 @@ class SttController extends ChangeNotifier {
         }
 
         _wordStatusRevision++; // ✅ NEW: Trigger rebuild
-        notifyListeners();
+        if (!_isTransitioningMode) notifyListeners();
         break;
 
       case 'started':
@@ -4151,11 +4242,12 @@ class SttController extends ChangeNotifier {
     }
 
     // 2. Resolve Metadata Instantly (Synchronous)
-    String surahName = _suratNameSimple;
-    int juzNum = 1; // Default fallback
+    final current = appBarNotifier.value;
+    String surahName = current.surahName;
+    int juzNum = current.juzNumber;
 
     try {
-      // ✅ Granular Optimization: If we already have a topVerseId on this page, use it.
+      // ✅ Granular Optimization: If we already have a topVerseId on this page, prioritize it.
       if (_topVersePage == pageNumber && _activeSurahId != null) {
         final surahMeta = _metadataCache.getSurah(_activeSurahId!);
         if (surahMeta != null) {
@@ -4166,15 +4258,10 @@ class SttController extends ChangeNotifier {
           _activeAyahNumber ?? 1,
         );
       } else {
-        // Priority: Metadata Cache (Instant fallback by page)
+        // Priority: Metadata Cache (Instant mapping by page)
         final surahIds = _metadataCache.getSurahIdsForPage(pageNumber);
         if (surahIds.isNotEmpty) {
           final surahId = surahIds.first;
-
-          // ✅ SYNC Granular Context (so PlaybackSettings can use it instantly)
-          _activeSurahId = surahId;
-          _activeAyahNumber = 1; // Default to first verse of surah on this page
-
           final surahMeta = _metadataCache.getSurah(surahId);
           if (surahMeta != null) {
             surahName = surahMeta['name_simple'] ?? surahName;
@@ -4187,7 +4274,6 @@ class SttController extends ChangeNotifier {
     }
 
     // 3. Update Notifier (Hanya widget AppBar yang mendengar ini yang akan rebuild)
-    // Ini menghilangkan flicker pada body aplikasi
     appBarNotifier.value = PageDisplayData(
       pageNumber: pageNumber,
       surahName: surahName,
