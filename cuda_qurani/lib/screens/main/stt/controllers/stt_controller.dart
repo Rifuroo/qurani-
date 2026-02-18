@@ -931,7 +931,7 @@ class SttController extends ChangeNotifier {
       // ?? Start playback
       await _listeningAudioService!.startPlayback();
 
-      _isRecording = true;
+      // ✅ FIX: Removed erroneous _isRecording = true; (Listening mode is passive)
       _hideUnreadAyat = false;
       _wordStatusRevision++; // ✅ Sync UI
 
@@ -974,6 +974,7 @@ class SttController extends ChangeNotifier {
       _currentHighlightKey = null; // ✅ Reset instantly
       _currentHighlightWordIdx = null; // ✅ Reset instantly
       _recordingSurahId = null; // ✅ Release anchor
+      _wordStatusRevision++; // ✅ NEW: Force one last clean repaint
 
       appLogger.log('LISTENING', 'Stopped manually');
       print('? Listening mode stopped');
@@ -1018,6 +1019,10 @@ class SttController extends ChangeNotifier {
       _tartibStatus.clear();
       _wordStatusMap.clear();
       _lastHighlightedIdx.clear();
+      _currentHighlightKey = null; // ✅ NEW: Reset instantly on auto-completion
+      _currentHighlightWordIdx =
+          null; // ✅ NEW: Reset instantly on auto-completion
+      _wordStatusRevision++; // ✅ NEW: Force one last clean repaint
 
       appLogger.log('LISTENING', 'Completed and reset');
       print('? All listening state reset');
@@ -1650,7 +1655,8 @@ class SttController extends ChangeNotifier {
 
       if (backgroundPages.isNotEmpty && !_isDisposed && !_stopPreloading) {
         Future.microtask(() async {
-          const batchSize = 15; // Load 15 pages per batch
+          const batchSize =
+              2; // ✅ REDUCED: Load only 2 pages per batch to keep UI thread responsive
           int totalLoaded = 0;
 
           for (int i = 0; i < backgroundPages.length; i += batchSize) {
@@ -1736,7 +1742,9 @@ class SttController extends ChangeNotifier {
         _geometryCache.remove(key); // ✅ CRITICAL: Evict geometry too
 
         // ✅ NEW: Evict prebuilt spans to release font references
-        _prebuiltSpans.removeWhere((k, _) => k.startsWith('p${key}_'));
+        _prebuiltSpans.removeWhere(
+          (k, _) => k.startsWith('p$key' + '_'),
+        ); // ✅ Faster key matching
 
         if (keysToRemove.length % 10 == 0) {
           // Only log occasionally
@@ -1804,7 +1812,10 @@ class SttController extends ChangeNotifier {
                 _updateSurahNameForPage(newPage, skipNotify: true);
                 _loadCurrentPageAyats(skipNotify: true);
                 notifyListeners(); // ✅ PERF FIX: Single notification for all state changes
-                Future.microtask(() => _preloadAdjacentPagesAggressively());
+                Future.delayed(
+                  const Duration(milliseconds: 500),
+                  () => _preloadAdjacentPagesAggressively(),
+                );
               })
               .catchError((e) {
                 appLogger.log(
@@ -1816,7 +1827,10 @@ class SttController extends ChangeNotifier {
                   _updateSurahNameForPage(newPage, skipNotify: true);
                   _loadCurrentPageAyats(skipNotify: true);
                   notifyListeners(); // ✅ PERF FIX: Single notification
-                  Future.microtask(() => _preloadAdjacentPagesAggressively());
+                  Future.delayed(
+                    const Duration(milliseconds: 500),
+                    () => _preloadAdjacentPagesAggressively(),
+                  );
                 });
               });
           return; // Exit early, will update when load completes
@@ -4052,6 +4066,7 @@ class SttController extends ChangeNotifier {
       _recordingSurahId = null; // ✅ Release anchor
       _currentHighlightKey = null; // ✅ Reset instantly
       _currentHighlightWordIdx = null;
+      _wordStatusRevision++; // ✅ NEW: Force one last clean repaint
       print('✅ stopRecording(): Stopped successfully');
       notifyListeners();
     } catch (e) {

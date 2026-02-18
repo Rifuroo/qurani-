@@ -695,6 +695,9 @@ class _QuranBottomBarState extends State<QuranBottomBar>
               Positioned(
                 bottom: bottomOffset,
                 child: GestureDetector(
+                  onPanStart: (_) {
+                    if (mounted) setState(() => _isDragging = true);
+                  },
                   onPanUpdate: (details) {
                     _handleDragUpdate(
                       details.delta.dx,
@@ -704,6 +707,23 @@ class _QuranBottomBarState extends State<QuranBottomBar>
                   },
                   onPanEnd: (details) {
                     _handleDragEnd(controller);
+                  },
+                  onTapDown: (details) {
+                    // ✅ TAP TO JUMP: Allow jumping to positions (clamped by mode)
+                    final localX = details.localPosition.dx;
+                    final centeredX = localX - (trackWidth / 2);
+                    final targetPos = (centeredX / (trackWidth / 2)).clamp(
+                      -1.0,
+                      1.0,
+                    );
+                    _handleDragUpdate(
+                      targetPos * (trackWidth / 2) -
+                          _dragPosition * (trackWidth / 2),
+                      trackWidth / 2,
+                      controller,
+                    );
+                    // Force commit if it's a tap
+                    Future.microtask(() => _handleDragEnd(controller));
                   },
                   behavior: HitTestBehavior.opaque,
                   child: Container(

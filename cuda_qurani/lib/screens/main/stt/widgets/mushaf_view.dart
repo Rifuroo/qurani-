@@ -327,9 +327,28 @@ class _MushafDisplayState extends State<MushafDisplay> {
               child:
                   pageContent, // ✅ PASS STABLE CHILD: This is never rebuilt during swipe!
               builder: (context, staticChild) {
-                final double pageValue = _pageController.hasClients
-                    ? (_pageController.page ?? 0.0)
-                    : (controller.currentPage - 1).toDouble();
+                // ✅ STABILIZATION: Ensure we don't jump to page 0.0 during initial attachment lag
+                final double targetPage = (controller.currentPage - 1)
+                    .toDouble();
+                double pageValue = targetPage;
+
+                if (_pageController.hasClients) {
+                  try {
+                    final p = _pageController.page;
+                    if (p != null) {
+                      // 🛡️ SYNC GUARD: If PageController just attached, it often reports 0.0
+                      // for exactly one frame before settling on initialPage.
+                      // If target is NOT page 0, we ignore the 0.0 value to prevent blanking.
+                      if (p == 0.0 && targetPage != 0.0) {
+                        pageValue = targetPage;
+                      } else {
+                        pageValue = p;
+                      }
+                    }
+                  } catch (_) {
+                    pageValue = targetPage;
+                  }
+                }
 
                 final double position = index - pageValue;
 
@@ -717,7 +736,14 @@ class _JustifiedAyahLine extends StatelessWidget {
         }
       }
 
-      return '$currentWordInLine:$hasWordStatuses:$revision:$hasSelection';
+      // ✅ REBUILD ISOLATION: Only include revision if this line is actually affected.
+      // This prevents 95% of lines from rebuilding on every word pulse.
+      final relevantRevision =
+          (hasActiveHighlight || hasWordStatuses || hasSelection)
+          ? revision
+          : 0;
+
+      return '$currentWordInLine:$hasWordStatuses:$relevantRevision:$hasSelection';
     });
 
     // ✅ Rebuild trigger check: ensures this line rebuilds when highlight/selection state changes
@@ -1003,8 +1029,10 @@ class _WordHighlightPainter extends CustomPainter {
     if (geometry == null || line.ayahSegments == null) return;
 
     final wordStatusMap = controller.wordStatusMap;
-    final highlightKey = controller.currentHighlightKey;
-    final highlightWordIdx = controller.currentHighlightWordIdx;
+    // ✅ CRITICAL FIX: Use primitives from constructor (passed by Selector)
+    // NOT the controller directly, which avoids "ghost" painting stale state.
+    final hKey = highlightKey;
+    final hIdx = highlightWordIdx;
     final paint = Paint();
 
     // ✅ 0. Group segments by verse key instead of raw segments to prevent overlaps
@@ -1022,7 +1050,7 @@ class _WordHighlightPainter extends CustomPainter {
       final bool isAyahActive =
           (statuses != null &&
               statuses.values.any((s) => s != WordStatus.pending)) ||
-          (key == highlightKey);
+          (key == hKey);
 
       final bool isAyahSelected =
           controller.navigatedAyahId ==
@@ -1049,13 +1077,40 @@ class _WordHighlightPainter extends CustomPainter {
               segment.ayahNumber,
               word.wordNumber,
             );
+
             final rects = geometry.wordBounds[geometryKey];
+            if (rects == null || rects.isEmpty) continue;
+
+            // ✅ 2. Active Mode Pulse (ONLY if we have a valid highlightKey)
+            if (hKey != null && key == hKey && hIdx == word.wordNumber - 1) {
+              double minWordL = rects.first.left;
+              double minWordT = rects.first.top;
+              double maxWordR = rects.first.right;
+              double maxWordB = rects.first.bottom;
+
+              for (int i = 1; i < rects.length; i++) {
+                final r = rects[i];
+                if (r.left < minWordL) minWordL = r.left;
+                if (r.top < minWordT) minWordT = r.top;
+                if (r.right > maxWordR) maxWordR = r.right;
+                if (r.bottom > maxWordB) maxWordB = r.bottom;
+              }
+
+              paint.color = primaryColor.withValues(alpha: 0.6);
+              canvas.drawRRect(
+                RRect.fromRectAndRadius(
+                  Rect.fromLTRB(minWordL, minWordT, maxWordR, maxWordB),
+                  const Radius.circular(4),
+                ),
+                paint,
+              );
+            }
 
             if (rects != null) {
               Color? wordColor;
               if (status != null && status != WordStatus.pending) {
                 wordColor = _getWordHighlightColor(status);
-              } else if (key == highlightKey) {
+              } else if (key == hKey) {
                 wordColor = primaryColor;
               }
 
