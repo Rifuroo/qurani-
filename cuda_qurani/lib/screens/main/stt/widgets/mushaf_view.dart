@@ -12,10 +12,7 @@ import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../services/mushaf_widget_cache.dart';
-import '../utils/constants.dart';
-import '../utils/ayah_char_mapper.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
-import 'package:cuda_qurani/screens/main/stt/widgets/mushaf_paper_background.dart';
 
 /// Utility class for rendering Mushaf pages with precise layout control.
 class MushafRenderer {
@@ -111,33 +108,9 @@ class MushafRenderer {
           : child;
     }
 
-    // Calculate total text width WITHOUT spacing for FittedBox decision
-    double totalTextWidth = 0;
-    for (final span in wordSpans) {
-      if (span is WidgetSpan) {
-        totalTextWidth += 40.0; // Approximation for marker
-      } else {
-        // ✅ FIX: Safely measure TextSpan that might contain nested WidgetSpans
-        bool hasNestedWidget(InlineSpan s) {
-          if (s is WidgetSpan) return true;
-          if (s is TextSpan && s.children != null) {
-            return s.children!.any(hasNestedWidget);
-          }
-          return false;
-        }
-
-        if (hasNestedWidget(span)) {
-          totalTextWidth += 40.0; // Use approximation if nested widget exists
-        } else {
-          final painter = TextPainter(
-            text: span is TextSpan ? span : TextSpan(children: [span]),
-            textDirection: TextDirection.rtl,
-            maxLines: 1,
-          )..layout();
-          totalTextWidth += painter.width;
-        }
-      }
-    }
+    // ✅ PERF FIX: Removed dead totalTextWidth computation — was allocating
+    // TextPainter per word span but result was never consumed. FittedBox handles
+    // sizing automatically.
 
     return SizedBox(
       width: maxWidth,
@@ -301,6 +274,17 @@ class _MushafDisplayState extends State<MushafDisplay> {
   @override
   Widget build(BuildContext context) {
     final controller = context.read<SttController>();
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // ✅ OPTIMIZATION: Set viewport once at root level, not per page build
+    // This feeds the geometry precomputation engine once.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        controller.setViewportWidth(screenWidth);
+        controller.setViewportHeight(screenHeight);
+      }
+    });
 
     return Directionality(
       textDirection: TextDirection.rtl, // ✅ FIX RTL: Kanan ke Kiri
@@ -446,7 +430,6 @@ class MushafPageContent extends StatelessWidget {
     final isSpecialPage = pageNumber == 1 || pageNumber == 2;
 
     // ✅ CALCULATE LAYOUT CONFIG ONCE PER PAGE
-    final controller = context.read<SttController>();
     final isIndopak = context.select<SttController, bool>(
       (c) => c.mushafLayout == MushafLayout.indopak,
     );
@@ -455,14 +438,6 @@ class MushafPageContent extends StatelessWidget {
       pageNumber,
       isIndopak,
     );
-
-    // ✅ HARDENING: Record viewport width for coordinate mapping
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted) {
-        controller.setViewportWidth(screenWidth);
-        controller.setViewportHeight(screenHeight);
-      }
-    });
 
     final linesContent = Column(
       mainAxisSize: MainAxisSize.min,
@@ -634,11 +609,8 @@ class _BasmallahLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final basmallahSize = screenHeight * 0.040;
+    // ✅ PERF FIX: Removed duplicate selector — isIndopak and isIndopakFontSize were identical
     final isIndopak = context.select<SttController, bool>(
-      (c) => c.mushafLayout == MushafLayout.indopak,
-    );
-
-    final isIndopakFontSize = context.select<SttController, bool>(
       (c) => c.mushafLayout == MushafLayout.indopak,
     );
 
@@ -648,7 +620,7 @@ class _BasmallahLine extends StatelessWidget {
       child: Text(
         '﷽',
         style: TextStyle(
-          fontSize: isIndopakFontSize ? basmallahSize * 0.85 : basmallahSize,
+          fontSize: isIndopak ? basmallahSize * 0.85 : basmallahSize,
           fontFamily: isIndopak ? 'IndoPak-Nastaleeq' : 'Quran-Common',
           color: AppColors.getTextPrimary(context),
         ),
@@ -665,6 +637,11 @@ class _JustifiedAyahLine extends StatelessWidget {
 
   // ✅ OPTIMIZATION: Pre-compile RegExp to avoid recreation inside loop
   static final RegExp _arabicNumberRegExp = RegExp(r'[٠-٩0-9]');
+
+  // ✅ PERF FIX: Hoisted from build() word loop — was compiled ~120× per page build
+  static final RegExp _markerStripper = RegExp(
+    r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}]',
+  );
 
   const _JustifiedAyahLine({
     required this.line,
@@ -687,45 +664,64 @@ class _JustifiedAyahLine extends StatelessWidget {
     );
 
     // Select ONLY the word status for the current active highlight if it belongs to this line
-    final lineAyahKeys =
-        line.ayahSegments?.map((s) => '${s.surahId}:${s.ayahNumber}').toSet() ??
-        {};
+    final lineSegments = line.ayahSegments ?? [];
 
     // ⚡️ ULTIMATE OPTIMIZATION: Rebuild ONLY if the active highlight OR selection is on THIS line
     final lineHighlightState = context.select<SttController, String>((c) {
-      // ✅ 1. Check Reading/Listening Highlight
       final revision = c.wordStatusRevision;
-
-      // ✅ 2. Check Selection Highlight (Deep Link / Similar Phrase)
       final navigatedAyahId = c.navigatedAyahId;
       final selectedAyahId = c.selectedAyahForOptions?.id;
+      final currentHighlightKey = c.currentHighlightKey;
 
-      // Check if any segment in this line matches the selection
+      // ✅ 1. Check for Active Word Highlight
+      bool hasActiveHighlight = false;
+      String currentWordInLine = 'none';
+      if (currentHighlightKey != null) {
+        for (final segment in lineSegments) {
+          if ('${segment.surahId}:${segment.ayahNumber}' ==
+              currentHighlightKey) {
+            hasActiveHighlight = true;
+            currentWordInLine =
+                '$currentHighlightKey:${c.currentHighlightWordIdx}';
+            break;
+          }
+        }
+      }
+
+      // ✅ 2. Check for Word Statuses (Colors)
+      bool hasWordStatuses = false;
+      if (!hasActiveHighlight) {
+        for (final segment in lineSegments) {
+          final key = '${segment.surahId}:${segment.ayahNumber}';
+          final stats = c.wordStatusMap[key];
+          if (stats != null &&
+              stats.values.any((s) => s != WordStatus.pending)) {
+            hasWordStatuses = true;
+            break;
+          }
+        }
+      }
+
+      // ✅ 3. Check Selection Highlight (Deep Link / Similar Phrase) - Avoid heavy split/parse
       bool hasSelection = false;
       if (navigatedAyahId != null || selectedAyahId != null) {
-        hasSelection = lineAyahKeys.any((key) {
-          final parts = key.split(':');
-          final surahId = int.parse(parts[0]);
-          final ayahNum = int.parse(parts[1]);
-          final globalId = GlobalAyatService.toGlobalAyat(surahId, ayahNum);
-          return globalId == navigatedAyahId || globalId == selectedAyahId;
-        });
+        for (final segment in lineSegments) {
+          final globalId = GlobalAyatService.toGlobalAyat(
+            segment.surahId,
+            segment.ayahNumber,
+          );
+          if (globalId == navigatedAyahId || globalId == selectedAyahId) {
+            hasSelection = true;
+            break;
+          }
+        }
       }
 
-      if (c.currentHighlightKey == null ||
-          !lineAyahKeys.contains(c.currentHighlightKey)) {
-        final hasAnyActive = lineAyahKeys.any(
-          (key) =>
-              c.wordStatusMap[key]?.values.any(
-                (s) => s != WordStatus.pending,
-              ) ??
-              false,
-        );
-        // Combine state: highlight status + selection status
-        return '${hasAnyActive ? 'has_status' : 'none'}:$revision:$hasSelection';
-      }
-      return '${c.currentHighlightKey}:${c.currentHighlightWordIdx}:$revision:$hasSelection';
+      return '$currentWordInLine:$hasWordStatuses:$revision:$hasSelection';
     });
+
+    // ✅ Rebuild trigger check: ensures this line rebuilds when highlight/selection state changes
+    if (lineHighlightState.isEmpty) return const SizedBox.shrink();
 
     final controller = context.read<SttController>();
 
@@ -753,9 +749,10 @@ class _JustifiedAyahLine extends StatelessWidget {
     });
 
     for (final segment in sortedSegments) {
-      final ayatIndex = controller.ayatList.indexWhere(
-        (a) => a.surah_id == segment.surahId && a.ayah == segment.ayahNumber,
-      );
+      // ✅ PERF FIX: O(1) map lookup replaces O(n) indexWhere linear scan
+      final ayatIndex =
+          controller.ayahIndexMap['${segment.surahId}:${segment.ayahNumber}'] ??
+          -1;
       final isCurrentAyat = ayatIndex >= 0 && ayatIndex == currentAyatIndex;
 
       for (int i = 0; i < segment.words.length; i++) {
@@ -788,10 +785,8 @@ class _JustifiedAyahLine extends StatelessWidget {
             ? baseFontSize * lastWordFontMultiplier
             : baseFontSize;
 
-        final markerStripper = RegExp(
-          r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}]',
-        );
-        final cleanText = word.text.replaceAll(markerStripper, '');
+        // ✅ PERF FIX: Uses class-level static _markerStripper instead of per-word compilation
+        final cleanText = word.text.replaceAll(_markerStripper, '');
 
         // ✅ FORCE INDOPAK STYLE FOR AYAH MARKER WITH STACK
         if (isLastWord) {
@@ -942,19 +937,21 @@ class _WordHighlightOverlay extends StatelessWidget {
         .map((s) => '${s.surahId}:${s.ayahNumber}')
         .toSet();
 
-    // Listen to highlight state only if it affects this line
-    final highlightData = context.select<SttController, String?>((c) {
-      if (c.currentHighlightKey == null ||
-          !lineAyahKeys.contains(c.currentHighlightKey)) {
-        return null;
-      }
-      return '${c.currentHighlightKey}:${c.currentHighlightWordIdx}';
-    });
-
     // ✅ NEW: Use revision counter to detect map changes (O(1))
     final revision = context.select<SttController, int>(
       (c) => c.wordStatusRevision,
     );
+
+    // ✅ NEW: Conditional selection to ensure ONLY affected lines rebuild
+    final highlightInfo = context.select<SttController, (String?, int?)>((c) {
+      if (c.currentHighlightKey == null ||
+          !lineAyahKeys.contains(c.currentHighlightKey)) {
+        return (null, null);
+      }
+      return (c.currentHighlightKey, c.currentHighlightWordIdx);
+    });
+    final highlightKey = highlightInfo.$1;
+    final highlightWordIdx = highlightInfo.$2;
 
     final controller = context.read<SttController>();
 
@@ -963,6 +960,9 @@ class _WordHighlightOverlay extends StatelessWidget {
         line: line,
         pageNumber: pageNumber,
         controller: controller,
+        highlightKey: highlightKey,
+        highlightWordIdx: highlightWordIdx,
+        wordStatusRevision: revision,
         correctColor: AppColors.getCorrect(context).withValues(alpha: 0.4),
         incorrectColor: AppColors.getIncorrect(context).withValues(alpha: 0.4),
         infoColor: AppColors.getInfo(context).withValues(alpha: 0.3),
@@ -976,6 +976,9 @@ class _WordHighlightPainter extends CustomPainter {
   final MushafPageLine line;
   final int pageNumber;
   final SttController controller;
+  final String? highlightKey;
+  final int? highlightWordIdx;
+  final int wordStatusRevision;
   final Color correctColor;
   final Color incorrectColor;
   final Color infoColor;
@@ -985,6 +988,9 @@ class _WordHighlightPainter extends CustomPainter {
     required this.line,
     required this.pageNumber,
     required this.controller,
+    required this.highlightKey,
+    required this.highlightWordIdx,
+    required this.wordStatusRevision,
     required this.correctColor,
     required this.incorrectColor,
     required this.infoColor,
@@ -1136,7 +1142,17 @@ class _WordHighlightPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _WordHighlightPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _WordHighlightPainter oldDelegate) {
+    // ✅ SURGICAL FIX: Repaint when primitive highlight pointers change
+    // Direct controller comparison failed because the instance reference is stable.
+    return oldDelegate.highlightKey != highlightKey ||
+        oldDelegate.highlightWordIdx != highlightWordIdx ||
+        oldDelegate.wordStatusRevision != wordStatusRevision ||
+        oldDelegate.line != line ||
+        oldDelegate.pageNumber != pageNumber ||
+        oldDelegate.correctColor != correctColor ||
+        oldDelegate.incorrectColor != incorrectColor;
+  }
 }
 
 // Methods tetap sama

@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'dart:async';
-import 'dart:io';
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/models/playback_settings_model.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
@@ -11,9 +10,6 @@ import 'package:cuda_qurani/services/listening_audio_services.dart';
 import 'package:cuda_qurani/services/local_database_service.dart';
 import 'package:cuda_qurani/services/reciter_database_service.dart';
 import 'package:cuda_qurani/screens/main/stt/utils/ayah_char_mapper.dart';
-import 'package:cuda_qurani/core/utils/language_helper.dart';
-import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 import '../data/models.dart' hide TartibStatus;
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
@@ -24,7 +20,6 @@ import 'package:cuda_qurani/services/supabase_service.dart';
 import 'package:cuda_qurani/services/auth_service.dart';
 import 'package:cuda_qurani/config/app_config.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
-import 'package:cuda_qurani/core/widgets/achievement_popup.dart';
 import 'package:cuda_qurani/providers/premium_provider.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/ayah_options_sheet.dart';
 import 'package:cuda_qurani/models/premium_features.dart';
@@ -39,6 +34,11 @@ class SttController extends ChangeNotifier {
   final Map<String, int> _ayahIndexMap = {};
   // ✅ O(1) LOOKUP: Map "surahId:ayahNumber" -> Ayah index for CURRENT page
   final Map<String, int> _currentPageAyahIndexMap = {};
+
+  // ✅ PERF FIX: Pre-compiled RegExp for stripping markers — was compiled per-word inside loops
+  static final RegExp _markerStripper = RegExp(
+    r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}]',
+  );
 
   final int? suratId;
   final int? pageId;
@@ -303,6 +303,8 @@ class SttController extends ChangeNotifier {
   String _suratNameSimple = '';
   String _suratVersesCount = '';
   DateTime? _sessionStartTime;
+  int?
+  _recordingSurahId; // ✅ NEW: Anchors the STT session to prevent race conditions during swipe
   Map<int, AyatProgress> _ayatProgress = {};
 
   // UI State
@@ -969,6 +971,9 @@ class SttController extends ChangeNotifier {
       // Clear visual states
       _tartibStatus.clear();
       _wordStatusMap.clear();
+      _currentHighlightKey = null; // ✅ Reset instantly
+      _currentHighlightWordIdx = null; // ✅ Reset instantly
+      _recordingSurahId = null; // ✅ Release anchor
 
       appLogger.log('LISTENING', 'Stopped manually');
       print('? Listening mode stopped');
@@ -1492,7 +1497,7 @@ class SttController extends ChangeNotifier {
   // ✅ CRITICAL: Track last loaded page to prevent duplicate calls
   int? _lastLoadedAyatsPage;
 
-  Future<void> _loadCurrentPageAyats() async {
+  Future<void> _loadCurrentPageAyats({bool skipNotify = false}) async {
     // ✅ OPTIMIZED: Prevent duplicate calls for same page
     if (_lastLoadedAyatsPage == _currentPage) {
       return; // Already loaded for this page
@@ -1501,7 +1506,8 @@ class SttController extends ChangeNotifier {
     if (!_isQuranMode) {
       _currentPageAyats = _ayatList;
       _lastLoadedAyatsPage = _currentPage;
-      notifyListeners();
+      if (!skipNotify)
+        notifyListeners(); // ✅ PERF FIX: Skip when caller batches
       return;
     }
     try {
@@ -1533,9 +1539,8 @@ class SttController extends ChangeNotifier {
         'Loaded ${_currentPageAyats.length} ayats for page $_currentPage',
       );
 
-      // ✅ CRITICAL: Notify listeners IMMEDIATELY after current page loaded
-      // This ensures UI shows current page data right away
-      notifyListeners();
+      // ✅ PERF FIX: Skip notification when caller will batch it
+      if (!skipNotify) notifyListeners();
 
       // ✅ Background: Preload adjacent pages AFTER current page is shown
       // This doesn't block UI update
@@ -1543,7 +1548,7 @@ class SttController extends ChangeNotifier {
     } catch (e) {
       appLogger.log('DATA_PAGE_ERROR', 'Error loading page ayats - $e');
       _currentPageAyats = [];
-      notifyListeners();
+      if (!skipNotify) notifyListeners();
     }
   }
 
@@ -1752,13 +1757,7 @@ class SttController extends ChangeNotifier {
       );
       return;
     }
-    if (newPage < 1 || newPage > totalPages || newPage == _currentPage) {
-      appLogger.log(
-        'NAV',
-        'Invalid navigation to page $newPage (max: $totalPages)',
-      );
-      return;
-    }
+    // ✅ PERF FIX: Removed duplicate guard block (was identical dead code)
 
     appLogger.log('NAV', '📄 Navigating from page $_currentPage to $newPage');
     // ✅ FIX: Update AppBar instantly BEFORE any async work
@@ -1780,6 +1779,12 @@ class SttController extends ChangeNotifier {
     // ✅ CRITICAL: Reset last loaded ayats page to force reload
     _lastLoadedAyatsPage = null;
 
+    // ✅ SURGICAL FIX: Reset highlight pointers instantly on navigation
+    // This prevents "sticky" highlights from ghosting onto the new page
+    _currentHighlightKey = null;
+    _currentHighlightWordIdx = null;
+    _wordStatusRevision++; // Trigger UI update for the lines
+
     // ✅ CRITICAL: Check both SttController cache AND QuranService cache
     // QuranService cache is shared singleton, so check it first
     if (!pageCache.containsKey(newPage)) {
@@ -1796,9 +1801,9 @@ class SttController extends ChangeNotifier {
           loadingFuture
               .then((lines) {
                 pageCache[newPage] = lines;
-                _updateSurahNameForPage(newPage);
-                _loadCurrentPageAyats();
-                notifyListeners();
+                _updateSurahNameForPage(newPage, skipNotify: true);
+                _loadCurrentPageAyats(skipNotify: true);
+                notifyListeners(); // ✅ PERF FIX: Single notification for all state changes
                 Future.microtask(() => _preloadAdjacentPagesAggressively());
               })
               .catchError((e) {
@@ -1808,9 +1813,9 @@ class SttController extends ChangeNotifier {
                 );
                 // Fallback to normal load
                 _loadSinglePageData(newPage).then((_) {
-                  _updateSurahNameForPage(newPage);
-                  _loadCurrentPageAyats();
-                  notifyListeners();
+                  _updateSurahNameForPage(newPage, skipNotify: true);
+                  _loadCurrentPageAyats(skipNotify: true);
+                  notifyListeners(); // ✅ PERF FIX: Single notification
                   Future.microtask(() => _preloadAdjacentPagesAggressively());
                 });
               });
@@ -1823,27 +1828,25 @@ class SttController extends ChangeNotifier {
     if (pageCache.containsKey(newPage)) {
       appLogger.log('NAV', '⚡ INSTANT: Page $newPage already in cache');
 
-      // Update surah name immediately from cache
-      _updateSurahNameForPage(newPage);
+      // Update surah name immediately from cache — skipNotify since we batch below
+      _updateSurahNameForPage(newPage, skipNotify: true);
 
-      // Update current page ayats immediately (no loading)
-      _loadCurrentPageAyats();
+      // Update current page ayats immediately (no loading) — skipNotify
+      _loadCurrentPageAyats(skipNotify: true);
 
-      // Update ayat index
+      // ✅ PERF FIX: O(1) ayah index lookup replaces indexWhere
       if (_currentPageAyats.isNotEmpty) {
         final firstAyatOnPage = _currentPageAyats.first;
-        final newIndex = _ayatList.indexWhere(
-          (a) =>
-              a.surah_id == firstAyatOnPage.surah_id &&
-              a.ayah == firstAyatOnPage.ayah,
-        );
+        final newIndex =
+            _ayahIndexMap['${firstAyatOnPage.surah_id}:${firstAyatOnPage.ayah}'] ??
+            -1;
         if (newIndex >= 0) {
           _currentAyatIndex = newIndex;
           appLogger.log('NAV', 'Updated ayat index to $_currentAyatIndex');
         }
       }
 
-      notifyListeners();
+      notifyListeners(); // ✅ PERF FIX: Single notification for all cached page changes
 
       // Preload more pages in background
       Future.microtask(() => _preloadAdjacentPagesAggressively());
@@ -1854,24 +1857,22 @@ class SttController extends ChangeNotifier {
       // Load with parallel fetch (will cache adjacent pages too)
       _loadSinglePageData(newPage)
           .then((_) {
-            // Update surah name after page loaded
-            _updateSurahNameForPage(newPage);
+            _updateSurahNameForPage(newPage, skipNotify: true);
 
-            _loadCurrentPageAyats();
+            _loadCurrentPageAyats(skipNotify: true);
 
+            // ✅ PERF FIX: O(1) lookup replaces indexWhere
             if (_currentPageAyats.isNotEmpty) {
               final firstAyatOnPage = _currentPageAyats.first;
-              final newIndex = _ayatList.indexWhere(
-                (a) =>
-                    a.surah_id == firstAyatOnPage.surah_id &&
-                    a.ayah == firstAyatOnPage.ayah,
-              );
+              final newIndex =
+                  _ayahIndexMap['${firstAyatOnPage.surah_id}:${firstAyatOnPage.ayah}'] ??
+                  -1;
               if (newIndex >= 0) {
                 _currentAyatIndex = newIndex;
               }
             }
 
-            notifyListeners();
+            notifyListeners(); // ✅ PERF FIX: Single notification
 
             // Continue preloading in background
             Future.microtask(() => _preloadAdjacentPagesAggressively());
@@ -2018,7 +2019,10 @@ class SttController extends ChangeNotifier {
   }
 
   // ===== NEW METHOD: Update surah name for current page =====
-  Future<void> _updateSurahNameForPage(int pageNumber) async {
+  Future<void> _updateSurahNameForPage(
+    int pageNumber, {
+    bool skipNotify = false,
+  }) async {
     try {
       // ✅ Priority 1: Use metadata cache (FASTEST - no database query)
       final surahName = _metadataCache.getPrimarySurahForPage(pageNumber);
@@ -2049,7 +2053,8 @@ class SttController extends ChangeNotifier {
                 surahName: _suratNameSimple,
                 juzNumber: juzNum,
               );
-              notifyListeners();
+              if (!skipNotify)
+                notifyListeners(); // ✅ PERF FIX: Skip when caller batches
               return;
             }
           }
@@ -2086,7 +2091,8 @@ class SttController extends ChangeNotifier {
                 surahName: _suratNameSimple,
                 juzNumber: juzNum,
               );
-              notifyListeners();
+              if (!skipNotify)
+                notifyListeners(); // ✅ PERF FIX: Skip when caller batches
             }
             return;
           }
@@ -2119,7 +2125,8 @@ class SttController extends ChangeNotifier {
             surahName: _suratNameSimple,
             juzNumber: juzNum,
           );
-          notifyListeners();
+          if (!skipNotify)
+            notifyListeners(); // ✅ PERF FIX: Skip when caller batches
         }
         return;
       }
@@ -2151,7 +2158,8 @@ class SttController extends ChangeNotifier {
             surahName: _suratNameSimple,
             juzNumber: juzNum,
           );
-          notifyListeners();
+          if (!skipNotify)
+            notifyListeners(); // ✅ PERF FIX: Skip when caller batches
           return;
         }
       }
@@ -2195,33 +2203,40 @@ class SttController extends ChangeNotifier {
   }
 
   double? _viewportHeight;
+  Timer? _viewportDebounce;
+  String? _lastGeometryViewportKey;
 
-  /// ✅ VIEWPORT TRACKING: Set the height for geometry precomputation
+  /// ✅ VIEWPORT TRACKING: Set the height/width for geometry precomputation with debouncing
   void setViewportHeight(double height) {
     if (_viewportHeight == height) return;
     _viewportHeight = height;
-
-    // If height changed, recompute
-    if (pageCache.isNotEmpty) {
-      for (final page in pageCache.keys.toList()) {
-        _precomputeGeometryForPage(page);
-      }
-      notifyListeners(); // ✅ NEW: Trigger UI update
-    }
+    _triggerGeometryRecompute();
   }
 
-  /// ✅ VIEWPORT TRACKING: Set the width for geometry precomputation
   void setViewportWidth(double width) {
     if (_viewportWidth == width) return;
     _viewportWidth = width;
+    _triggerGeometryRecompute();
+  }
 
-    // If width changed, we need to recompute geometry for already cached pages
-    if (pageCache.isNotEmpty) {
-      for (final page in pageCache.keys.toList()) {
-        _precomputeGeometryForPage(page);
+  void _triggerGeometryRecompute() {
+    _viewportDebounce?.cancel();
+    _viewportDebounce = Timer(const Duration(milliseconds: 50), () {
+      if (_isDisposed || _viewportWidth == null) return;
+
+      final currentKey = "${_viewportWidth}x${_viewportHeight ?? 0}";
+      if (_lastGeometryViewportKey == currentKey) return;
+
+      _lastGeometryViewportKey = currentKey;
+
+      // If viewport changed significantly, recompute all cached pages
+      if (pageCache.isNotEmpty) {
+        for (final page in pageCache.keys.toList()) {
+          _precomputeGeometryForPage(page, force: true);
+        }
+        notifyListeners();
       }
-      notifyListeners(); // ✅ NEW: Trigger UI update
-    }
+    });
   }
 
   /// ✅ PRE-COMPUTATION ENGINE: Build spans and GEOMETRY for a page
@@ -2255,8 +2270,18 @@ class SttController extends ChangeNotifier {
     }
   }
 
-  void _precomputeGeometryForPage(int pageNumber) {
+  void _precomputeGeometryForPage(int pageNumber, {bool force = false}) {
     if (_viewportWidth == null || _isDisposed) return;
+
+    final currentViewportKey = "${_viewportWidth}x${_viewportHeight ?? 0}";
+
+    // ✅ PERF FIX: Skip if geometry exists for THIS viewport
+    if (!force &&
+        geometryCache.containsKey(pageNumber) &&
+        _lastGeometryViewportKey == currentViewportKey) {
+      return;
+    }
+
     final lines = pageCache[pageNumber];
     if (lines == null) return;
 
@@ -2337,10 +2362,8 @@ class SttController extends ChangeNotifier {
             // Matches UI: effectiveFontSize * 1.1 + 2.0 (margins)
             wWidth = effectiveFontSize * 1.1 + 2.0;
           } else {
-            final markerStripper = RegExp(
-              r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}]',
-            );
-            final cleanText = word.text.replaceAll(markerStripper, '');
+            // ✅ PERF FIX: Uses class-level _markerStripper instead of per-word compilation
+            final cleanText = word.text.replaceAll(_markerStripper, '');
 
             final double textHeight = (pageNumber == 1 || pageNumber == 2)
                 ? 1.5
@@ -3014,8 +3037,13 @@ class SttController extends ChangeNotifier {
       case 'word_processing':
         final int processingAyah = message['ayah'] ?? 0;
         final int processingWordIndex = message['word_index'] ?? 0;
+        // ✅ ANCHOR FIX: Use _recordingSurahId as priority fallback
         final int processingSurah =
-            message['surah'] ?? suratId ?? _determinedSurahId ?? 1;
+            message['surah'] ??
+            _recordingSurahId ??
+            suratId ??
+            _determinedSurahId ??
+            1;
         _currentAyatIndex = _ayatList.indexWhere(
           (a) => a.ayah == processingAyah && a.surah_id == processingSurah,
         );
@@ -3078,8 +3106,13 @@ class SttController extends ChangeNotifier {
         final String expectedWord = message['expected_word'] ?? '';
         final String transcribedWord = message['transcribed_word'] ?? '';
         final int totalWords = message['total_words'] ?? 0;
+        // ✅ ANCHOR FIX: Use _recordingSurahId as priority fallback
         final int feedbackSurah =
-            message['surah'] ?? suratId ?? _determinedSurahId ?? 1;
+            message['surah'] ??
+            _recordingSurahId ??
+            suratId ??
+            _determinedSurahId ??
+            1;
 
         _currentAyatIndex = _ayatList.indexWhere(
           (a) => a.ayah == feedbackAyah && a.surah_id == feedbackSurah,
@@ -3928,6 +3961,7 @@ class SttController extends ChangeNotifier {
         print('   Keeping wordStatusMap (resuming session: $resumeSessionId)');
       }
       _wordStatusRevision++; // ✅ NEW: Sync UI
+      _recordingSurahId = null; // Clear old anchor before starting new
       _expectedAyah = 1;
       _sessionId = resumeSessionId; // ? Use existing session_id if resuming
       _errorMessage = '';
@@ -3958,6 +3992,11 @@ class SttController extends ChangeNotifier {
           'Cannot determine surah ID for recording - no data loaded',
         );
       }
+
+      // ✅ ANCHOR: Lock the surah ID for this session
+      _recordingSurahId = recordingSurahId;
+      _currentHighlightKey = null;
+      _currentHighlightWordIdx = null;
 
       print(
         '📤 startRecording(): Sending START message for surah $recordingSurahId...',
@@ -4010,6 +4049,9 @@ class SttController extends ChangeNotifier {
           .sendPauseRecording(); // ? Changed: PAUSE (was sendStopRecording)
       _isRecording = false;
       appLogger.log('RECORDING', 'Stopped');
+      _recordingSurahId = null; // ✅ Release anchor
+      _currentHighlightKey = null; // ✅ Reset instantly
+      _currentHighlightWordIdx = null;
       print('✅ stopRecording(): Stopped successfully');
       notifyListeners();
     } catch (e) {

@@ -106,108 +106,119 @@ class _SttPageState extends State<SttPage> {
         Provider(create: (_) => QuranService()),
       ],
       child: Consumer<SttController>(
+        child: Scaffold(
+          backgroundColor: AppColors.getBackground(context),
+          extendBodyBehindAppBar: true,
+          appBar: const QuranAppBar(),
+          // ✅ OPTIMIZATION: Selector for Loading/Error states ONLY
+          // This keeps the overall body structure stable
+          body: Selector<SttController, String?>(
+            selector: (_, c) => c.errorMessage,
+            builder: (context, errorMessage, _) {
+              final isLoading = context.select<SttController, bool>(
+                (c) => c.isLoading,
+              );
+
+              if (isLoading) return const SizedBox.shrink();
+
+              if (errorMessage?.isNotEmpty ?? false) {
+                final controller = context.read<SttController>();
+                return Column(
+                  children: [
+                    // Error banner below AppBar
+                    SizedBox(height: kToolbarHeight * 0.86),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: MediaQuery.of(context).size.width * 0.04,
+                        vertical: MediaQuery.of(context).size.height * 0.015,
+                      ),
+                      color: AppColors.getError(context).withValues(alpha: 0.9),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.warning,
+                            color: AppColors.textInverse,
+                            size: MediaQuery.of(context).size.width * 0.05,
+                          ),
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.02,
+                          ),
+                          Expanded(
+                            child: Text(
+                              errorMessage ?? 'An error occurred',
+                              style: TextStyle(
+                                color: AppColors.textInverse,
+                                fontSize:
+                                    MediaQuery.of(context).size.width * 0.035,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.close,
+                              color: AppColors.textInverse,
+                              size: MediaQuery.of(context).size.width * 0.05,
+                            ),
+                            onPressed: controller.clearError,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: controller.toggleUIVisibility,
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: _buildMainContent(context),
+                            ), // ✅ Pass context!
+                            // Logs panel logic moved inside
+                            Selector<SttController, bool>(
+                              selector: (_, c) => c.showLogs && c.isUIVisible,
+                              builder: (_, show, __) => show
+                                  ? const QuranLogsPanel()
+                                  : const SizedBox.shrink(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return GestureDetector(
+                onTap: context.read<SttController>().toggleUIVisibility,
+                child: MushafPaperBackground(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: _buildMainContent(context),
+                      ), // ✅ Pass context!
+                      Selector<SttController, bool>(
+                        selector: (_, c) => c.showLogs && c.isUIVisible,
+                        builder: (_, show, __) => show
+                            ? const QuranLogsPanel()
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
         builder: (context, controller, child) {
-          // ✅ NEW: Show achievement popup when earned
+          // ✅ NEW: Show achievement popup when earned - this runs on every notifyListeners
           if (controller.newlyEarnedAchievements.isNotEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _showAchievementPopup(context, controller);
             });
           }
 
-          return Scaffold(
-            backgroundColor: AppColors.getBackground(context),
-            extendBodyBehindAppBar: true, 
-            appBar: const QuranAppBar(),
-            // ✅ OPTIMIZATION: Selector for Loading/Error states ONLY
-            body: Selector<SttController, String?>(
-              selector: (_, c) => c.errorMessage,
-              builder: (context, errorMessage, _) {
-                 final isLoading = context.select<SttController, bool>((c) => c.isLoading);
-                 
-                 if (isLoading) return const SizedBox.shrink();
-                 
-                 if (errorMessage?.isNotEmpty ?? false) {
-                    final controller = context.read<SttController>();
-                    return Column(
-                    children: [
-                      // Error banner below AppBar
-                      SizedBox(height: kToolbarHeight * 0.86),
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: MediaQuery.of(context).size.width * 0.04,
-                          vertical: MediaQuery.of(context).size.height * 0.015,
-                        ),
-                        color: AppColors.getError(
-                          context,
-                        ).withValues(alpha: 0.9),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.warning,
-                              color: AppColors.textInverse,
-                              size: MediaQuery.of(context).size.width * 0.05,
-                            ),
-                            SizedBox(
-                              width: MediaQuery.of(context).size.width * 0.02,
-                            ),
-                            Expanded(
-                              child: Text(
-                                errorMessage ?? 'An error occurred',
-                                style: TextStyle(
-                                  color: AppColors.textInverse,
-                                  fontSize:
-                                      MediaQuery.of(context).size.width * 0.035,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(
-                                Icons.close,
-                                color: AppColors.textInverse,
-                                size: MediaQuery.of(context).size.width * 0.05,
-                              ),
-                              onPressed: controller.clearError,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: controller.toggleUIVisibility,
-                          child: Column(
-                            children: [
-                              Expanded(child: _buildMainContent(context)), // ✅ Pass context!
-                              // Logs panel logic moved inside
-                              Selector<SttController, bool>(
-                                selector: (_, c) => c.showLogs && c.isUIVisible,
-                                builder: (_, show, __) => show ? const QuranLogsPanel() : const SizedBox.shrink(),
-                              )
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                 }
-                 
-                 return GestureDetector(
-                    onTap: context.read<SttController>().toggleUIVisibility,
-                    child: MushafPaperBackground(
-                      child: Column(
-                        children: [
-                          Expanded(child: _buildMainContent(context)), // ✅ Pass context!
-                          Selector<SttController, bool>(
-                                selector: (_, c) => c.showLogs && c.isUIVisible,
-                                builder: (_, show, __) => show ? const QuranLogsPanel() : const SizedBox.shrink(),
-                          )
-                        ],
-                      ),
-                    ),
-                  );
-              },
-            ),
-          );
+          // ✅ Return the stable child (Scaffold) - it won't rebuild unless SttPage itself rebuilds
+          return child!;
         },
       ),
     );
@@ -221,7 +232,7 @@ class _SttPageState extends State<SttPage> {
       children: [
         // MushafView handles its own listeners
         _buildQuranText(context, context.read<SttController>()),
-        
+
         // BottomBar handles its own listeners
         const Positioned(
           bottom: 0,
@@ -229,71 +240,88 @@ class _SttPageState extends State<SttPage> {
           right: 0,
           child: QuranBottomBar(key: ValueKey('quran_bottom_bar')),
         ),
-        
+
         // Popup handles its own state
         const SliderGuidePopup(),
 
         // ✅ RATE LIMIT BANNER (Selector)
         Selector<SttController, bool>(
-           selector: (_, c) => c.rateLimit != null && c.rateLimitRemaining <= 1 && c.rateLimitRemaining > 0 && !c.isRateLimitExceeded,
-           builder: (context, show, _) {
-             if (!show) return const SizedBox.shrink();
-             final controller = context.read<SttController>();
-             return Positioned(
-                top: kToolbarHeight + MediaQuery.of(context).padding.top,
-                left: 0,
-                right: 0,
-                child: RateLimitBanner(
-                  current: controller.rateLimitCurrent,
-                  limit: controller.rateLimitMax,
-                  remaining: controller.rateLimitRemaining,
-                  resetTime: controller.rateLimitResetFormatted,
-                  plan: controller.rateLimitPlan,
-                  isExceeded: false,
-                  onUpgradePressed: () => _navigateToPremium(context),
-                ),
-              );
-           }
+          selector: (_, c) =>
+              c.rateLimit != null &&
+              c.rateLimitRemaining <= 1 &&
+              c.rateLimitRemaining > 0 &&
+              !c.isRateLimitExceeded,
+          builder: (context, show, _) {
+            if (!show) return const SizedBox.shrink();
+            final controller = context.read<SttController>();
+            return Positioned(
+              top: kToolbarHeight + MediaQuery.of(context).padding.top,
+              left: 0,
+              right: 0,
+              child: RateLimitBanner(
+                current: controller.rateLimitCurrent,
+                limit: controller.rateLimitMax,
+                remaining: controller.rateLimitRemaining,
+                resetTime: controller.rateLimitResetFormatted,
+                plan: controller.rateLimitPlan,
+                isExceeded: false,
+                onUpgradePressed: () => _navigateToPremium(context),
+              ),
+            );
+          },
         ),
 
         // ✅ RATE LIMIT EXCEEDED (Selector)
         Selector<SttController, bool>(
           selector: (_, c) => c.isRateLimitExceeded,
-          builder: (context, show, _) => show ? Positioned.fill(
-                child: RateLimitExceededOverlay(
-                  limit: context.read<SttController>().rateLimitMax,
-                  resetTime: context.read<SttController>().rateLimitResetFormatted,
-                  plan: context.read<SttController>().rateLimitPlan,
-                  onUpgradePressed: () => _navigateToPremium(context),
-                  onClose: () => Navigator.of(context).pop(),
-                ),
-              ) : const SizedBox.shrink(),
+          builder: (context, show, _) => show
+              ? Positioned.fill(
+                  child: RateLimitExceededOverlay(
+                    limit: context.read<SttController>().rateLimitMax,
+                    resetTime: context
+                        .read<SttController>()
+                        .rateLimitResetFormatted,
+                    plan: context.read<SttController>().rateLimitPlan,
+                    onUpgradePressed: () => _navigateToPremium(context),
+                    onClose: () => Navigator.of(context).pop(),
+                  ),
+                )
+              : const SizedBox.shrink(),
         ),
 
         // ✅ DURATION WARNING (Selector)
         Selector<SttController, bool>(
-           selector: (_, c) => c.isDurationWarningActive && !c.isDurationLimitExceeded && !c.isDurationUnlimited,
-           builder: (context, show, _) => show ? Positioned(
-                top: kToolbarHeight + MediaQuery.of(context).padding.top,
-                left: 0,
-                right: 0,
-                child: DurationWarningBanner(
-                  warningMessage: context.read<SttController>().durationWarning,
-                  onDismiss: () {},
-                ),
-              ) : const SizedBox.shrink(),
+          selector: (_, c) =>
+              c.isDurationWarningActive &&
+              !c.isDurationLimitExceeded &&
+              !c.isDurationUnlimited,
+          builder: (context, show, _) => show
+              ? Positioned(
+                  top: kToolbarHeight + MediaQuery.of(context).padding.top,
+                  left: 0,
+                  right: 0,
+                  child: DurationWarningBanner(
+                    warningMessage: context
+                        .read<SttController>()
+                        .durationWarning,
+                    onDismiss: () {},
+                  ),
+                )
+              : const SizedBox.shrink(),
         ),
 
         // ✅ DURATION EXCEEDED (Selector)
         Selector<SttController, bool>(
-           selector: (_, c) => c.isDurationLimitExceeded,
-           builder: (context, show, _) => show ? Positioned.fill(
-                child: DurationLimitExceededOverlay(
-                  message: context.read<SttController>().durationWarning,
-                  onUpgradePressed: () => _navigateToPremium(context),
-                  onClose: () => Navigator.of(context).pop(),
-                ),
-              ) : const SizedBox.shrink(),
+          selector: (_, c) => c.isDurationLimitExceeded,
+          builder: (context, show, _) => show
+              ? Positioned.fill(
+                  child: DurationLimitExceededOverlay(
+                    message: context.read<SttController>().durationWarning,
+                    onUpgradePressed: () => _navigateToPremium(context),
+                    onClose: () => Navigator.of(context).pop(),
+                  ),
+                )
+              : const SizedBox.shrink(),
         ),
       ],
     );
@@ -307,7 +335,9 @@ class _SttPageState extends State<SttPage> {
 
   Widget _buildQuranText(BuildContext context, SttController controller) {
     // ✅ OPTIMIZATION: Read only specific properties.
-    final isQuranMode = context.select<SttController, bool>((c) => c.isQuranMode);
+    final isQuranMode = context.select<SttController, bool>(
+      (c) => c.isQuranMode,
+    );
 
     // ✅ No horizontal padding - let individual views handle their own
 
@@ -319,8 +349,8 @@ class _SttPageState extends State<SttPage> {
         return FadeTransition(opacity: animation, child: child);
       },
       child: isQuranMode
-          ? _buildMushafView(controller) 
-          : _buildListView(controller), 
+          ? _buildMushafView(controller)
+          : _buildListView(controller),
     );
   }
 
