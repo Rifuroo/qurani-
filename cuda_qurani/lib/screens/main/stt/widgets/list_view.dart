@@ -2,6 +2,7 @@
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../controllers/stt_controller.dart';
 import '../data/models.dart';
@@ -11,6 +12,7 @@ import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/services/global_ayat_services.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/ayah_translation_widget.dart';
+import 'package:cuda_qurani/screens/main/stt/widgets/ayah_tafsir_widget.dart';
 import 'dart:async';
 
 /// ✅ PHASE 7: Atomic Ayah Architecture
@@ -43,6 +45,12 @@ class _QuranListViewState extends State<QuranListView> {
   @override
   void initState() {
     super.initState();
+
+    // ✅ Hide status bar (only top bar)
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: [SystemUiOverlay.bottom],
+    );
 
     final controller = context.read<SttController>();
     final targetPage = controller.listViewCurrentPage;
@@ -323,6 +331,11 @@ class _QuranListViewState extends State<QuranListView> {
     _debounceTimer?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    // ✅ Restore status bar when leaving
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: SystemUiOverlay.values,
+    );
     super.dispose();
   }
 
@@ -774,6 +787,14 @@ class _CompleteAyahWidget extends StatelessWidget {
                   AyahTranslationWidget(
                     key: ValueKey(
                       'trans_${segment.surahId}_${segment.ayahNumber}',
+                    ),
+                    surahId: segment.surahId,
+                    ayahNumber: segment.ayahNumber,
+                  ),
+                if (segment.isStartOfAyah)
+                  AyahTafsirWidget(
+                    key: ValueKey(
+                      'tafsir_${segment.surahId}_${segment.ayahNumber}',
                     ),
                     surahId: segment.surahId,
                     ayahNumber: segment.ayahNumber,

@@ -11,28 +11,50 @@ class ResourceDatabaseHelper {
   factory ResourceDatabaseHelper() => _instance;
   ResourceDatabaseHelper._internal();
 
-  Database? _db;
-  String? _currentDbPath;
+  final Map<String, Database> _dbCache = {};
+  final Map<String, Future<Database>> _pendingOpens = {};
 
   Future<Database> getDatabase(String dbName, {String? category}) async {
     final docsDir = await getApplicationDocumentsDirectory();
     final path = join(docsDir.path, 'resources', '$dbName.db');
 
-    if (_db != null && _currentDbPath == path) {
-      return _db!;
+    // 1. Check if already open and valid
+    if (_dbCache.containsKey(path)) {
+      final db = _dbCache[path]!;
+      if (db.isOpen) {
+        return db;
+      } else {
+        _dbCache.remove(path);
+      }
     }
 
-    if (_db != null) {
-      await _db!.close();
+    // 2. Check if an open is already in progress for this path
+    if (_pendingOpens.containsKey(path)) {
+      return await _pendingOpens[path]!;
     }
 
+    // 3. Start opening and track the future
+    final openFuture = _openDatabaseSafe(path, category);
+    _pendingOpens[path] = openFuture;
+
+    try {
+      final db = await openFuture;
+      _dbCache[path] = db;
+      return db;
+    } finally {
+      _pendingOpens.remove(path);
+    }
+  }
+
+  Future<Database> _openDatabaseSafe(String path, String? category) async {
     // Ensure directory exists
     await Directory(dirname(path)).create(recursive: true);
 
-    _db = await openDatabase(
+    return await openDatabase(
       path,
       version: 1,
       onCreate: (db, version) async {
+        debugPrint('ResourceDB: Creating table for category $category');
         // Use Tarteel-compatible table names by default if category is known
         if (category == 'tafsir') {
           await db.execute('''
@@ -71,8 +93,6 @@ class ResourceDatabaseHelper {
         }
       },
     );
-    _currentDbPath = path;
-    return _db!;
   }
 
   Future<void> insertBatch(
@@ -200,10 +220,10 @@ class ResourceDatabaseHelper {
     await Directory(dirname(path)).create(recursive: true);
 
     // IF the database is already open, close it before overwriting
-    if (_db != null && _currentDbPath == path) {
-      await _db!.close();
-      _db = null;
-      _currentDbPath = null;
+    if (_dbCache.containsKey(path)) {
+      final db = _dbCache[path]!;
+      await db.close();
+      _dbCache.remove(path);
       debugPrint(
         'Closed cached database handle for $dbName before re-staging.',
       );
