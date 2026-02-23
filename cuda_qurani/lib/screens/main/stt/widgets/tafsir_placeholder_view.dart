@@ -10,6 +10,7 @@ import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import 'package:cuda_qurani/screens/main/stt/data/models.dart';
 import 'package:cuda_qurani/screens/main/stt/services/quran_service.dart';
 import 'package:cuda_qurani/services/quran_resource_service.dart';
+import 'package:cuda_qurani/core/navigation/app_navigation_service.dart';
 import 'package:provider/provider.dart';
 
 class TafsirPlaceholderView extends StatefulWidget {
@@ -105,7 +106,7 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
             Icons.arrow_back,
             color: AppColors.getTextSecondary(context),
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => AppNavigationService.safePop(context),
         ),
         title: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -125,7 +126,7 @@ class _TafsirPlaceholderViewState extends State<TafsirPlaceholderView> {
         actions: [
           IconButton(
             icon: Icon(Icons.close, color: AppColors.getTextSecondary(context)),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => AppNavigationService.exitToRoot(context),
           ),
         ],
       ),

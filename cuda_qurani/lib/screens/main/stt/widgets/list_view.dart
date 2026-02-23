@@ -652,6 +652,7 @@ class _CompleteAyahWidget extends StatelessWidget {
     final controller = context.read<SttController>();
     return GestureDetector(
       onLongPress: () => controller.handleListViewLongPress(context, segment),
+      onTap: () => controller.jumpToAyah(segment.surahId, segment.ayahNumber),
       behavior: HitTestBehavior.opaque,
       child: Selector<SttController, _AyahState>(
         selector: (_, controller) {
@@ -804,9 +805,13 @@ class _CompleteAyahWidget extends StatelessWidget {
         }
       }
 
-      if ((state.isCurrentAyat || state.isHighlighted) &&
+      // ✅ Phase 8: Remove redundant per-word highlight for navigated/static states.
+      // We only use word-level background for ACTIVE listening/matching (STT).
+      // Static highlights (click/jump) use the block-level background in the parent.
+      if (state.isListeningMode &&
+          (state.isCurrentAyat || state.isHighlighted) &&
           wordBg == Colors.transparent) {
-        wordBg = AppColors.getPrimary(context).withValues(alpha: 0.1);
+        wordBg = AppColors.getPrimary(context).withValues(alpha: 0.15);
       }
 
       if (state.hideUnreadAyat) {

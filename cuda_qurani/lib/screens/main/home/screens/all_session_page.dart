@@ -9,6 +9,7 @@ import 'package:cuda_qurani/core/widgets/app_components.dart';
 import 'package:cuda_qurani/services/supabase_service.dart';
 import 'package:cuda_qurani/services/auth_service.dart';
 import 'package:cuda_qurani/screens/main/stt/stt_page.dart';
+import 'package:cuda_qurani/core/navigation/app_navigation_service.dart';
 
 class AllSessionPage extends StatefulWidget {
   const AllSessionPage({Key? key}) : super(key: key);
@@ -98,7 +99,11 @@ class _AllSessionPageState extends State<AllSessionPage> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? Center(child: CircularProgressIndicator(color: AppColors.getPrimary(context)))
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.getPrimary(context),
+                ),
+              )
             : _buildBody(context),
       ),
     );
@@ -155,7 +160,10 @@ class _AllSessionPageState extends State<AllSessionPage> {
         : 'SESSIONS';
     return Text(
       '${context.formatNumber(_sessions.length)} $headerText',
-      style: AppTypography.overline(context, color: AppColors.getTextTertiary(context)),
+      style: AppTypography.overline(
+        context,
+        color: AppColors.getTextTertiary(context),
+      ),
     );
   }
 
@@ -259,7 +267,11 @@ class _AllSessionPageState extends State<AllSessionPage> {
         // Surah Name (smaller)
         Text(
           session.surah,
-          style: AppTypography.title(context, weight: AppTypography.semiBold, color: AppColors.getTextPrimary(context)),
+          style: AppTypography.title(
+            context,
+            weight: AppTypography.semiBold,
+            color: AppColors.getTextPrimary(context),
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -274,7 +286,10 @@ class _AllSessionPageState extends State<AllSessionPage> {
           children: [
             Text(
               _formatDurationWithContext(context, session.duration),
-              style: AppTypography.captionSmall(context, color: AppColors.getTextSecondary(context)),
+              style: AppTypography.captionSmall(
+                context,
+                color: AppColors.getTextSecondary(context),
+              ),
             ),
 
             // Separator Dot
@@ -294,7 +309,10 @@ class _AllSessionPageState extends State<AllSessionPage> {
 
             Text(
               '${context.formatNumber(session.verses)} $versesText',
-              style: AppTypography.captionSmall(context, color: AppColors.getTextSecondary(context)),
+              style: AppTypography.captionSmall(
+                context,
+                color: AppColors.getTextSecondary(context),
+              ),
             ),
           ],
         ),
@@ -443,7 +461,9 @@ class _AllSessionPageState extends State<AllSessionPage> {
       case SessionType.memorization:
         return AppColors.getSecondary(context);
       case SessionType.revision:
-        return AppColors.getPrimary(context); // Using primary since accent getter might not exist
+        return AppColors.getPrimary(
+          context,
+        ); // Using primary since accent getter might not exist
     }
   }
 
@@ -508,6 +528,7 @@ class _AllSessionPageState extends State<AllSessionPage> {
 
     Navigator.of(context).push(
       MaterialPageRoute(
+        settings: const RouteSettings(name: AppNavigationService.mushafRoute),
         builder: (_) => SttPage(
           suratId: session.surahId!,
           isFromHistory: true,
@@ -754,6 +775,3 @@ class SessionData {
     return months[month];
   }
 }
-
-
-

@@ -12,9 +12,10 @@ import 'tafsir_placeholder_view.dart';
 import 'translation_placeholder_view.dart';
 import 'package:cuda_qurani/features/similarity/presentation/pages/verse_similarity_page.dart';
 import 'package:cuda_qurani/features/similarity/presentation/pages/phrase_similarity_page.dart';
+import 'package:cuda_qurani/features/similarity/domain/repositories/similarity_repository.dart';
+import 'package:cuda_qurani/features/similarity/data/repositories/similarity_repository_impl.dart';
 import 'package:cuda_qurani/features/similarity/presentation/controllers/verse_similarity_controller.dart';
 import 'package:cuda_qurani/features/similarity/presentation/controllers/phrase_similarity_controller.dart';
-import 'package:cuda_qurani/features/similarity/data/repositories/similarity_repository_impl.dart';
 
 class AyahOptionsSheet extends StatefulWidget {
   final AyahSegment segment;
@@ -182,7 +183,6 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
                   icon: Icons.translate_outlined,
                   label: 'Translations',
                   onTap: () {
-                    Navigator.pop(context);
                     _navigateToContent(context, AyahContentType.translation);
                   },
                 ),
@@ -192,7 +192,6 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
                   icon: Icons.menu_book_outlined,
                   label: 'Tafsir',
                   onTap: () {
-                    Navigator.pop(context);
                     _navigateToContent(context, AyahContentType.tafsir);
                   },
                 ),
@@ -216,7 +215,6 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
                             ? 'No similar phrases'
                             : '$_phraseCount similar phrases'),
                   onTap: () {
-                    Navigator.pop(context);
                     _navigateToPhraseSimilarity(context);
                   },
                 ),
@@ -230,7 +228,6 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
                             ? 'No similar verses'
                             : '$_similarityCount similar verses'),
                   onTap: () {
-                    Navigator.pop(context);
                     _navigateToVerseSimilarity(context);
                   },
                 ),
@@ -453,6 +450,7 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
             providers: [
               ChangeNotifierProvider.value(value: sttController),
               Provider.value(value: quranService),
+              Provider<ISimilarityRepository>.value(value: repository),
               ChangeNotifierProvider(
                 create: (_) => VerseSimilarityController(
                   repository: repository,

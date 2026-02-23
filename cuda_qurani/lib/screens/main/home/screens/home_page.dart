@@ -1,4 +1,4 @@
-  // lib/screens/main/home/screens/home_page.dart
+// lib/screens/main/home/screens/home_page.dart
 
 import 'dart:math';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
@@ -11,6 +11,7 @@ import 'package:cuda_qurani/providers/auth_provider.dart';
 import 'package:cuda_qurani/services/supabase_service.dart';
 import 'package:cuda_qurani/services/auth_service.dart';
 import 'package:cuda_qurani/screens/main/stt/stt_page.dart';
+import 'package:cuda_qurani/core/navigation/app_navigation_service.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/core/widgets/goal_dialog.dart'; // 🎯 NEW: Goal Setting
 import 'package:cuda_qurani/services/widget_service.dart';
@@ -116,9 +117,10 @@ class _HomePageState extends State<HomePage> {
         final localStreak = _calculateLocalStreak(sessionDates);
         _currentStreak = localStreak['current']!;
         _longestStreak = localStreak['longest']!;
-        
-        print('🔥 Local Streak Calculation: Current=$_currentStreak, Longest=$_longestStreak');
 
+        print(
+          '🔥 Local Streak Calculation: Current=$_currentStreak, Longest=$_longestStreak',
+        );
 
         // Parse stats
         final stats = data['stats'] as Map<String, dynamic>? ?? {};
@@ -164,12 +166,15 @@ class _HomePageState extends State<HomePage> {
             .toList();
 
         setState(() => _isLoadingStats = false);
-        
+
         // ✅ SYNC WITH HOME SCREEN WIDGET
         if (_hasGoal) {
-          final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+          final languageProvider = Provider.of<LanguageProvider>(
+            context,
+            listen: false,
+          );
           final lang = languageProvider.currentLanguageCode;
-          
+
           String title = 'Daily Goal';
           String unit = 'Verses';
           if (lang == 'id') {
@@ -179,12 +184,13 @@ class _HomePageState extends State<HomePage> {
             title = 'الهدف اليومي';
             unit = 'آيات';
           }
-          
+
           String progressValue = "$_goalCurrent/$_goalTarget";
           if (lang == 'ar') {
-            progressValue = "${DailyAyahService.toArabicDigits(_goalCurrent)}/${DailyAyahService.toArabicDigits(_goalTarget)}";
+            progressValue =
+                "${DailyAyahService.toArabicDigits(_goalCurrent)}/${DailyAyahService.toArabicDigits(_goalTarget)}";
           }
-          
+
           WidgetService.updateGoalWidget(
             context: context,
             current: _goalCurrent,
@@ -687,6 +693,7 @@ class _HomePageState extends State<HomePage> {
 
       await Navigator.of(context).push(
         MaterialPageRoute(
+          settings: const RouteSettings(name: AppNavigationService.mushafRoute),
           builder: (_) => SttPage(
             suratId: surahId,
             isFromHistory: true,
@@ -725,15 +732,19 @@ class _HomePageState extends State<HomePage> {
       // 1. Parse all dates to Local Time and strip time part
       // Set allows unique dates only
       final Set<DateTime> uniqueDates = {};
-      
+
       for (final dateStr in dateStrings) {
         final utcDate = DateTime.parse(dateStr);
         final localDate = utcDate.toLocal();
         // Create date-only DateTime (year, month, day)
-        final dateOnly = DateTime(localDate.year, localDate.month, localDate.day);
+        final dateOnly = DateTime(
+          localDate.year,
+          localDate.month,
+          localDate.day,
+        );
         uniqueDates.add(dateOnly);
       }
-      
+
       final sortedDates = uniqueDates.toList()
         ..sort((a, b) => b.compareTo(a)); // Sort DESC (newest first)
 
@@ -747,19 +758,19 @@ class _HomePageState extends State<HomePage> {
 
       // 2. Calculate Current Streak
       int currentStreak = 0;
-      
+
       // Check if the most recent activity is today or yesterday
       // If most recent is older than yesterday, streak is broken -> 0
       final mostRecent = sortedDates.first;
-      
-      bool isStreakActive = 
-          mostRecent.isAtSameMomentAs(todayDate) || 
+
+      bool isStreakActive =
+          mostRecent.isAtSameMomentAs(todayDate) ||
           mostRecent.isAtSameMomentAs(yesterdayDate);
 
       if (isStreakActive) {
         // Start counting backwards
         // We need to find the "start" of the current sequence
-        
+
         // If the latest is today, start checking from today
         // If the latest is yesterday, start checking from yesterday
         DateTime verifyDate = mostRecent;
@@ -768,7 +779,7 @@ class _HomePageState extends State<HomePage> {
         for (int i = 1; i < sortedDates.length; i++) {
           final prevDate = sortedDates[i];
           final expectedPrevDate = verifyDate.subtract(const Duration(days: 1));
-          
+
           if (prevDate.isAtSameMomentAs(expectedPrevDate)) {
             currentStreak++;
             verifyDate = prevDate;
@@ -800,15 +811,11 @@ class _HomePageState extends State<HomePage> {
       }
       // Final check for the last sequence
       longestStreak = max(longestStreak, tempStreak);
-      
+
       // Ensure current doesn't exceed longest (logical constraint)
       longestStreak = max(longestStreak, currentStreak);
 
-      return {
-        'current': currentStreak,
-        'longest': longestStreak,
-      };
-      
+      return {'current': currentStreak, 'longest': longestStreak};
     } catch (e) {
       print('❌ Error calculating local streak: $e');
       return {'current': 0, 'longest': 0};

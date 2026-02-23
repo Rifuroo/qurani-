@@ -5,13 +5,13 @@ import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/core/widgets/app_components.dart';
 import 'package:cuda_qurani/main.dart';
-import 'package:cuda_qurani/screens/main/home/services/juz_service.dart';
 import 'package:cuda_qurani/screens/main/stt/stt_page.dart';
 import 'package:cuda_qurani/services/local_database_service.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
 import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cuda_qurani/screens/main/home/widgets/navigation_bar.dart';
+import 'package:cuda_qurani/core/navigation/app_navigation_service.dart';
 import 'dart:async';
 
 enum TabType { surah, juz, page }
@@ -205,6 +205,7 @@ class _SurahListPageState extends State<SurahListPage> {
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             SttPage(suratId: surahId),
+        settings: const RouteSettings(name: AppNavigationService.mushafRoute),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurvedAnimation(
@@ -234,6 +235,7 @@ class _SurahListPageState extends State<SurahListPage> {
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             SttPage(pageId: pageNumber),
+        settings: const RouteSettings(name: AppNavigationService.mushafRoute),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurvedAnimation(
@@ -268,6 +270,7 @@ class _SurahListPageState extends State<SurahListPage> {
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             SttPage(pageId: page),
+        settings: const RouteSettings(name: AppNavigationService.mushafRoute),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurvedAnimation(
@@ -301,6 +304,7 @@ class _SurahListPageState extends State<SurahListPage> {
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             SttPage(juzId: juzNumber),
+        settings: const RouteSettings(name: AppNavigationService.mushafRoute),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurvedAnimation(
@@ -548,7 +552,9 @@ class _SurahListPageState extends State<SurahListPage> {
           curve: Curves.easeInOut,
           padding: EdgeInsets.symmetric(vertical: AppDesignSystem.space10 * s),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.getSurface(context) : Colors.transparent,
+            color: isSelected
+                ? AppColors.getSurface(context)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(
               AppDesignSystem.radiusSmall * s,
             ),
@@ -567,7 +573,9 @@ class _SurahListPageState extends State<SurahListPage> {
             textAlign: TextAlign.center,
             style: AppTypography.label(
               context,
-              color: isSelected ? AppColors.getPrimary(context) : AppColors.getTextTertiary(context),
+              color: isSelected
+                  ? AppColors.getPrimary(context)
+                  : AppColors.getTextTertiary(context),
               weight: isSelected
                   ? AppTypography.semiBold
                   : AppTypography.medium,
