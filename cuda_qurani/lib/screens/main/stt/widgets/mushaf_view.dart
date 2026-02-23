@@ -689,7 +689,6 @@ class _JustifiedAyahLine extends StatelessWidget {
     final lineHighlightState = context.select<SttController, String>((c) {
       final revision = c.wordStatusRevision;
       final navigatedAyahId = c.navigatedAyahId;
-      final selectedAyahId = c.selectedAyahForOptions?.id;
       final currentHighlightKey = c.currentHighlightKey;
 
       // ✅ 1. Check for Active Word Highlight
@@ -723,13 +722,19 @@ class _JustifiedAyahLine extends StatelessWidget {
 
       // ✅ 3. Check Selection Highlight (Deep Link / Similar Phrase) - Avoid heavy split/parse
       bool hasSelection = false;
-      if (navigatedAyahId != null || selectedAyahId != null) {
+      if (navigatedAyahId != null || c.selectedAyahForOptions != null) {
         for (final segment in lineSegments) {
           final globalId = GlobalAyatService.toGlobalAyat(
             segment.surahId,
             segment.ayahNumber,
           );
-          if (globalId == navigatedAyahId || globalId == selectedAyahId) {
+
+          final isSelected =
+              c.selectedAyahForOptions != null &&
+              c.selectedAyahForOptions!.surahId == segment.surahId &&
+              c.selectedAyahForOptions!.ayahNumber == segment.ayahNumber;
+
+          if (globalId == navigatedAyahId || isSelected) {
             hasSelection = true;
             break;
           }
@@ -968,16 +973,44 @@ class _WordHighlightOverlay extends StatelessWidget {
       (c) => c.wordStatusRevision,
     );
 
-    // ✅ NEW: Conditional selection to ensure ONLY affected lines rebuild
-    final highlightInfo = context.select<SttController, (String?, int?)>((c) {
-      if (c.currentHighlightKey == null ||
-          !lineAyahKeys.contains(c.currentHighlightKey)) {
-        return (null, null);
-      }
-      return (c.currentHighlightKey, c.currentHighlightWordIdx);
-    });
-    final highlightKey = highlightInfo.$1;
-    final highlightWordIdx = highlightInfo.$2;
+    // ✅ NEW: Multi-State Selection to ensure ONLY affected lines rebuild
+    final highlightInfo = context
+        .select<
+          SttController,
+          ({String? key, int? idx, int? navigatedId, int? selectedId})
+        >((c) {
+          final key =
+              (c.currentHighlightKey != null &&
+                  lineAyahKeys.contains(c.currentHighlightKey))
+              ? c.currentHighlightKey
+              : null;
+
+          // Check if any ayah on this line is selected via long-press or deep link
+          int? navId;
+          int? selId;
+
+          for (final s in line.ayahSegments!) {
+            final gId = GlobalAyatService.toGlobalAyat(s.surahId, s.ayahNumber);
+            if (gId == c.navigatedAyahId) navId = gId;
+
+            if (c.selectedAyahForOptions != null &&
+                c.selectedAyahForOptions!.surahId == s.surahId &&
+                c.selectedAyahForOptions!.ayahNumber == s.ayahNumber) {
+              selId = gId;
+            }
+          }
+
+          return (
+            key: key,
+            idx: c.currentHighlightWordIdx,
+            navigatedId: navId,
+            selectedId: selId,
+          );
+        });
+
+    final isListeningMode = context.select<SttController, bool>(
+      (c) => c.isListeningMode,
+    );
 
     final controller = context.read<SttController>();
 
@@ -986,9 +1019,12 @@ class _WordHighlightOverlay extends StatelessWidget {
         line: line,
         pageNumber: pageNumber,
         controller: controller,
-        highlightKey: highlightKey,
-        highlightWordIdx: highlightWordIdx,
+        highlightKey: highlightInfo.key,
+        highlightWordIdx: highlightInfo.idx,
+        navigatedId: highlightInfo.navigatedId,
+        selectedId: highlightInfo.selectedId,
         wordStatusRevision: revision,
+        isListeningMode: isListeningMode,
         correctColor: AppColors.getCorrect(context).withValues(alpha: 0.4),
         incorrectColor: AppColors.getIncorrect(context).withValues(alpha: 0.4),
         infoColor: AppColors.getInfo(context).withValues(alpha: 0.3),
@@ -1004,7 +1040,10 @@ class _WordHighlightPainter extends CustomPainter {
   final SttController controller;
   final String? highlightKey;
   final int? highlightWordIdx;
+  final int? navigatedId;
+  final int? selectedId;
   final int wordStatusRevision;
+  final bool isListeningMode;
   final Color correctColor;
   final Color incorrectColor;
   final Color infoColor;
@@ -1016,7 +1055,10 @@ class _WordHighlightPainter extends CustomPainter {
     required this.controller,
     required this.highlightKey,
     required this.highlightWordIdx,
+    required this.navigatedId,
+    required this.selectedId,
     required this.wordStatusRevision,
+    required this.isListeningMode,
     required this.correctColor,
     required this.incorrectColor,
     required this.infoColor,
@@ -1047,18 +1089,21 @@ class _WordHighlightPainter extends CustomPainter {
       final statuses = wordStatusMap[key];
 
       // ✅ Priority Check: Is this Ayah currently being read or has results?
+      // ✅ Phase 8 Refinement: ONLY show per-word boxes in ACTIVE Listening Mode.
+      // Clicks/Selection use the single block-level highlight (Selection Mode).
       final bool isAyahActive =
-          (statuses != null &&
-              statuses.values.any((s) => s != WordStatus.pending)) ||
-          (key == hKey);
+          isListeningMode &&
+          ((statuses != null &&
+                  statuses.values.any((s) => s != WordStatus.pending)) ||
+              (key == hKey));
 
       final bool isAyahSelected =
-          controller.navigatedAyahId ==
+          navigatedId ==
               GlobalAyatService.toGlobalAyat(
                 segments.first.surahId,
                 segments.first.ayahNumber,
               ) ||
-          controller.selectedAyahForOptions?.id ==
+          selectedId ==
               GlobalAyatService.toGlobalAyat(
                 segments.first.surahId,
                 segments.first.ayahNumber,
@@ -1070,7 +1115,8 @@ class _WordHighlightPainter extends CustomPainter {
 
         for (final segment in segments) {
           for (final word in segment.words) {
-            final status = statuses?[word.wordNumber - 1];
+            final wordIdx = word.wordNumber - 1;
+            final status = statuses?[wordIdx];
             final geometryKey = PageGeometry.getWordKey(
               line.lineNumber,
               segment.surahId,
@@ -1082,7 +1128,7 @@ class _WordHighlightPainter extends CustomPainter {
             if (rects == null || rects.isEmpty) continue;
 
             // ✅ 2. Active Mode Pulse (ONLY if we have a valid highlightKey)
-            if (hKey != null && key == hKey && hIdx == word.wordNumber - 1) {
+            if (hKey != null && key == hKey && hIdx == wordIdx) {
               double minWordL = rects.first.left;
               double minWordT = rects.first.top;
               double maxWordR = rects.first.right;
@@ -1106,17 +1152,15 @@ class _WordHighlightPainter extends CustomPainter {
               );
             }
 
-            if (rects != null) {
-              Color? wordColor;
-              if (status != null && status != WordStatus.pending) {
-                wordColor = _getWordHighlightColor(status);
-              } else if (key == hKey) {
-                wordColor = primaryColor;
-              }
+            Color? wordColor;
+            if (status != null && status != WordStatus.pending) {
+              wordColor = _getWordHighlightColor(status);
+            } else if (key == hKey) {
+              wordColor = primaryColor;
+            }
 
-              if (wordColor != null) {
-                colorGroups.putIfAbsent(wordColor, () => []).addAll(rects);
-              }
+            if (wordColor != null) {
+              colorGroups.putIfAbsent(wordColor, () => []).addAll(rects);
             }
           }
         }
@@ -1170,7 +1214,9 @@ class _WordHighlightPainter extends CustomPainter {
             if (r.right > maxR) maxR = r.right;
             if (r.bottom > maxB) maxB = r.bottom;
           }
-          paint.color = primaryColor.withValues(alpha: 0.15);
+          paint.color = primaryColor.withValues(
+            alpha: 0.25,
+          ); // ✅ Higher Opacity
           canvas.drawRect(
             Rect.fromLTRB(minL, minT, maxR, maxB).inflate(0.5),
             paint,
@@ -1202,6 +1248,8 @@ class _WordHighlightPainter extends CustomPainter {
     // Direct controller comparison failed because the instance reference is stable.
     return oldDelegate.highlightKey != highlightKey ||
         oldDelegate.highlightWordIdx != highlightWordIdx ||
+        oldDelegate.navigatedId != navigatedId ||
+        oldDelegate.selectedId != selectedId ||
         oldDelegate.wordStatusRevision != wordStatusRevision ||
         oldDelegate.line != line ||
         oldDelegate.pageNumber != pageNumber ||

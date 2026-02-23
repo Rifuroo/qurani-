@@ -28,6 +28,7 @@ class PhraseSimilarityController extends ChangeNotifier {
   }
 
   // Getters
+  ISimilarityRepository get repository => _repository;
   int get surahId => _surahId;
   int get ayahNumber => _ayahNumber;
   String get surahName => _surahName;

@@ -13,6 +13,7 @@ import 'package:cuda_qurani/screens/main/home/widgets/navigation_bar.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
 import 'package:cuda_qurani/services/supabase_service.dart';
 import 'package:cuda_qurani/screens/main/stt/stt_page.dart';
+import 'package:cuda_qurani/core/navigation/app_navigation_service.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 
 // ==================== MODELS ====================
@@ -324,15 +325,21 @@ class _CompletionPageState extends State<CompletionPage> {
 
   Future<void> _navigateToSurah(int surahId) async {
     AppHaptics.light();
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => SttPage(suratId: surahId)));
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: AppNavigationService.mushafRoute),
+        builder: (_) => SttPage(suratId: surahId),
+      ),
+    );
   }
 
   Future<void> _continueReading() async {
     AppHaptics.medium();
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => SttPage(suratId: _lastRead.surahId)),
+      MaterialPageRoute(
+        settings: const RouteSettings(name: AppNavigationService.mushafRoute),
+        builder: (_) => SttPage(suratId: _lastRead.surahId),
+      ),
     );
   }
 
@@ -559,7 +566,9 @@ class _CompletionPageState extends State<CompletionPage> {
                   child: LinearProgressIndicator(
                     value: percentage / 100,
                     minHeight: 6 * s,
-                    backgroundColor: AppColors.getSurfaceContainerLowest(context),
+                    backgroundColor: AppColors.getSurfaceContainerLowest(
+                      context,
+                    ),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       percentage >= 100
                           ? AppColors.getSuccess(context)
@@ -590,11 +599,17 @@ class _CompletionPageState extends State<CompletionPage> {
       decoration: BoxDecoration(
         color: AppColors.getError(context).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSmall * s),
-        border: Border.all(color: AppColors.getError(context).withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppColors.getError(context).withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_rounded, color: AppColors.getError(context), size: 20 * s),
+          Icon(
+            Icons.warning_rounded,
+            color: AppColors.getError(context),
+            size: 20 * s,
+          ),
           SizedBox(width: AppDesignSystem.space8 * s),
           Expanded(
             child: Text(
@@ -604,7 +619,10 @@ class _CompletionPageState extends State<CompletionPage> {
                       'completion.error_offline_text',
                     )
                   : 'Using offline data. Pull to refresh.',
-              style: AppTypography.caption(context, color: AppColors.getError(context)),
+              style: AppTypography.caption(
+                context,
+                color: AppColors.getError(context),
+              ),
             ),
           ),
         ],
@@ -651,7 +669,9 @@ class _CompletionPageState extends State<CompletionPage> {
                       ),
                       PieChartSectionData(
                         value: percentage < 100 ? (100 - percentage) : 0.1,
-                        color: AppColors.getPrimary(context).withValues(alpha: 0.15),
+                        color: AppColors.getPrimary(
+                          context,
+                        ).withValues(alpha: 0.15),
                         radius: 24 * s,
                         showTitle: false,
                       ),
@@ -822,7 +842,7 @@ class _CompletionPageState extends State<CompletionPage> {
                   )
                 : 'Continue Reading',
             style: AppTypography.title(
-              context, 
+              context,
               weight: AppTypography.semiBold,
               color: AppColors.getTextSecondary(context),
             ),
@@ -877,7 +897,9 @@ class _CompletionPageState extends State<CompletionPage> {
                               '${_translations.isNotEmpty ? LanguageHelper.tr(_translations, 'completion.surah_text') : 'Surah'} ${context.formatNumber(_lastRead.surahId)}',
                               style: AppTypography.captionSmall(
                                 context,
-                                color: AppColors.getTextInverse(context).withValues(alpha: 0.9),
+                                color: AppColors.getTextInverse(
+                                  context,
+                                ).withValues(alpha: 0.9),
                               ),
                             ),
                           ),
@@ -1053,7 +1075,9 @@ class _CompletionPageState extends State<CompletionPage> {
               AppDesignSystem.radiusSmall * s,
             ),
             border: Border.all(
-              color: isSelected ? AppColors.getPrimary(context) : AppColors.getBorderMedium(context),
+              color: isSelected
+                  ? AppColors.getPrimary(context)
+                  : AppColors.getBorderMedium(context),
               width: AppDesignSystem.borderNormal * s,
             ),
           ),
@@ -1063,14 +1087,18 @@ class _CompletionPageState extends State<CompletionPage> {
               Icon(
                 isSelected ? Icons.check_circle : Icons.circle_outlined,
                 size: AppDesignSystem.iconSmall * s,
-                color: isSelected ? AppColors.getTextInverse(context) : AppColors.getTextTertiary(context),
+                color: isSelected
+                    ? AppColors.getTextInverse(context)
+                    : AppColors.getTextTertiary(context),
               ),
               SizedBox(width: AppDesignSystem.space4 * s),
               Text(
                 label,
                 style: AppTypography.labelSmall(
                   context,
-                  color: isSelected ? AppColors.getTextInverse(context) : AppColors.getTextSecondary(context),
+                  color: isSelected
+                      ? AppColors.getTextInverse(context)
+                      : AppColors.getTextSecondary(context),
                   weight: AppTypography.medium,
                 ),
               ),

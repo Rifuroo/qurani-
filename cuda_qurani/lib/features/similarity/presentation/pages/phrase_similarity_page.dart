@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
+import 'package:cuda_qurani/core/navigation/app_navigation_service.dart';
 import '../controllers/phrase_similarity_controller.dart';
 import '../widgets/ayah_similarity_card.dart';
 
@@ -49,15 +50,13 @@ class PhraseSimilarityPage extends StatelessWidget {
       centerTitle: true,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
-        onPressed: () => Navigator.pop(context),
+        onPressed: () => AppNavigationService.safePop(context),
         color: AppColors.getTextSecondary(context),
       ),
       actions: [
         IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(
-            context,
-          ).popUntil((r) => r.isFirst || r.settings.name == '/'),
+          onPressed: () => AppNavigationService.exitToRoot(context),
           color: AppColors.getTextSecondary(context),
         ),
       ],
