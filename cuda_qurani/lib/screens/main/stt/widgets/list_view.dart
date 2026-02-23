@@ -9,6 +9,8 @@ import '../services/quran_service.dart';
 import '../utils/constants.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
+import 'package:cuda_qurani/services/global_ayat_services.dart';
+import 'package:cuda_qurani/screens/main/stt/widgets/ayah_translation_widget.dart';
 import 'dart:async';
 
 /// ✅ PHASE 7: Atomic Ayah Architecture
@@ -668,8 +670,19 @@ class _CompleteAyahWidget extends StatelessWidget {
             hideUnreadAyat: controller.hideUnreadAyat,
             isListeningMode: controller.isListeningMode,
             isHighlighted: controller.currentHighlightKey == wordStatusKey,
-            isNavigatedHighlight: controller.navigatedAyahId == segment.id,
-            isSelected: controller.selectedAyahForOptions?.id == segment.id,
+            // ✅ FIX: Use surahId/ayahNumber comparison instead of segment.id
+            // segment.id = surahId*1000+ayahNumber (localized), but
+            // navigatedAyahId is a GLOBAL index (1-6236) — they never match.
+            isNavigatedHighlight:
+                controller.navigatedAyahId ==
+                GlobalAyatService.toGlobalAyat(
+                  segment.surahId,
+                  segment.ayahNumber,
+                ),
+            isSelected:
+                controller.selectedAyahForOptions?.surahId == segment.surahId &&
+                controller.selectedAyahForOptions?.ayahNumber ==
+                    segment.ayahNumber,
           );
         },
         shouldRebuild: (prev, next) => prev != next,
@@ -754,6 +767,17 @@ class _CompleteAyahWidget extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                // ✅ TRANSLATION: Always show inline translation below Arabic text
+                // Only rendered for isStartOfAyah (full Ayah, not a split-line segment)
+                if (segment.isStartOfAyah)
+                  AyahTranslationWidget(
+                    key: ValueKey(
+                      'trans_${segment.surahId}_${segment.ayahNumber}',
+                    ),
+                    surahId: segment.surahId,
+                    ayahNumber: segment.ayahNumber,
+                  ),
               ],
             ),
           );

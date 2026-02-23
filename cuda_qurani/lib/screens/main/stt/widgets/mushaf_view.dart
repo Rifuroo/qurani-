@@ -772,12 +772,13 @@ class _JustifiedAyahLine extends StatelessWidget {
 
     final wordStatusMap = controller.wordStatusMap;
 
-    // ✅ CRITICAL: Ensure segments are sorted by reading order (Surah/Ayah)
-    final sortedSegments = List<AyahSegment>.from(line.ayahSegments ?? []);
-    sortedSegments.sort((a, b) {
-      if (a.surahId != b.surahId) return a.surahId.compareTo(b.surahId);
-      return a.ayahNumber.compareTo(b.ayahNumber);
-    });
+    // ✅ BUG-3 FIX: Sort segments ONCE at build time instead of on every loop iteration.
+    // Previously this allocated a new List and sorted it on every rebuild (~10ms during audio).
+    final sortedSegments = line.ayahSegments!.toList()
+      ..sort((a, b) {
+        if (a.surahId != b.surahId) return a.surahId.compareTo(b.surahId);
+        return a.ayahNumber.compareTo(b.ayahNumber);
+      });
 
     for (final segment in sortedSegments) {
       // ✅ PERF FIX: O(1) map lookup replaces O(n) indexWhere linear scan
@@ -968,16 +969,20 @@ class _WordHighlightOverlay extends StatelessWidget {
         .map((s) => '${s.surahId}:${s.ayahNumber}')
         .toSet();
 
-    // ✅ NEW: Use revision counter to detect map changes (O(1))
-    final revision = context.select<SttController, int>(
-      (c) => c.wordStatusRevision,
-    );
-
-    // ✅ NEW: Multi-State Selection to ensure ONLY affected lines rebuild
-    final highlightInfo = context
+    // ✅ BUG-2 FIX: Merged 3 separate context.select into 1
+    // Previously 3 selects = 3 independent listeners = up to 3 rebuild passes per notification.
+    // Now it's a single listener that returns all needed values as one record.
+    final info = context
         .select<
           SttController,
-          ({String? key, int? idx, int? navigatedId, int? selectedId})
+          ({
+            String? key,
+            int? idx,
+            int? navigatedId,
+            int? selectedId,
+            bool isListeningMode,
+            int revision,
+          })
         >((c) {
           final key =
               (c.currentHighlightKey != null &&
@@ -985,14 +990,11 @@ class _WordHighlightOverlay extends StatelessWidget {
               ? c.currentHighlightKey
               : null;
 
-          // Check if any ayah on this line is selected via long-press or deep link
           int? navId;
           int? selId;
-
           for (final s in line.ayahSegments!) {
             final gId = GlobalAyatService.toGlobalAyat(s.surahId, s.ayahNumber);
             if (gId == c.navigatedAyahId) navId = gId;
-
             if (c.selectedAyahForOptions != null &&
                 c.selectedAyahForOptions!.surahId == s.surahId &&
                 c.selectedAyahForOptions!.ayahNumber == s.ayahNumber) {
@@ -1005,12 +1007,10 @@ class _WordHighlightOverlay extends StatelessWidget {
             idx: c.currentHighlightWordIdx,
             navigatedId: navId,
             selectedId: selId,
+            isListeningMode: c.isListeningMode,
+            revision: c.wordStatusRevision,
           );
         });
-
-    final isListeningMode = context.select<SttController, bool>(
-      (c) => c.isListeningMode,
-    );
 
     final controller = context.read<SttController>();
 
@@ -1019,12 +1019,12 @@ class _WordHighlightOverlay extends StatelessWidget {
         line: line,
         pageNumber: pageNumber,
         controller: controller,
-        highlightKey: highlightInfo.key,
-        highlightWordIdx: highlightInfo.idx,
-        navigatedId: highlightInfo.navigatedId,
-        selectedId: highlightInfo.selectedId,
-        wordStatusRevision: revision,
-        isListeningMode: isListeningMode,
+        highlightKey: info.key,
+        highlightWordIdx: info.idx,
+        navigatedId: info.navigatedId,
+        selectedId: info.selectedId,
+        wordStatusRevision: info.revision,
+        isListeningMode: info.isListeningMode,
         correctColor: AppColors.getCorrect(context).withValues(alpha: 0.4),
         incorrectColor: AppColors.getIncorrect(context).withValues(alpha: 0.4),
         infoColor: AppColors.getInfo(context).withValues(alpha: 0.3),

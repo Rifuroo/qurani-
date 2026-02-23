@@ -6,17 +6,14 @@ import './main/auth/login/login_page.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:home_widget/home_widget.dart'; // ✅ NEW
 import 'package:cuda_qurani/screens/main/stt/stt_page.dart'; // ✅ NEW
+import 'package:cuda_qurani/core/navigation/app_navigation_service.dart';
 import 'package:cuda_qurani/services/local_database_service.dart'; // ✅ NEW
 
 class AuthWrapper extends StatefulWidget {
   final int? initialPageId;
   final int? highlightAyahId;
 
-  const AuthWrapper({
-    super.key,
-    this.initialPageId,
-    this.highlightAyahId,
-  });
+  const AuthWrapper({super.key, this.initialPageId, this.highlightAyahId});
 
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
@@ -28,7 +25,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     super.initState();
     // ✅ Listen for widget clicks when app is already running
     HomeWidget.widgetClicked.listen(_handleDeepLink);
-    
+
     // Only verify deep link if NOT passed via constructor (legacy/fallback)
     if (widget.initialPageId == null) {
       HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleDeepLink);
@@ -42,19 +39,23 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (segments.length >= 2) {
           final surahId = int.tryParse(segments[0]);
           final ayahNum = int.tryParse(segments[1]);
-          
+
           if (surahId != null && ayahNum != null) {
-            final pageId = await LocalDatabaseService.getPageNumber(surahId, ayahNum);
-             if (mounted) {
-               Navigator.of(context).push(
-                 MaterialPageRoute(
-                   builder: (_) => SttPage(
-                     pageId: pageId,
-                     highlightAyahId: ayahNum,
-                   ),
-                 ),
-               );
-             }
+            final pageId = await LocalDatabaseService.getPageNumber(
+              surahId,
+              ayahNum,
+            );
+            if (mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  settings: const RouteSettings(
+                    name: AppNavigationService.mushafRoute,
+                  ),
+                  builder: (_) =>
+                      SttPage(pageId: pageId, highlightAyahId: ayahNum),
+                ),
+              );
+            }
           }
         }
       } catch (e) {

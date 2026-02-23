@@ -24,6 +24,7 @@ import 'package:cuda_qurani/providers/premium_provider.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/ayah_options_sheet.dart';
 import 'package:cuda_qurani/models/premium_features.dart';
 import 'package:cuda_qurani/screens/main/stt/services/mutashabihat_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SttController extends ChangeNotifier {
   // Core State
@@ -544,8 +545,26 @@ class SttController extends ChangeNotifier {
   bool get showLogs => _showLogs;
   int get currentPage => _currentPage;
   bool get isDataLoaded => _isDataLoaded;
-  bool get isTransitioningMode => _isTransitioningMode; // ✅ NEW Phase 4
+  bool get isTransitioningMode => _isTransitioningMode;
   List<AyatData> get currentPageAyats => _currentPageAyats;
+
+  // ✅ Translation toggle
+  bool _showTranslationInListView = false;
+  bool get showTranslationInListView => _showTranslationInListView;
+
+  Future<void> setShowTranslation(bool value) async {
+    if (_showTranslationInListView == value) return;
+    _showTranslationInListView = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('show_translation_list_view', value);
+  }
+
+  Future<void> _loadTranslationSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    _showTranslationInListView =
+        prefs.getBool('show_translation_list_view') ?? false;
+  }
 
   // ✅ ACCESSORS FOR MAPS
   Map<String, int> get ayahIndexMap => _ayahIndexMap;
@@ -596,6 +615,9 @@ class SttController extends ChangeNotifier {
         'APP_INIT',
         'Loaded layout: ${_mushafLayout.displayName} (${_mushafLayout.totalPages} pages)',
       );
+
+      // ✅ Load persisted user settings (translation toggle, etc.)
+      await _loadTranslationSetting();
 
       // ðŸš€ STEP 1: Determine target page FIRST
       int targetPage = await _determineTargetPage();
