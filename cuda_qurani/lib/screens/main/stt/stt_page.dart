@@ -10,6 +10,8 @@ import 'widgets/quran_widgets.dart';
 import 'widgets/mushaf_view.dart';
 import 'widgets/list_view.dart';
 import 'widgets/mushaf_paper_background.dart';
+import 'widgets/bookmark_drawer.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/widgets/achievement_popup.dart';
@@ -110,6 +112,7 @@ class _SttPageState extends State<SttPage> {
           backgroundColor: AppColors.getBackground(context),
           extendBodyBehindAppBar: true,
           appBar: const QuranAppBar(),
+          endDrawer: const BookmarkDrawer(),
           // ✅ OPTIMIZATION: Selector for Loading/Error states ONLY
           // This keeps the overall body structure stable
           body: Selector<SttController, String?>(

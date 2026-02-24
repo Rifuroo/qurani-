@@ -1,4 +1,4 @@
-﻿// lib\screens\main\stt\widgets\quran_widgets.dart
+// lib\screens\main\stt\widgets\quran_widgets.dart
 import 'dart:async';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
@@ -14,6 +14,7 @@ import '../controllers/stt_controller.dart';
 import '../utils/constants.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
+import 'ayah_search_delegate.dart';
 
 class QuranAppBar extends StatefulWidget implements PreferredSizeWidget {
   const QuranAppBar({Key? key}) : super(key: key);
@@ -234,6 +235,32 @@ class _QuranAppBarState extends State<QuranAppBar> {
 
           // ✅ FIX ACTIONS: Gunakan Selector agar icon tetap berubah, tapi tidak rebuild Widget utama
           actions: [
+            // Search Button
+            IconButton(
+              icon: Icon(
+                Icons.search,
+                size: iconSize * 0.9,
+                color: _getAppBarTextColor(context),
+              ),
+              onPressed: () {
+                showSearch(context: context, delegate: AyahSearchDelegate());
+              },
+              splashRadius: iconSize * 1.1,
+            ),
+
+            // Bookmark Button
+            IconButton(
+              icon: Icon(
+                Icons.bookmark_outline,
+                size: iconSize * 0.9,
+                color: _getAppBarTextColor(context),
+              ),
+              onPressed: () {
+                Scaffold.of(context).openEndDrawer();
+              },
+              splashRadius: iconSize * 1.1,
+            ),
+
             // Mode Toggle (Mushaf vs List)
             Selector<SttController, bool>(
               selector: (_, c) => c.isQuranMode,

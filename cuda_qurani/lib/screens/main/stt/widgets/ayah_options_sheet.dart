@@ -4,13 +4,19 @@ import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import 'package:cuda_qurani/services/quran_resource_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cuda_qurani/services/bookmark_service.dart';
+
+import 'package:share_plus/share_plus.dart';
 import '../data/models.dart';
+
 import '../services/quran_service.dart';
 import 'package:cuda_qurani/features/quran_content/domain/entities/ayah_content.dart';
 import 'tafsir_placeholder_view.dart';
 import 'translation_placeholder_view.dart';
+import '../utils/translation_html_parser.dart';
+
 import 'package:cuda_qurani/features/similarity/presentation/pages/verse_similarity_page.dart';
+
 import 'package:cuda_qurani/features/similarity/presentation/pages/phrase_similarity_page.dart';
 import 'package:cuda_qurani/features/similarity/domain/repositories/similarity_repository.dart';
 import 'package:cuda_qurani/features/similarity/data/repositories/similarity_repository_impl.dart';
@@ -62,11 +68,21 @@ class AyahOptionsSheet extends StatefulWidget {
 class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
   int? _similarityCount;
   int? _phraseCount;
+  bool _isBookmarked = false;
 
   @override
   void initState() {
     super.initState();
     _loadSimilarityCounts();
+    _checkBookmarkStatus();
+  }
+
+  Future<void> _checkBookmarkStatus() async {
+    final status = await BookmarkService().isBookmarked(
+      widget.segment.surahId,
+      widget.segment.ayahNumber,
+    );
+    if (mounted) setState(() => _isBookmarked = status);
   }
 
   Future<void> _loadSimilarityCounts() async {
@@ -198,10 +214,9 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
                 const Divider(height: 1, thickness: 0.5),
                 _buildCompactOption(
                   context,
-                  icon: Icons.bookmark_border_outlined,
+                  icon: _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                   label: 'Bookmark',
                   onTap: () {
-                    Navigator.pop(context);
                     _toggleBookmark(context);
                   },
                 ),
@@ -235,20 +250,20 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
                 _buildCompactOption(
                   context,
                   icon: Icons.copy_outlined,
-                  label: 'Copy',
+                  label: 'Copy Ayah',
                   onTap: () {
                     Navigator.pop(context);
-                    _copyToClipboard(context);
+                    _handleShareAction(context, isCopyOnly: true);
                   },
                 ),
                 const Divider(height: 1, thickness: 0.5),
                 _buildCompactOption(
                   context,
                   icon: Icons.share_outlined,
-                  label: 'Share',
+                  label: 'Share Ayah',
                   onTap: () {
                     Navigator.pop(context);
-                    _shareAyah(context);
+                    _handleShareAction(context, isCopyOnly: false);
                   },
                 ),
                 // Add bottom padding for better touch area
@@ -311,44 +326,16 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
     }
   }
 
-  Future<void> _copyToClipboard(BuildContext context) async {
-    final resourceService = Provider.of<QuranResourceService>(
-      context,
-      listen: false,
-    );
-
-    final arabicText =
-        widget.segment.ayahGlyphText ??
-        widget.segment.words.map((w) => w.text).join(' ');
-    final translation = await resourceService.getTranslationText(
-      widget.segment.surahId,
-      widget.segment.ayahNumber,
-    );
-
-    final textToCopy =
-        'Quran ${widget.segment.surahId}:${widget.segment.ayahNumber}\n\n$arabicText\n\n${translation ?? ""}';
-
-    await Clipboard.setData(ClipboardData(text: textToCopy));
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ayah copied to clipboard'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
+  // Removed _copyToClipboard and _shareAyah as they are now handled by ShareCustomizationSheet
 
   Future<void> _toggleBookmark(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    final bookmarkKey = 'bookmarks';
-    final currentBookmarks = prefs.getStringList(bookmarkKey) ?? [];
-    final ayahKey = '${widget.segment.surahId}:${widget.segment.ayahNumber}';
+    final bookmarkService = BookmarkService();
+    final surahId = widget.segment.surahId;
+    final ayahNumber = widget.segment.ayahNumber;
 
-    if (currentBookmarks.contains(ayahKey)) {
-      currentBookmarks.remove(ayahKey);
-      await prefs.setStringList(bookmarkKey, currentBookmarks);
+    if (_isBookmarked) {
+      await bookmarkService.removeBookmark(surahId, ayahNumber);
+      if (mounted) setState(() => _isBookmarked = false);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -358,8 +345,12 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
         );
       }
     } else {
-      currentBookmarks.add(ayahKey);
-      await prefs.setStringList(bookmarkKey, currentBookmarks);
+      await bookmarkService.addBookmark(
+        surahId: surahId,
+        ayahNumber: ayahNumber,
+        surahName: widget.surahName,
+      );
+      if (mounted) setState(() => _isBookmarked = true);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -371,31 +362,71 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
     }
   }
 
-  Future<void> _shareAyah(BuildContext context) async {
-    final resourceService = Provider.of<QuranResourceService>(
-      context,
-      listen: false,
-    );
-    final arabicText = widget.segment.words.map((w) => w.text).join(' ');
-    final translation = await resourceService.getTranslationText(
-      widget.segment.surahId,
-      widget.segment.ayahNumber,
-    );
+  Future<void> _handleShareAction(
+    BuildContext context, {
+    required bool isCopyOnly,
+  }) async {
+    try {
+      final resourceService = context.read<QuranResourceService>();
+      final StringBuffer buffer = StringBuffer();
 
-    final shareText =
-        'Quran ${widget.segment.surahId}:${widget.segment.ayahNumber}\n\n$arabicText\n\n${translation ?? ""} - Shared from Qurani';
-
-    // Since share_plus is not yet in pubspec, we'll use copy as a fallback for now
-    // but structure it for future share integration.
-    await Clipboard.setData(ClipboardData(text: shareText));
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Prepared for sharing (copied to clipboard)'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      buffer.writeln(
+        'Quran ${widget.segment.surahId}:${widget.segment.ayahNumber}',
       );
+      buffer.writeln(
+        '${widget.surahName} - Verse ${widget.segment.ayahNumber}',
+      );
+      buffer.writeln();
+
+      // Arabic
+      final rawArabic =
+          widget.segment.ayahGlyphText ??
+          widget.segment.words.map((w) => w.text).join(' ');
+      buffer.writeln(rawArabic);
+      buffer.writeln();
+
+      // Translation
+      final rawTranslation = await resourceService.getTranslationText(
+        widget.segment.surahId,
+        widget.segment.ayahNumber,
+      );
+      if (rawTranslation != null) {
+        final cleanTranslation = TranslationHtmlParser.cleanContent(
+          rawTranslation.replaceAll(RegExp(r'<[^>]*>'), ''),
+          widget.segment.ayahNumber,
+        );
+        buffer.writeln(cleanTranslation);
+        buffer.writeln();
+      }
+
+      // Transliteration
+      final rawTrans = await resourceService.getTransliterationText(
+        widget.segment.surahId,
+        widget.segment.ayahNumber,
+      );
+      if (rawTrans != null) {
+        buffer.writeln(rawTrans);
+        buffer.writeln();
+      }
+
+      buffer.write('- Shared from Qurani');
+      final finalContent = buffer.toString().trim();
+
+      if (isCopyOnly) {
+        await Clipboard.setData(ClipboardData(text: finalContent));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ayah content copied to clipboard'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        await Share.share(finalContent);
+      }
+    } catch (e) {
+      debugPrint('Error sharing/copying: $e');
     }
   }
 
