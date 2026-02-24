@@ -28,17 +28,6 @@ class QuranResourceService extends ChangeNotifier {
   String? _selectedTafsirLanguage;
   String? _selectedTranslationLanguage;
 
-  // ✅ PERF: Metadata Cache (Table/Column probing)
-  // key: dbName, value: (tableName, idCol, hasGroupKey)
-  final Map<String, (String, String, bool)> _dbMetadataCache = {};
-
-  // ✅ PERF: Content Cache (Strings)
-  // Avoids DB roundtrips for already visited verses.
-  // key: "surah:ayah", value: text
-  final Map<String, String> _translationCache = {};
-  final Map<String, String> _tafsirCache = {};
-  static const int _maxContentCacheSize = 1000;
-
   String? get selectedTafsirId => _selectedTafsirId;
   String? get selectedTranslationId => _selectedTranslationId;
 
@@ -187,10 +176,6 @@ class QuranResourceService extends ChangeNotifier {
         await prefs.setString('selected_tafsir_id', id);
         await prefs.setString('selected_tafsir_name_lang', nameLang);
       }
-
-      // ✅ Clear metadata cache for this slot to trigger re-probe
-      _dbMetadataCache.remove(dbName);
-      _tafsirCache.clear(); // ✅ Clear content cache for new resource
 
       notifyListeners();
     } catch (e) {
@@ -349,10 +334,6 @@ class QuranResourceService extends ChangeNotifier {
         await prefs.setString('selected_translation_name_lang', nameLang);
       }
 
-      // ✅ Clear metadata cache for this slot to trigger re-probe
-      _dbMetadataCache.remove(dbName);
-      _translationCache.clear(); // ✅ Clear content cache for new resource
-
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading translation $id ($nameLang): $e');
@@ -365,47 +346,30 @@ class QuranResourceService extends ChangeNotifier {
     if (_activeTafsirDbName == null) return null;
 
     String key = '$surah:$ayah';
-
-    // ✅ CHECK CONTENT CACHE FIRST
-    if (_tafsirCache.containsKey(key)) {
-      return _tafsirCache[key];
-    }
-
     final db = await _dbHelper.getDatabase(_activeTafsirDbName!);
+
+    // 1. Probe for table name
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table'",
+    );
+    final tableNames = tables.map((t) => t['name'] as String).toList();
 
     String tableName = 'tafsir';
     String idCol = 'ayah_key';
-    bool hasGroupKey = false;
 
-    if (_dbMetadataCache.containsKey(_activeTafsirDbName)) {
-      final meta = _dbMetadataCache[_activeTafsirDbName]!;
-      tableName = meta.$1;
-      idCol = meta.$2;
-      hasGroupKey = meta.$3;
-    } else {
-      // 1. Probe for table name
-      final tables = await db.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type='table'",
-      );
-      final tableNames = tables.map((t) => t['name'] as String).toList();
-
-      if (tableNames.contains('tafsir')) {
-        tableName = 'tafsir';
-      } else if (tableNames.contains('resources')) {
-        tableName = 'resources';
-        idCol = 'id';
-      } else if (tableNames.isNotEmpty) {
-        tableName = tableNames.first;
-      }
-
-      // 2. Probe for group_ayah_key column
-      final tableInfo = await db.rawQuery('PRAGMA table_info($tableName)');
-      final columnNames = tableInfo.map((c) => c['name'] as String).toList();
-      hasGroupKey = columnNames.contains('group_ayah_key');
-
-      // Store in cache
-      _dbMetadataCache[_activeTafsirDbName!] = (tableName, idCol, hasGroupKey);
+    if (tableNames.contains('tafsir')) {
+      tableName = 'tafsir';
+    } else if (tableNames.contains('resources')) {
+      tableName = 'resources';
+      idCol = 'id';
+    } else if (tableNames.isNotEmpty) {
+      tableName = tableNames.first;
     }
+
+    // 2. Probe for group_ayah_key column
+    final tableInfo = await db.rawQuery('PRAGMA table_info($tableName)');
+    final columnNames = tableInfo.map((c) => c['name'] as String).toList();
+    final hasGroupKey = columnNames.contains('group_ayah_key');
 
     // 3. Query for the entry
     final result = await db.query(
@@ -462,12 +426,6 @@ class QuranResourceService extends ChangeNotifier {
         }
       }
     }
-
-    // ✅ SAVE TO CACHE (with basic size cap)
-    if (_tafsirCache.length > _maxContentCacheSize) {
-      _tafsirCache.remove(_tafsirCache.keys.first);
-    }
-    _tafsirCache[key] = text;
 
     return text;
   }
@@ -527,63 +485,47 @@ class QuranResourceService extends ChangeNotifier {
     }
 
     String key = '$surah:$ayah';
-
-    // ✅ CHECK CONTENT CACHE FIRST
-    if (_translationCache.containsKey(key)) {
-      debugPrint('getTranslationText: CACHE HIT for $key');
-      return _translationCache[key];
-    }
-
     final db = await _dbHelper.getDatabase(dbName);
     debugPrint('getTranslationText: Querying $key in $dbName');
 
+    // 1. Probe for table name
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table'",
+    );
+    final tableNames = tables.map((t) => t['name'] as String).toList();
+
     String tableName = 'translation';
     String idCol = 'ayah_key';
-    bool hasGroupKey = false;
 
-    if (_dbMetadataCache.containsKey(dbName)) {
-      final meta = _dbMetadataCache[dbName]!;
-      tableName = meta.$1;
-      idCol = meta.$2;
-      hasGroupKey = meta.$3;
-    } else {
-      // 1. Probe for table name
-      final tables = await db.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type='table'",
-      );
-      final tableNames = tables.map((t) => t['name'] as String).toList();
-
-      if (tableNames.contains('transliteration')) {
-        tableName = 'transliteration';
-        idCol = 'ayah_key';
-      } else if (tableNames.contains('translation')) {
-        tableName = 'translation';
-        idCol = 'ayah_key';
-      } else if (tableNames.contains('resources')) {
-        tableName = 'resources';
-        final tableInfo = await db.rawQuery('PRAGMA table_info(resources)');
-        final cols = tableInfo.map((c) => c['name'] as String).toList();
-        idCol = cols.contains('ayah_key') ? 'ayah_key' : 'id';
-      } else if (tableNames.isNotEmpty) {
-        tableName = tableNames.first;
-        final tableInfo = await db.rawQuery('PRAGMA table_info($tableName)');
-        final cols = tableInfo.map((c) => c['name'] as String).toList();
-        if (cols.contains('ayah_key')) {
-          idCol = 'ayah_key';
-        } else if (cols.contains('id')) {
-          idCol = 'id';
-        }
-      }
-
-      // 2. Probe for group_ayah_key column
+    if (tableNames.contains('transliteration')) {
+      tableName = 'transliteration';
+      idCol = 'ayah_key';
+    } else if (tableNames.contains('translation')) {
+      tableName = 'translation';
+      idCol = 'ayah_key';
+    } else if (tableNames.contains('resources')) {
+      tableName = 'resources';
+      // Check if 'id' or 'ayah_key' exists
+      final tableInfo = await db.rawQuery('PRAGMA table_info(resources)');
+      final cols = tableInfo.map((c) => c['name'] as String).toList();
+      idCol = cols.contains('ayah_key') ? 'ayah_key' : 'id';
+    } else if (tableNames.isNotEmpty) {
+      tableName = tableNames.first;
+      // Probe for id column
       final tableInfo = await db.rawQuery('PRAGMA table_info($tableName)');
-      final columnNames = tableInfo.map((c) => c['name'] as String).toList();
-      hasGroupKey = columnNames.contains('group_ayah_key');
-
-      // Store in cache
-      _dbMetadataCache[dbName] = (tableName, idCol, hasGroupKey);
+      final cols = tableInfo.map((c) => c['name'] as String).toList();
+      if (cols.contains('ayah_key')) {
+        idCol = 'ayah_key';
+      } else if (cols.contains('id')) {
+        idCol = 'id';
+      }
     }
-    debugPrint('getTranslationText: Using CACHED metadata for $dbName');
+    debugPrint('getTranslationText: Using table $tableName, idCol $idCol');
+
+    // 2. Probe for group_ayah_key column
+    final tableInfo = await db.rawQuery('PRAGMA table_info($tableName)');
+    final columnNames = tableInfo.map((c) => c['name'] as String).toList();
+    final hasGroupKey = columnNames.contains('group_ayah_key');
 
     // 3. Query for the entry and its metadata
     final result = await db.query(
@@ -611,12 +553,6 @@ class QuranResourceService extends ChangeNotifier {
     debugPrint(
       'getTranslationText: Found text for $key (length: ${text.length})',
     );
-
-    // ✅ SAVE TO CACHE (with basic size cap)
-    if (_translationCache.length > _maxContentCacheSize) {
-      _translationCache.remove(_translationCache.keys.first);
-    }
-    _translationCache[key] = text;
 
     // 4. Detect Real Range
     if (hasGroupKey && groupKey != null) {
