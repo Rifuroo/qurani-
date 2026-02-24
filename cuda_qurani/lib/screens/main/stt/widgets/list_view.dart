@@ -2,7 +2,6 @@
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/models/quran_models.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../controllers/stt_controller.dart';
 import '../data/models.dart';
@@ -45,12 +44,6 @@ class _QuranListViewState extends State<QuranListView> {
   @override
   void initState() {
     super.initState();
-
-    // ✅ Hide status bar (only top bar)
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.manual,
-      overlays: [SystemUiOverlay.bottom],
-    );
 
     final controller = context.read<SttController>();
     final targetPage = controller.listViewCurrentPage;
@@ -329,13 +322,7 @@ class _QuranListViewState extends State<QuranListView> {
   @override
   void dispose() {
     _debounceTimer?.cancel();
-    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
-    // ✅ Restore status bar when leaving
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.manual,
-      overlays: SystemUiOverlay.values,
-    );
     super.dispose();
   }
 
@@ -667,7 +654,6 @@ class _CompleteAyahWidget extends StatelessWidget {
     final controller = context.read<SttController>();
     return GestureDetector(
       onLongPress: () => controller.handleListViewLongPress(context, segment),
-      onTap: () => controller.jumpToAyah(segment.surahId, segment.ayahNumber),
       behavior: HitTestBehavior.opaque,
       child: Selector<SttController, _AyahState>(
         selector: (_, controller) {
@@ -762,9 +748,11 @@ class _CompleteAyahWidget extends StatelessWidget {
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    padding: (state.isNavigatedHighlight || state.isSelected)
-                        ? const EdgeInsets.symmetric(horizontal: 4, vertical: 2)
-                        : EdgeInsets.zero,
+                    // ✅ FIXED: Always use fixed padding to prevent layout shifts ("loncat") when selected
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
                     child: Wrap(
                       alignment: WrapAlignment.start,
                       crossAxisAlignment: WrapCrossAlignment.center,
