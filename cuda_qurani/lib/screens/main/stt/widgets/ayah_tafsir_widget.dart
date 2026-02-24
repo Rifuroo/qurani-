@@ -31,9 +31,8 @@ class _AyahTafsirWidgetState extends State<AyahTafsirWidget> {
   @override
   void initState() {
     super.initState();
-    // Pre-schedule fetch if possible, though we only show if expanded
-    // Actually, we need to know IF tafsir exists to show the button
-    _scheduleFetch();
+    // Do NOT call _scheduleFetch here because didChangeDependencies
+    // will be called immediately after.
   }
 
   @override

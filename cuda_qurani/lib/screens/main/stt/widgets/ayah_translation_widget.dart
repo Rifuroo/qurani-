@@ -32,13 +32,15 @@ class _AyahTranslationWidgetState extends State<AyahTranslationWidget> {
   @override
   void initState() {
     super.initState();
-    _scheduleFetch();
+    // Do NOT call _scheduleFetch here because didChangeDependencies
+    // will be called immediately after, which would trigger a double fetch.
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Refresh if the user switches to a different translation
+    // Refresh if the user switches to a different translation,
+    // or if this is the initial build (since _lastTranslationId is null).
     final svc = context.read<QuranResourceService>();
     if (svc.selectedTranslationId != _lastTranslationId) {
       _lastTranslationId = svc.selectedTranslationId;

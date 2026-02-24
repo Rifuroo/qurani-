@@ -686,73 +686,92 @@ class _JustifiedAyahLine extends StatelessWidget {
     final lineSegments = line.ayahSegments ?? [];
 
     // ⚡️ ULTIMATE OPTIMIZATION: Rebuild ONLY if the active highlight OR selection is on THIS line
-    final lineHighlightState = context.select<SttController, String>((c) {
-      final revision = c.wordStatusRevision;
-      final navigatedAyahId = c.navigatedAyahId;
-      final currentHighlightKey = c.currentHighlightKey;
+    final lineHighlightState = context
+        .select<
+          SttController,
+          ({
+            String currentWordInLine,
+            bool hasWordStatuses,
+            int relevantRevision,
+            bool hasSelection,
+          })
+        >((c) {
+          final revision = c.wordStatusRevision;
+          final navigatedAyahId = c.navigatedAyahId;
+          final currentHighlightKey = c.currentHighlightKey;
 
-      // ✅ 1. Check for Active Word Highlight
-      bool hasActiveHighlight = false;
-      String currentWordInLine = 'none';
-      if (currentHighlightKey != null) {
-        for (final segment in lineSegments) {
-          if ('${segment.surahId}:${segment.ayahNumber}' ==
-              currentHighlightKey) {
-            hasActiveHighlight = true;
-            currentWordInLine =
-                '$currentHighlightKey:${c.currentHighlightWordIdx}';
-            break;
+          // ✅ 1. Check for Active Word Highlight
+          bool hasActiveHighlight = false;
+          String currentWordInLine = 'none';
+          if (currentHighlightKey != null) {
+            for (final segment in lineSegments) {
+              if ('${segment.surahId}:${segment.ayahNumber}' ==
+                  currentHighlightKey) {
+                hasActiveHighlight = true;
+                currentWordInLine =
+                    '$currentHighlightKey:${c.currentHighlightWordIdx}';
+                break;
+              }
+            }
           }
-        }
-      }
 
-      // ✅ 2. Check for Word Statuses (Colors)
-      bool hasWordStatuses = false;
-      if (!hasActiveHighlight) {
-        for (final segment in lineSegments) {
-          final key = '${segment.surahId}:${segment.ayahNumber}';
-          final stats = c.wordStatusMap[key];
-          if (stats != null &&
-              stats.values.any((s) => s != WordStatus.pending)) {
-            hasWordStatuses = true;
-            break;
+          // ✅ 2. Check for Word Statuses (Colors)
+          bool hasWordStatuses = false;
+          if (!hasActiveHighlight) {
+            for (final segment in lineSegments) {
+              final key = '${segment.surahId}:${segment.ayahNumber}';
+              final stats = c.wordStatusMap[key];
+              if (stats != null &&
+                  stats.values.any((s) => s != WordStatus.pending)) {
+                hasWordStatuses = true;
+                break;
+              }
+            }
           }
-        }
-      }
 
-      // ✅ 3. Check Selection Highlight (Deep Link / Similar Phrase) - Avoid heavy split/parse
-      bool hasSelection = false;
-      if (navigatedAyahId != null || c.selectedAyahForOptions != null) {
-        for (final segment in lineSegments) {
-          final globalId = GlobalAyatService.toGlobalAyat(
-            segment.surahId,
-            segment.ayahNumber,
+          // ✅ 3. Check Selection Highlight (Deep Link / Similar Phrase) - Avoid heavy split/parse
+          bool hasSelection = false;
+          if (navigatedAyahId != null || c.selectedAyahForOptions != null) {
+            for (final segment in lineSegments) {
+              final globalId = GlobalAyatService.toGlobalAyat(
+                segment.surahId,
+                segment.ayahNumber,
+              );
+
+              final isSelected =
+                  c.selectedAyahForOptions != null &&
+                  c.selectedAyahForOptions!.surahId == segment.surahId &&
+                  c.selectedAyahForOptions!.ayahNumber == segment.ayahNumber;
+
+              if (globalId == navigatedAyahId || isSelected) {
+                hasSelection = true;
+                break;
+              }
+            }
+          }
+
+          // ✅ REBUILD ISOLATION: Only include revision if this line is actually affected.
+          // This prevents 95% of lines from rebuilding on every word pulse.
+          final relevantRevision =
+              (hasActiveHighlight || hasWordStatuses || hasSelection)
+              ? revision
+              : 0;
+
+          return (
+            currentWordInLine: currentWordInLine,
+            hasWordStatuses: hasWordStatuses,
+            relevantRevision: relevantRevision,
+            hasSelection: hasSelection,
           );
-
-          final isSelected =
-              c.selectedAyahForOptions != null &&
-              c.selectedAyahForOptions!.surahId == segment.surahId &&
-              c.selectedAyahForOptions!.ayahNumber == segment.ayahNumber;
-
-          if (globalId == navigatedAyahId || isSelected) {
-            hasSelection = true;
-            break;
-          }
-        }
-      }
-
-      // ✅ REBUILD ISOLATION: Only include revision if this line is actually affected.
-      // This prevents 95% of lines from rebuilding on every word pulse.
-      final relevantRevision =
-          (hasActiveHighlight || hasWordStatuses || hasSelection)
-          ? revision
-          : 0;
-
-      return '$currentWordInLine:$hasWordStatuses:$relevantRevision:$hasSelection';
-    });
+        });
 
     // ✅ Rebuild trigger check: ensures this line rebuilds when highlight/selection state changes
-    if (lineHighlightState.isEmpty) return const SizedBox.shrink();
+    if (lineHighlightState.currentWordInLine == 'none' &&
+        !lineHighlightState.hasWordStatuses &&
+        lineHighlightState.relevantRevision == 0 &&
+        !lineHighlightState.hasSelection) {
+      // Still might need to build if it's currently being built for the first time
+    }
 
     final controller = context.read<SttController>();
 
@@ -772,13 +791,8 @@ class _JustifiedAyahLine extends StatelessWidget {
 
     final wordStatusMap = controller.wordStatusMap;
 
-    // ✅ BUG-3 FIX: Sort segments ONCE at build time instead of on every loop iteration.
-    // Previously this allocated a new List and sorted it on every rebuild (~10ms during audio).
-    final sortedSegments = line.ayahSegments!.toList()
-      ..sort((a, b) {
-        if (a.surahId != b.surahId) return a.surahId.compareTo(b.surahId);
-        return a.ayahNumber.compareTo(b.ayahNumber);
-      });
+    final sortedSegments = line.ayahSegments ?? [];
+    // ✅ TUNING: Segments are pre-sorted by QuranService, removing redundant toList()..sort()
 
     for (final segment in sortedSegments) {
       // ✅ PERF FIX: O(1) map lookup replaces O(n) indexWhere linear scan

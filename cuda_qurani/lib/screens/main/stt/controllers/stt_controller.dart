@@ -1872,17 +1872,53 @@ class SttController extends ChangeNotifier {
         case 'ayah':
           if (line.ayahSegments != null) {
             for (final segment in line.ayahSegments!) {
+              // ✅ CRITICAL FIX: Only render the verse on the page where it BEGINS.
+              // If this is a continuation segment (isStartOfAyah == false), skip it.
+              if (!segment.isStartOfAyah) continue;
+
               final key = '${segment.surahId}:${segment.ayahNumber}';
               if (!renderedAyahs.contains(key)) {
                 renderedAyahs.add(key);
 
-                final allWords = completeAyahs[key]!;
-                final metadata = ayahMetadataMap[key]!;
+                // 🚀 PULL-FORWARD STRATEGY: Combine spanning segments
+                final List<WordData> words = List.from(completeAyahs[key]!);
+
+                if (!segment.isEndOfAyah) {
+                  int nextP = pageNumber + 1;
+                  bool foundEnd = false;
+                  while (nextP <= totalPages && !foundEnd) {
+                    final nextLines = pageCache[nextP];
+                    if (nextLines == null) break;
+
+                    bool foundOnThisPage = false;
+                    for (final nl in nextLines) {
+                      if (nl.lineType == 'ayah' && nl.ayahSegments != null) {
+                        for (final ns in nl.ayahSegments!) {
+                          if (ns.surahId == segment.surahId &&
+                              ns.ayahNumber == segment.ayahNumber) {
+                            words.addAll(ns.words);
+                            foundOnThisPage = true;
+                            if (ns.isEndOfAyah) {
+                              foundEnd = true;
+                              break;
+                            }
+                          }
+                        }
+                      }
+                      if (foundEnd) break;
+                    }
+                    if (!foundOnThisPage) break;
+                    nextP++;
+                  }
+                }
+
+                // Ensure words are sorted by number
+                words.sort((a, b) => a.wordNumber.compareTo(b.wordNumber));
 
                 final completeSegment = AyahSegment(
-                  surahId: metadata.surahId,
-                  ayahNumber: metadata.ayahNumber,
-                  words: allWords,
+                  surahId: segment.surahId,
+                  ayahNumber: segment.ayahNumber,
+                  words: words,
                   isStartOfAyah: true,
                   isEndOfAyah: true,
                 );
@@ -2841,16 +2877,24 @@ class SttController extends ChangeNotifier {
 
     if (_isQuranMode) {
       // capture from Mushaf -> List
-      final pageLines = pageCache[_currentPage];
-      if (pageLines != null && pageLines.isNotEmpty) {
-        final firstAyahLine = pageLines.firstWhere(
-          (l) =>
-              l.lineType == 'ayah' &&
-              l.ayahSegments != null &&
-              l.ayahSegments!.isNotEmpty,
-          orElse: () => pageLines.first,
-        );
-        targetAyahId = firstAyahLine.ayahSegments?.first.id;
+      // ✅ TUNING: Prioritize selected/highlighted Ayah as anchor if available on current page
+      if (_selectedAyahForOptions != null) {
+        targetAyahId = _selectedAyahForOptions!.id;
+      } else if (_currentHighlightKey != null) {
+        final parts = _currentHighlightKey!.split(':');
+        targetAyahId = int.parse(parts[0]) * 1000 + int.parse(parts[1]);
+      } else {
+        final pageLines = pageCache[_currentPage];
+        if (pageLines != null && pageLines.isNotEmpty) {
+          final firstAyahLine = pageLines.firstWhere(
+            (l) =>
+                l.lineType == 'ayah' &&
+                l.ayahSegments != null &&
+                l.ayahSegments!.isNotEmpty,
+            orElse: () => pageLines.first,
+          );
+          targetAyahId = firstAyahLine.ayahSegments?.first.id;
+        }
       }
     } else {
       // capture from List -> Mushaf
@@ -2860,7 +2904,9 @@ class SttController extends ChangeNotifier {
       }
     }
 
+    // ✅ SYNC: Ensure top verse and page are anchored for multi-view consistency
     _topVerseId = targetAyahId;
+    _topVersePage = targetPage;
 
     // 2. OPTIMISTIC STATE FLIP (Instant feedback)
     _isQuranMode = !_isQuranMode;
