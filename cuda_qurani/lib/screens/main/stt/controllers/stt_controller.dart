@@ -1804,6 +1804,7 @@ class SttController extends ChangeNotifier {
 
       for (final key in keysToRemove) {
         pageCache.remove(key);
+        _renderCache.remove(key); // ✅ CRITICAL: Evict render cache too
         _geometryCache.remove(key); // ✅ CRITICAL: Evict geometry too
 
         // ✅ NEW: Evict prebuilt spans to release font references
@@ -1815,7 +1816,7 @@ class SttController extends ChangeNotifier {
           // Only log occasionally
           appLogger.log(
             'CACHE',
-            'Removed page $key (distance: ${(key - _currentPage).abs()}, max: $totalPages)',
+            'Evicted page $key metadata/render/geometry (Distance: ${(key - _currentPage).abs()})',
           );
         }
       }
