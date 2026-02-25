@@ -118,6 +118,7 @@ class _SttPageState extends State<SttPage> {
 
           return Scaffold(
             backgroundColor: AppColors.getBackground(context),
+            resizeToAvoidBottomInset: false,
             extendBodyBehindAppBar: true,
             appBar: const QuranAppBar(),
             endDrawer: BookmarkDrawer(controller: controller),
