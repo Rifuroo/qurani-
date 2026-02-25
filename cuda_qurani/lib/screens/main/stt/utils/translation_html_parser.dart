@@ -50,15 +50,17 @@ class TranslationHtmlParser {
     // ✅ Strip footnote markers — common in Quran translation DBs:
     //   <sup>1</sup>, <sup class="foot">1</sup> etc.
     cleaned = cleaned.replaceAll(
-      RegExp(r'<sup[^>]*>\d+</sup>', caseSensitive: false),
+      RegExp(r'<sup[^>]*>.*?</sup>', caseSensitive: false),
       '',
     );
     //   Standalone superscript-style numbers attached to punctuation: ,1  .1  ;1
-    cleaned = cleaned.replaceAll(RegExp(r'([,\.;:])\d+(?=\s|\$)'), r'\1');
+    cleaned = cleaned.replaceAll(RegExp(r'([,\.;:])\d+(?=\s|$)'), r'\1');
     //   Bracketed footnote refs: [1] [2] (1) (2)
     cleaned = cleaned.replaceAll(RegExp(r'[\(\[]\d+[\)\]]'), '');
     //   Trailing bare numbers after whitespace (e.g. "jalan yang lurus 1")
-    cleaned = cleaned.replaceAll(RegExp(r'\s\d+(?=\s*\$)'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\s\d+(?=\s*$)'), '');
+    //   Bare numbers at the very end of a sentence segment
+    cleaned = cleaned.replaceAll(RegExp(r'(\w)\d(\s|$)'), r'\1\2');
 
     // HTML entity decoding
     cleaned = cleaned.replaceAll('&nbsp;', ' ');

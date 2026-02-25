@@ -4,8 +4,28 @@ import '../controllers/stt_controller.dart';
 import '../../../../services/bookmark_service.dart';
 import '../../../../core/design_system/app_design_system.dart';
 
-class BookmarkDrawer extends StatelessWidget {
-  const BookmarkDrawer({super.key});
+class BookmarkDrawer extends StatefulWidget {
+  final SttController? controller;
+  const BookmarkDrawer({super.key, this.controller});
+
+  @override
+  State<BookmarkDrawer> createState() => _BookmarkDrawerState();
+}
+
+class _BookmarkDrawerState extends State<BookmarkDrawer> {
+  late Future<List<Map<String, dynamic>>> _bookmarksFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshBookmarks();
+  }
+
+  void _refreshBookmarks() {
+    setState(() {
+      _bookmarksFuture = BookmarkService().getAllBookmarks();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +61,7 @@ class BookmarkDrawer extends StatelessWidget {
             // List of Bookmarks
             Expanded(
               child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: BookmarkService().getAllBookmarks(),
+                future: _bookmarksFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -128,16 +148,18 @@ class BookmarkDrawer extends StatelessWidget {
                               surahId,
                               ayahNum,
                             );
-                            // Refresh list (using setState would require StatefulWidget,
-                            // but we can just pop and re-render if needed, or better use a Stream)
-                            // For simplicity in this UI, we can trigger a rebuild of the parent/self
-                            (context as Element).markNeedsBuild();
+                            _refreshBookmarks();
                           },
                         ),
                         onTap: () {
-                          final controller = context.read<SttController>();
-                          controller.jumpToAyah(surahId, ayahNum);
-                          Navigator.pop(context); // Close drawer
+                          // Close drawer first
+                          Navigator.pop(context);
+
+                          // Use the passed controller if available, fallback to context read
+                          final effectiveController =
+                              widget.controller ??
+                              context.read<SttController>();
+                          effectiveController.jumpToAyah(surahId, ayahNum);
                         },
                       );
                     },

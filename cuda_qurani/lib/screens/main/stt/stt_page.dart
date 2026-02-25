@@ -108,120 +108,100 @@ class _SttPageState extends State<SttPage> {
         Provider(create: (_) => QuranService()),
       ],
       child: Consumer<SttController>(
-        child: Scaffold(
-          backgroundColor: AppColors.getBackground(context),
-          extendBodyBehindAppBar: true,
-          appBar: const QuranAppBar(),
-          endDrawer: const BookmarkDrawer(),
-          // ✅ OPTIMIZATION: Selector for Loading/Error states ONLY
-          // This keeps the overall body structure stable
-          body: Selector<SttController, String?>(
-            selector: (_, c) => c.errorMessage,
-            builder: (context, errorMessage, _) {
-              final isLoading = context.select<SttController, bool>(
-                (c) => c.isLoading,
-              );
-
-              if (isLoading) return const SizedBox.shrink();
-
-              if (errorMessage?.isNotEmpty ?? false) {
-                final controller = context.read<SttController>();
-                return Column(
-                  children: [
-                    // Error banner below AppBar
-                    SizedBox(height: kToolbarHeight * 0.86),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: MediaQuery.of(context).size.width * 0.04,
-                        vertical: MediaQuery.of(context).size.height * 0.015,
-                      ),
-                      color: AppColors.getError(context).withValues(alpha: 0.9),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.warning,
-                            color: AppColors.textInverse,
-                            size: MediaQuery.of(context).size.width * 0.05,
-                          ),
-                          SizedBox(
-                            width: MediaQuery.of(context).size.width * 0.02,
-                          ),
-                          Expanded(
-                            child: Text(
-                              errorMessage ?? 'An error occurred',
-                              style: TextStyle(
-                                color: AppColors.textInverse,
-                                fontSize:
-                                    MediaQuery.of(context).size.width * 0.035,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.close,
-                              color: AppColors.textInverse,
-                              size: MediaQuery.of(context).size.width * 0.05,
-                            ),
-                            onPressed: controller.clearError,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: controller.toggleUIVisibility,
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: _buildMainContent(context),
-                            ), // ✅ Pass context!
-                            // Logs panel logic moved inside
-                            Selector<SttController, bool>(
-                              selector: (_, c) => c.showLogs && c.isUIVisible,
-                              builder: (_, show, __) => show
-                                  ? const QuranLogsPanel()
-                                  : const SizedBox.shrink(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }
-
-              return GestureDetector(
-                onTap: context.read<SttController>().toggleUIVisibility,
-                child: MushafPaperBackground(
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: _buildMainContent(context),
-                      ), // ✅ Pass context!
-                      Selector<SttController, bool>(
-                        selector: (_, c) => c.showLogs && c.isUIVisible,
-                        builder: (_, show, __) => show
-                            ? const QuranLogsPanel()
-                            : const SizedBox.shrink(),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
         builder: (context, controller, child) {
-          // ✅ NEW: Show achievement popup when earned - this runs on every notifyListeners
+          // Handle achievement popup logic
           if (controller.newlyEarnedAchievements.isNotEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _showAchievementPopup(context, controller);
             });
           }
 
-          // ✅ Return the stable child (Scaffold) - it won't rebuild unless SttPage itself rebuilds
-          return child!;
+          return Scaffold(
+            backgroundColor: AppColors.getBackground(context),
+            extendBodyBehindAppBar: true,
+            appBar: const QuranAppBar(),
+            endDrawer: BookmarkDrawer(controller: controller),
+            body: Selector<SttController, String?>(
+              selector: (_, c) => c.errorMessage,
+              builder: (context, errorMessage, _) {
+                final isLoading = context.select<SttController, bool>(
+                  (c) => c.isLoading,
+                );
+
+                if (isLoading) return const SizedBox.shrink();
+
+                if (errorMessage?.isNotEmpty ?? false) {
+                  return Column(
+                    children: [
+                      SizedBox(height: kToolbarHeight * 0.86),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: MediaQuery.of(context).size.width * 0.04,
+                          vertical: MediaQuery.of(context).size.height * 0.015,
+                        ),
+                        color: AppColors.getError(
+                          context,
+                        ).withValues(alpha: 0.9),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning, color: AppColors.textInverse),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                errorMessage!,
+                                style: TextStyle(color: AppColors.textInverse),
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.close,
+                                color: AppColors.textInverse,
+                              ),
+                              onPressed: controller.clearError,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: controller.toggleUIVisibility,
+                          child: Column(
+                            children: [
+                              Expanded(child: _buildMainContent(context)),
+                              Selector<SttController, bool>(
+                                selector: (_, c) => c.showLogs && c.isUIVisible,
+                                builder: (_, show, __) => show
+                                    ? const QuranLogsPanel()
+                                    : const SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                return GestureDetector(
+                  onTap: controller.toggleUIVisibility,
+                  child: MushafPaperBackground(
+                    child: Column(
+                      children: [
+                        Expanded(child: _buildMainContent(context)),
+                        Selector<SttController, bool>(
+                          selector: (_, c) => c.showLogs && c.isUIVisible,
+                          builder: (_, show, __) => show
+                              ? const QuranLogsPanel()
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
         },
       ),
     );

@@ -15,6 +15,8 @@ import 'tafsir_placeholder_view.dart';
 import 'translation_placeholder_view.dart';
 import '../utils/translation_html_parser.dart';
 
+import 'share_customization_sheet.dart';
+import '../../../../services/local_database_service.dart';
 import 'package:cuda_qurani/features/similarity/presentation/pages/verse_similarity_page.dart';
 
 import 'package:cuda_qurani/features/similarity/presentation/pages/phrase_similarity_page.dart';
@@ -250,7 +252,7 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
                 _buildCompactOption(
                   context,
                   icon: Icons.copy_outlined,
-                  label: 'Copy Ayah',
+                  label: 'Copy',
                   onTap: () {
                     Navigator.pop(context);
                     _handleShareAction(context, isCopyOnly: true);
@@ -260,10 +262,14 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
                 _buildCompactOption(
                   context,
                   icon: Icons.share_outlined,
-                  label: 'Share Ayah',
+                  label: 'Share',
                   onTap: () {
                     Navigator.pop(context);
-                    _handleShareAction(context, isCopyOnly: false);
+                    ShareCustomizationSheet.show(
+                      context,
+                      widget.segment,
+                      widget.surahName,
+                    );
                   },
                 ),
                 // Add bottom padding for better touch area
@@ -370,20 +376,18 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
       final resourceService = context.read<QuranResourceService>();
       final StringBuffer buffer = StringBuffer();
 
-      buffer.writeln(
-        'Quran ${widget.segment.surahId}:${widget.segment.ayahNumber}',
-      );
-      buffer.writeln(
-        '${widget.surahName} - Verse ${widget.segment.ayahNumber}',
-      );
+      buffer.writeln('${widget.surahName} - Ayat ${widget.segment.ayahNumber}');
       buffer.writeln();
 
       // Arabic
-      final rawArabic =
-          widget.segment.ayahGlyphText ??
-          widget.segment.words.map((w) => w.text).join(' ');
-      buffer.writeln(rawArabic);
-      buffer.writeln();
+      final simpleArabic = await LocalDatabaseService.getSimpleArabicText(
+        widget.segment.surahId,
+        widget.segment.ayahNumber,
+      );
+      if (simpleArabic != null) {
+        buffer.writeln(simpleArabic);
+        buffer.writeln();
+      }
 
       // Translation
       final rawTranslation = await resourceService.getTranslationText(
@@ -405,7 +409,7 @@ class _AyahOptionsSheetState extends State<AyahOptionsSheet> {
         widget.segment.ayahNumber,
       );
       if (rawTrans != null) {
-        buffer.writeln(rawTrans);
+        buffer.writeln('Transliteration: $rawTrans');
         buffer.writeln();
       }
 

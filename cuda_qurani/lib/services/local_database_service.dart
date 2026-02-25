@@ -345,6 +345,31 @@ class LocalDatabaseService {
     return surah;
   }
 
+  /// ✅ NEW: Fetch simple Arabic text (clean words) for an Ayah
+  static Future<String?> getSimpleArabicText(
+    int surahId,
+    int ayahNumber,
+  ) async {
+    await _ensureInitialized();
+    try {
+      final results = await _wordsDb!.query(
+        'words',
+        columns: ['text'],
+        where: 'surah = ? AND ayah = ?',
+        whereArgs: [surahId, ayahNumber],
+        orderBy: 'word ASC',
+      );
+
+      if (results.isEmpty) return null;
+
+      // Join words into a space-separated string
+      return results.map((row) => row['text'] as String).join(' ');
+    } catch (e) {
+      print('[DB] Error fetching simple Arabic: $e');
+      return null;
+    }
+  }
+
   /// Search verses by Arabic text OR surah name (Latin/Arabic)
   static Future<List<Map<String, dynamic>>> searchVerses(String query) async {
     await _ensureInitialized();
@@ -357,9 +382,44 @@ class LocalDatabaseService {
 
     List<Map<String, dynamic>> results = [];
 
+    // 0. CHECK FOR DIRECT VERSE REFERENCE (e.g. "36:1", "1 1", "36 : 1")
+    final verseRefMatch = RegExp(
+      r'^(\d+)\s*[:\s-]\s*(\d+)$',
+    ).firstMatch(query.trim());
+    if (verseRefMatch != null) {
+      final surahNum = int.parse(verseRefMatch.group(1)!);
+      final ayahNum = int.parse(verseRefMatch.group(2)!);
+
+      print('[DB] Direct verse reference detected: $surahNum:$ayahNum');
+
+      // Basic validation (Quran limits)
+      if (surahNum >= 1 && surahNum <= 114) {
+        final metadata = await getSurahMetadata(surahNum);
+        final ayahWords = await _wordsDb!.query(
+          'words',
+          where: 'surah = ? AND ayah = ?',
+          whereArgs: [surahNum, ayahNum],
+          orderBy: 'word ASC',
+        );
+
+        if (ayahWords.isNotEmpty) {
+          return [
+            {
+              'surah_number': surahNum,
+              'ayah_number': ayahNum,
+              'text': ayahWords.map((w) => w['text'] as String).join(' '),
+              'surah_name': metadata?['name_simple'] ?? 'Surah $surahNum',
+              'surah_name_arabic': metadata?['name_arabic'] ?? '',
+              'match_type': 'verse_reference',
+            },
+          ];
+        }
+      }
+    }
+
     // 1. Search by SURAH NAME (Latin or Arabic)
     // Use case-insensitive search with LOWER()
-    String queryLower = query.toLowerCase();
+    String queryLower = query.toLowerCase().trim();
 
     // Try multiple variations for better matching
     // Remove spaces, hyphens, and normalize
@@ -436,18 +496,77 @@ class LocalDatabaseService {
 
     // 2. Search by VERSE TEXT (Arabic) - ONLY if no surah name match
     // Skip if query is too short (common words like "al" would match too many)
-    if (query.length < 3) {
-      print('[DB] Query too short for verse text search (min 3 characters)');
+    if (query.length < 2) {
+      // Relaxed to 2 for short Arabic words
+      print('[DB] Query too short for verse text search (min 2 characters)');
       return results;
     }
 
-    final words = await _wordsDb!.query(
-      'words',
-      where: 'text LIKE ?',
-      whereArgs: ['%$query%'],
-      orderBy: 'surah ASC, ayah ASC, word ASC',
-      limit: 100, // Limit results
-    );
+    // Normalize query for diacritic-insensitive matching
+    String normalizedQuery = _normalizeArabic(query.trim());
+    final List<String> searchWords = normalizedQuery.split(RegExp(r'\s+'));
+
+    final List<Map<String, dynamic>> words;
+    if (searchWords.length > 1) {
+      // Multi-word search using INTERSECT
+      final StringBuffer intersectQuery = StringBuffer();
+      for (int i = 0; i < searchWords.length; i++) {
+        intersectQuery.write('SELECT surah, ayah FROM words WHERE text GLOB ?');
+        if (i < searchWords.length - 1) {
+          intersectQuery.write(' INTERSECT ');
+        }
+      }
+
+      final intersectArgs = searchWords
+          .map((w) => _generateSearchPatternGlob(w))
+          .toList();
+      final List<Map<String, dynamic>> ayahPairs = await _wordsDb!.rawQuery(
+        intersectQuery.toString(),
+        intersectArgs,
+      );
+
+      if (ayahPairs.isEmpty) {
+        print('[DB] No results found for multi-word query: $searchWords');
+        // Debug: Check individual words
+        for (int i = 0; i < searchWords.length; i++) {
+          final count = Sqflite.firstIntValue(
+            await _wordsDb!.rawQuery(
+              'SELECT COUNT(*) FROM words WHERE text GLOB ?',
+              [intersectArgs[i]],
+            ),
+          );
+          print(
+            '      - Word "$i" (${searchWords[i]}) pattern (${intersectArgs[i]}): $count matches',
+          );
+        }
+        return [];
+      }
+
+      // Fetch all words for these ayahs to build the preview
+      final List<Map<String, dynamic>> allMatchedWords = [];
+      for (final pair in ayahPairs.take(20)) {
+        // Limit to top 20 ayahs for performance
+        final surah = pair['surah'];
+        final ayah = pair['ayah'];
+        final ayahWords = await _wordsDb!.query(
+          'words',
+          where: 'surah = ? AND ayah = ?',
+          whereArgs: [surah, ayah],
+          orderBy: 'word ASC',
+        );
+        allMatchedWords.addAll(ayahWords);
+      }
+      words = allMatchedWords;
+    } else {
+      // Single word search
+      words = await _wordsDb!.query(
+        'words',
+        where: 'text GLOB ?',
+        whereArgs: [_generateSearchPatternGlob(normalizedQuery)],
+        orderBy: 'surah ASC, ayah ASC, word ASC',
+        limit: 100, // Limit results
+      );
+    }
 
     if (words.isNotEmpty) {
       print('[DB] Found ${words.length} matching words by text');
@@ -673,7 +792,7 @@ class LocalDatabaseService {
 
         final String assetPath;
         switch (layout) {
-        case MushafLayout.qpc:
+          case MushafLayout.qpc:
             assetPath = 'assets/QPCv2/qpc-v2-15-lines.db';
             break;
           case MushafLayout.indopak:
@@ -783,5 +902,51 @@ class LocalDatabaseService {
       print('[LocalDB] Stack trace: $stackTrace');
       return {};
     }
+  }
+
+  /// ✅ Simple Arabic Normalizer to strip diacritics
+  static String _normalizeArabic(String text) {
+    if (text.isEmpty) return text;
+
+    // 1. Strip all diacritics (Harakat)
+    // Range: 064B (Fathatan) to 065F, 0670 (Alif Khanjariya)
+    final diacritics = RegExp('[\u064B-\u065F\u0670]');
+    String result = text.replaceAll(diacritics, '');
+
+    // 2. Normalize Alifs (Including Alif Wasla ٱ)
+    // \u0671 is Alif Wasla
+    result = result.replaceAll(RegExp(r'[أإآٱ]'), 'ا');
+
+    // 3. Normalize Hamzas (Yaa with Hamza, Waw with Hamza)
+    result = result.replaceAll(RegExp(r'[ؤئ]'), 'ء');
+
+    // 4. Normalize Teh Marbuta to Heh (optional, but good for searching)
+    // result = result.replaceAll('ة', 'ه');
+
+    return result;
+  }
+
+  /// ✅ Generate a wildcard pattern for GLOB (SQLite) - supports character classes
+  /// Example: "الحمد" -> "*[اأإآٱ]لحلمد*"
+  static String _generateSearchPatternGlob(String word) {
+    if (word.isEmpty) return '**';
+
+    final StringBuffer pattern = StringBuffer('*');
+    for (int i = 0; i < word.length; i++) {
+      String char = word[i];
+      if (RegExp(r'[اأإآٱ\u0670]').hasMatch(char)) {
+        // Match ANY Alif variant including Alif Khanjariya
+        pattern.write('[اأإآٱ\u0670]');
+      } else if (char == 'و' || char == 'ؤ') {
+        pattern.write('[وؤ]');
+      } else if (char == 'ي' || char == 'ئ' || char == 'ى') {
+        pattern.write('[يئى]');
+      } else {
+        pattern.write(char);
+      }
+      // Add wildcard between characters to bypass diacritics
+      pattern.write('*');
+    }
+    return pattern.toString();
   }
 }

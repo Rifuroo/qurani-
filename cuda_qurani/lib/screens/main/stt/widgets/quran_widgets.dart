@@ -14,7 +14,7 @@ import '../controllers/stt_controller.dart';
 import '../utils/constants.dart';
 import 'package:cuda_qurani/core/providers/language_provider.dart';
 import 'package:cuda_qurani/services/metadata_cache_service.dart';
-import 'ayah_search_delegate.dart';
+import 'ayah_search_modal.dart';
 
 class QuranAppBar extends StatefulWidget implements PreferredSizeWidget {
   const QuranAppBar({Key? key}) : super(key: key);
@@ -160,94 +160,95 @@ class _QuranAppBarState extends State<QuranAppBar> {
           ),
 
           // ✅ FIX UTAMA: Gunakan ValueListenableBuilder agar JUDUL update instan tanpa rebuild seluruh AppBar
-          title: ValueListenableBuilder<PageDisplayData>(
-            valueListenable: controller.appBarNotifier,
-            builder: (context, data, _) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo
-                  Image.asset(
-                    'assets/images/qurani-white-text.png',
-                    height: screenHeight * 0.016,
-                    fit: BoxFit.contain,
-                    alignment: Alignment.centerLeft,
+          title: InkWell(
+            onTap: () => AyahSearchModal.show(context),
+            borderRadius: BorderRadius.circular(8),
+            child: ValueListenableBuilder<PageDisplayData>(
+              valueListenable: controller.appBarNotifier,
+              builder: (context, data, _) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 8,
                   ),
-                  SizedBox(height: screenHeight * 0.006),
-
-                  // Info Row with structured layout
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Surah Name (Dari Notifier)
-                      Flexible(
-                        child: Text(
-                          data.surahName,
-                          style: TextStyle(
-                            fontSize: titleSize,
-                            fontWeight: FontWeight.w400,
-                            color: _getAppBarTextColor(
-                              context,
-                            ).withOpacity(0.9),
-                            height: 1.1,
+                      // Logo
+                      Image.asset(
+                        'assets/images/qurani-white-text.png',
+                        height: screenHeight * 0.016,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.centerLeft,
+                      ),
+                      SizedBox(height: screenHeight * 0.006),
+
+                      // Info Row with structured layout
+                      Row(
+                        children: [
+                          // Surah Name (Dari Notifier)
+                          Flexible(
+                            child: Text(
+                              data.surahName,
+                              style: TextStyle(
+                                fontSize: titleSize,
+                                fontWeight: FontWeight.w400,
+                                color: _getAppBarTextColor(
+                                  context,
+                                ).withOpacity(0.9),
+                                height: 1.1,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
 
-                      SizedBox(width: screenWidth * 0.015),
-                      _buildSeparator(context, screenHeight),
-                      SizedBox(width: screenWidth * 0.015),
+                          SizedBox(width: screenWidth * 0.015),
+                          _buildSeparator(context, screenHeight),
+                          SizedBox(width: screenWidth * 0.015),
 
-                      // Juz Badge (Dari Notifier)
-                      Text(
-                        '${LanguageHelper.tr(_translations, "app_bar.juz_text")} ${context.formatNumber(data.juzNumber)}',
-                        style: TextStyle(
-                          fontSize: badgeSize,
-                          fontWeight: FontWeight.w400,
-                          color: _getAppBarTextColor(context).withOpacity(0.9),
-                          height: 1.1,
-                        ),
-                      ),
+                          // Juz Badge (Dari Notifier)
+                          Text(
+                            '${LanguageHelper.tr(_translations, "app_bar.juz_text")} ${context.formatNumber(data.juzNumber)}',
+                            style: TextStyle(
+                              fontSize: badgeSize,
+                              fontWeight: FontWeight.w400,
+                              color: _getAppBarTextColor(
+                                context,
+                              ).withOpacity(0.9),
+                              height: 1.1,
+                            ),
+                          ),
 
-                      SizedBox(width: screenWidth * 0.015),
-                      _buildSeparator(context, screenHeight),
-                      SizedBox(width: screenWidth * 0.015),
+                          SizedBox(width: screenWidth * 0.015),
+                          _buildSeparator(context, screenHeight),
+                          SizedBox(width: screenWidth * 0.015),
 
-                      // Page Number (Dari Notifier)
-                      Text(
-                        '${LanguageHelper.tr(_translations, "app_bar.page_text")} ${context.formatNumber(data.pageNumber)}',
-                        style: TextStyle(
-                          fontSize: subtitleSize,
-                          fontWeight: FontWeight.w400,
-                          color: _getAppBarTextColor(context).withOpacity(0.9),
-                          height: 1.1,
-                        ),
+                          // Page Number (Dari Notifier)
+                          Text(
+                            '${LanguageHelper.tr(_translations, "app_bar.page_text")} ${context.formatNumber(data.pageNumber)}',
+                            style: TextStyle(
+                              fontSize: subtitleSize,
+                              fontWeight: FontWeight.w400,
+                              color: _getAppBarTextColor(
+                                context,
+                              ).withOpacity(0.9),
+                              height: 1.1,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              );
-            },
+                );
+              },
+            ),
           ),
           titleSpacing: 0,
 
           // ✅ FIX ACTIONS: Gunakan Selector agar icon tetap berubah, tapi tidak rebuild Widget utama
           actions: [
-            // Search Button
-            IconButton(
-              icon: Icon(
-                Icons.search,
-                size: iconSize * 0.9,
-                color: _getAppBarTextColor(context),
-              ),
-              onPressed: () {
-                showSearch(context: context, delegate: AyahSearchDelegate());
-              },
-              splashRadius: iconSize * 1.1,
-            ),
-
             // Bookmark Button
             IconButton(
               icon: Icon(
