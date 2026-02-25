@@ -121,6 +121,8 @@ class _SttPageState extends State<SttPage> {
             extendBodyBehindAppBar: true,
             appBar: const QuranAppBar(),
             endDrawer: BookmarkDrawer(controller: controller),
+            endDrawerEnableOpenDragGesture:
+                false, // Prevents accidental swipe-to-open
             body: Selector<SttController, String?>(
               selector: (_, c) => c.errorMessage,
               builder: (context, errorMessage, _) {
@@ -209,9 +211,11 @@ class _SttPageState extends State<SttPage> {
 
   // ✅ FIXED: Pass context to ensure Provider is found
   Widget _buildMainContent(BuildContext context) {
+    // ✅ PASS context to ensure Provider is found
     // ✅ OPTIMIZATION: Remove blanket Consumer
     // Use select for specific checks to keep Stack stable
     return Stack(
+      fit: StackFit.expand, // Force stack to fill available space
       children: [
         // MushafView handles its own listeners
         _buildQuranText(context, context.read<SttController>()),
@@ -306,6 +310,9 @@ class _SttPageState extends State<SttPage> {
                 )
               : const SizedBox.shrink(),
         ),
+
+        // ✅ NEW: SMART ACTION HUB
+        SmartActionHub(),
       ],
     );
   }

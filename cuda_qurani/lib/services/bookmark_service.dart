@@ -22,7 +22,7 @@ class BookmarkService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // ✅ Increment version
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE bookmarks (
@@ -31,9 +31,17 @@ class BookmarkService {
             ayah_number INTEGER NOT NULL,
             surah_name TEXT NOT NULL,
             timestamp INTEGER NOT NULL,
+            last_visited INTEGER, -- ✅ NEW
             UNIQUE(surah_id, ayah_number)
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute(
+            'ALTER TABLE bookmarks ADD COLUMN last_visited INTEGER',
+          );
+        }
       },
     );
   }
@@ -61,6 +69,17 @@ class BookmarkService {
     );
   }
 
+  /// ✅ NEW: Update last visited time for a bookmark
+  Future<void> markAsVisited(int surahId, int ayahNumber) async {
+    final db = await database;
+    await db.update(
+      'bookmarks',
+      {'last_visited': DateTime.now().millisecondsSinceEpoch},
+      where: 'surah_id = ? AND ayah_number = ?',
+      whereArgs: [surahId, ayahNumber],
+    );
+  }
+
   Future<bool> isBookmarked(int surahId, int ayahNumber) async {
     final db = await database;
     final maps = await db.query(
@@ -71,8 +90,27 @@ class BookmarkService {
     return maps.isNotEmpty;
   }
 
-  Future<List<Map<String, dynamic>>> getAllBookmarks() async {
+  Future<List<Map<String, dynamic>>> getAllBookmarks({
+    String sortBy = 'timestamp',
+    bool ascending = false,
+  }) async {
     final db = await database;
-    return await db.query('bookmarks', orderBy: 'timestamp DESC');
+    String orderBy;
+
+    switch (sortBy) {
+      case 'quran':
+        orderBy =
+            'surah_id ${ascending ? 'ASC' : 'DESC'}, ayah_number ${ascending ? 'ASC' : 'DESC'}';
+        break;
+      case 'visited':
+        orderBy = 'last_visited ${ascending ? 'ASC' : 'DESC'}';
+        break;
+      case 'timestamp':
+      default:
+        orderBy = 'timestamp ${ascending ? 'ASC' : 'DESC'}';
+        break;
+    }
+
+    return await db.query('bookmarks', orderBy: orderBy);
   }
 }
