@@ -64,79 +64,71 @@ class _AyahTafsirWidgetState extends State<AyahTafsirWidget> {
     );
 
     if (tafsirId == null) {
-      return const SizedBox.shrink(); // Hide entirely if no tafsir selected
+      return const SizedBox.shrink();
     }
 
     return FutureBuilder<String?>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox.shrink(); // Wait quietly
+          return const SizedBox.shrink();
         }
 
         final data = snapshot.data;
         if (data == null) {
-          return const SizedBox.shrink(); // No tafsir available for this ayah
+          return const SizedBox.shrink();
         }
 
-        return Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Expand/Collapse Toggle
-              InkWell(
-                onTap: () => setState(() => _isExpanded = !_isExpanded),
-                borderRadius: BorderRadius.circular(4),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _isExpanded
-                            ? Icons.menu_book
-                            : Icons.menu_book_outlined,
-                        size: 14,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _isExpanded = !_isExpanded),
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isExpanded ? Icons.menu_book : Icons.menu_book_outlined,
+                      size: 14,
+                      color: AppColors.getPrimary(
+                        context,
+                      ).withValues(alpha: 0.7),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _isExpanded ? 'Hide Tafsir' : 'Read Tafsir',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.getPrimary(
                           context,
-                        ).withValues(alpha: 0.7),
+                        ).withValues(alpha: 0.8),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _isExpanded ? 'Hide Tafsir' : 'Read Tafsir',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.getPrimary(
-                            context,
-                          ).withValues(alpha: 0.8),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        _isExpanded
-                            ? Icons.keyboard_arrow_up
-                            : Icons.keyboard_arrow_down,
-                        size: 14,
-                        color: AppColors.getPrimary(
-                          context,
-                        ).withValues(alpha: 0.5),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _isExpanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      size: 14,
+                      color: AppColors.getPrimary(
+                        context,
+                      ).withValues(alpha: 0.5),
+                    ),
+                  ],
                 ),
               ),
-
-              // Expanded Content
-              if (_isExpanded) ...[
-                const SizedBox(height: 8),
-                _buildTafsirContent(context, data, tafsirLanguage),
-                const SizedBox(height: 12),
-              ],
+            ),
+            if (_isExpanded) ...[
+              const SizedBox(height: 8),
+              _buildTafsirContent(context, data, tafsirLanguage),
+              const SizedBox(height: 12),
             ],
-          ),
+          ],
         );
       },
     );

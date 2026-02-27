@@ -59,17 +59,12 @@ class _AyahTranslationWidgetState extends State<AyahTranslationWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch only the fields we care about to avoid full rebuilds
-    final translationId = context.select<QuranResourceService, String?>(
-      (s) => s.selectedTranslationId,
-    );
     final translationLanguage = context.select<QuranResourceService, String?>(
       (s) => s.selectedTranslationLanguage,
     );
 
-    // No translation selected at all
-    if (translationId == null) {
-      return _buildNotAvailable(context);
+    if (translationLanguage == null) {
+      return const SizedBox.shrink();
     }
 
     return FutureBuilder<String?>(
@@ -94,27 +89,22 @@ class _AyahTranslationWidgetState extends State<AyahTranslationWidget> {
         final spans = TranslationHtmlParser.parseHtmlToSpans(context, cleaned);
         final isRtl = TranslationHtmlParser.isRtlLanguage(translationLanguage);
 
-        return Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Group-range banner (e.g. "translation covers verses 1–7")
-              if (groupRange != null) ...[
-                _buildGroupBanner(context, groupRange),
-                const SizedBox(height: 4),
-              ],
-
-              Directionality(
-                textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
-                child: RichText(
-                  textAlign: isRtl ? TextAlign.justify : TextAlign.left,
-                  text: TextSpan(children: spans),
-                ),
-              ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (groupRange != null) ...[
+              _buildGroupBanner(context, groupRange),
+              const SizedBox(height: 4),
             ],
-          ),
+            Directionality(
+              textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+              child: RichText(
+                textAlign: isRtl ? TextAlign.justify : TextAlign.left,
+                text: TextSpan(children: spans),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -136,36 +126,31 @@ class _AyahTranslationWidgetState extends State<AyahTranslationWidget> {
   }
 
   Widget _buildNotAvailable(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 6, bottom: 2),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => TranslationDownloadPage()),
-          );
-        },
-        borderRadius: BorderRadius.circular(4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.download_for_offline_outlined,
-              size: 14,
-              color: AppColors.getTextSecondary(context).withValues(alpha: 0.5),
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => TranslationDownloadPage()),
+        );
+      },
+      borderRadius: BorderRadius.circular(4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.download_for_offline_outlined,
+            size: 14,
+            color: AppColors.getTextSecondary(context).withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'Download translation',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.getTextSecondary(context).withValues(alpha: 0.6),
             ),
-            const SizedBox(width: 4),
-            Text(
-              'Download translation',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.getTextSecondary(
-                  context,
-                ).withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

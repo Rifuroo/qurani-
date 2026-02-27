@@ -555,6 +555,9 @@ class SttController extends ChangeNotifier {
   bool _showTafsirInListView = true;
   bool get showTafsirInListView => _showTafsirInListView;
 
+  set showTranslationInListView(bool value) => setShowTranslation(value);
+  set showTafsirInListView(bool value) => setShowTafsir(value);
+
   Future<void> setShowTranslation(bool value) async {
     if (_showTranslationInListView == value) return;
     _showTranslationInListView = value;

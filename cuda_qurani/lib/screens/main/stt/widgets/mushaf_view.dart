@@ -443,7 +443,7 @@ class MushafPageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appBarHeight = kToolbarHeight * 0.95;
+    final appBarHeight = kToolbarHeight;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSpecialPage = pageNumber == 1 || pageNumber == 2;
@@ -470,7 +470,7 @@ class MushafPageContent extends StatelessWidget {
     // ✅ Highlighting Consolidated: Use a single Stack with one overlay for the entire page
     return Column(
       children: [
-        // Header tanpa padding horizontal
+        // Header
         Padding(
           padding: EdgeInsets.only(top: appBarHeight),
           child: MushafPageHeader(pageNumber: pageNumber),
@@ -654,13 +654,8 @@ class _JustifiedAyahLine extends StatelessWidget {
   final int pageNumber;
   final MushafLayoutConfig layoutConfig; // ✅ Use Config
 
-  // ✅ OPTIMIZATION: Pre-compile RegExp to avoid recreation inside loop
-  static final RegExp _arabicNumberRegExp = RegExp(r'[٠-٩0-9]');
-
-  // ✅ PERF FIX: Hoisted from build() word loop — was compiled ~120× per page build
-  static final RegExp _markerStripper = RegExp(
-    r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}]',
-  );
+  // ✅ LOCAL CACHE: Key = "mushafLayout:page:line:isDarkMode:wordStatusRevision:highlightKey:navigatedId:selectedId"
+  static final Map<String, List<InlineSpan>> _localSpanCache = {};
 
   const _JustifiedAyahLine({
     required this.line,
@@ -675,9 +670,6 @@ class _JustifiedAyahLine extends StatelessWidget {
       (c) => c.mushafLayout,
     );
     final isIndopak = mushafLayout == MushafLayout.indopak;
-    final currentAyatIndex = context.select<SttController, int>(
-      (c) => c.currentAyatIndex,
-    );
     final hideUnreadAyat = context.select<SttController, bool>(
       (c) => c.hideUnreadAyat,
     );
@@ -774,50 +766,36 @@ class _JustifiedAyahLine extends StatelessWidget {
     }
 
     final controller = context.read<SttController>();
-
-    // ✅ Use Calculated Font Size
     final baseFontSize = layoutConfig.fontSize;
-    final lastWordFontMultiplier = 0.850;
 
-    if (line.ayahSegments == null || line.ayahSegments!.isEmpty) {
-      return SizedBox(height: MushafRenderer.lineHeight(context));
+    // ✅ ⚡️ ULTIMATE SPAN CACHING: Key includes all visual states
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final cacheKey =
+        '${mushafLayout.name}:$pageNumber:${line.lineNumber}:$isDarkMode:${lineHighlightState.relevantRevision}:${lineHighlightState.currentWordInLine}:${lineHighlightState.hasSelection}:$hideUnreadAyat';
+
+    if (_localSpanCache.containsKey(cacheKey)) {
+      return _drawJustifiedLine(_localSpanCache[cacheKey]!, context);
     }
 
     List<InlineSpan> spans = [];
-
     final fontFamily = mushafLayout.isGlyphBased
-        ? 'p$pageNumber' // QPC: p1, p2, p3, etc.
-        : 'IndoPak-Nastaleeq'; // IndoPak: single font for all pages
+        ? 'p$pageNumber'
+        : 'IndoPak-Nastaleeq';
+    final lastWordFontMultiplier = 0.850;
 
-    final wordStatusMap = controller.wordStatusMap;
-
-    final sortedSegments = line.ayahSegments ?? [];
-    // ✅ TUNING: Segments are pre-sorted by QuranService, removing redundant toList()..sort()
-
-    for (final segment in sortedSegments) {
-      // ✅ PERF FIX: O(1) map lookup replaces O(n) indexWhere linear scan
-      final ayatIndex =
-          controller.ayahIndexMap['${segment.surahId}:${segment.ayahNumber}'] ??
-          -1;
-      final isCurrentAyat = ayatIndex >= 0 && ayatIndex == currentAyatIndex;
+    for (final segment in lineSegments) {
+      final ayatKey = '${segment.surahId}:${segment.ayahNumber}';
+      final wordStatuses = controller.wordStatusMap[ayatKey];
 
       for (int i = 0; i < segment.words.length; i++) {
         final word = segment.words[i];
         final wordIndex = word.wordNumber - 1;
+        final wordStatus = wordStatuses?[wordIndex];
 
-        final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
-        final wordStatus = wordStatusMap[wordStatusKey]?[wordIndex];
-
-        Color wordBg = Colors.transparent;
         double wordOpacity = 1.0;
-
         final isLastWordInAyah =
             segment.isEndOfAyah && i == (segment.words.length - 1);
 
-        // ✅ UNIFIED BOX Highlighting: Always transparent here, handled by painter
-        wordBg = Colors.transparent;
-
-        // Opacity logic
         if (hideUnreadAyat) {
           if (wordStatus != null && wordStatus != WordStatus.pending) {
             wordOpacity = 1.0;
@@ -826,30 +804,22 @@ class _JustifiedAyahLine extends StatelessWidget {
           }
         }
 
-        final isLastWord = isLastWordInAyah;
-        final effectiveFontSize = isLastWord
+        final effectiveFontSize = isLastWordInAyah
             ? baseFontSize * lastWordFontMultiplier
             : baseFontSize;
 
-        // ✅ PERF FIX: Uses class-level static _markerStripper instead of per-word compilation
-        final cleanText = word.text.replaceAll(_markerStripper, '');
-
-        // ✅ FORCE INDOPAK STYLE FOR AYAH MARKER WITH STACK
-        if (isLastWord) {
+        if (isLastWordInAyah) {
           final markerSpan = WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: Container(
               width: effectiveFontSize * 1.1,
               height: effectiveFontSize,
               alignment: Alignment.center,
-              margin: const EdgeInsets.symmetric(
-                horizontal: 1.0,
-              ), // ✅ Celah kecil kanan-kiri
+              margin: const EdgeInsets.symmetric(horizontal: 1.0),
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  // 1. Lingkaran (Ayah End Marker)
                   Transform.translate(
                     offset: Offset(0, -effectiveFontSize * 0.15),
                     child: Transform.scale(
@@ -865,12 +835,9 @@ class _JustifiedAyahLine extends StatelessWidget {
                           height: 0.1,
                         ),
                         textDirection: TextDirection.rtl,
-                        overflow: TextOverflow.visible,
                       ),
                     ),
                   ),
-
-                  // 2. Nomor Ayat (Centered inside ornament)
                   Center(
                     child: Text(
                       LanguageHelper.toIndoPakDigits(segment.ayahNumber),
@@ -885,7 +852,6 @@ class _JustifiedAyahLine extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                       textDirection: TextDirection.rtl,
-                      overflow: TextOverflow.visible,
                     ),
                   ),
                 ],
@@ -893,7 +859,6 @@ class _JustifiedAyahLine extends StatelessWidget {
             ),
           );
 
-          // ✅ MERGE WITH PREVIOUS WORD TO PREVENT JUSTIFICATION GAP
           if (spans.isNotEmpty) {
             final lastSpan = spans.removeLast();
             spans.add(TextSpan(children: [lastSpan, markerSpan]));
@@ -901,18 +866,15 @@ class _JustifiedAyahLine extends StatelessWidget {
             spans.add(markerSpan);
           }
         } else {
-          // Normal text word
           spans.add(
             TextSpan(
-              text: cleanText,
+              text: word.cleanText,
               style: TextStyle(
                 fontSize: effectiveFontSize,
                 fontFamily: fontFamily,
-                color: _getWordColor(
-                  isCurrentAyat,
+                color: AppColors.getTextPrimary(
                   context,
                 ).withValues(alpha: wordOpacity),
-                backgroundColor: wordBg,
                 fontWeight: FontWeight.normal,
                 height: (pageNumber == 1 || pageNumber == 2)
                     ? 1.5
@@ -924,16 +886,24 @@ class _JustifiedAyahLine extends StatelessWidget {
       }
     }
 
-    // ✅ Build stack with highlights and interaction
+    _localSpanCache[cacheKey] = spans;
+    // Limit cache size
+    if (_localSpanCache.length > 500)
+      _localSpanCache.remove(_localSpanCache.keys.first);
+
+    return _drawJustifiedLine(spans, context);
+  }
+
+  Widget _drawJustifiedLine(List<InlineSpan> spans, BuildContext context) {
     return GestureDetector(
-      onLongPressStart: (details) => controller.handleMushafLongPress(
-        context,
-        pageNumber,
-        line,
-        details.localPosition,
-      ),
-      behavior: HitTestBehavior
-          .opaque, // ✅ FIX: Ensure entire line area is touch-responsive
+      onLongPressStart: (details) =>
+          context.read<SttController>().handleMushafLongPress(
+            context,
+            pageNumber,
+            line,
+            details.localPosition,
+          ),
+      behavior: HitTestBehavior.opaque,
       child: Stack(
         children: [
           RepaintBoundary(
@@ -1273,9 +1243,6 @@ class _WordHighlightPainter extends CustomPainter {
 }
 
 // Methods tetap sama
-Color _getWordColor(bool isCurrentWord, BuildContext context) {
-  return AppColors.getTextPrimary(context);
-}
 
 Color getCorrectColor(BuildContext context) {
   return AppColors.getCorrect(context);

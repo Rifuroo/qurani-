@@ -149,7 +149,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
         child: AppBar(
           backgroundColor: _getAppBarBackgroundColor(context),
           foregroundColor: _getAppBarTextColor(context),
-          toolbarHeight: kToolbarHeight * 0.80,
+          toolbarHeight: kToolbarHeight,
           leading: IconButton(
             icon: Icon(
               Icons.menu,
@@ -237,7 +237,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
           ),
           titleSpacing: 0,
 
-          // ✅ SIMPLIFIED ACTIONS: Only Settings remains
+          // ✅ ACTIONS: Search, Visibility, Settings
           actions: [
             IconButton(
               onPressed: () => AyahSearchModal.show(context),

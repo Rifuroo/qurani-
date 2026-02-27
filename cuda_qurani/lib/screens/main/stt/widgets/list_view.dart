@@ -522,9 +522,11 @@ class _VerticalPageContent extends StatelessWidget {
 
     return Container(
       constraints: BoxConstraints(minHeight: screenHeight * 0.75),
-      padding: EdgeInsets.symmetric(
-        horizontal: screenWidth * 0.04,
-        vertical: screenHeight * 0.015,
+      padding: EdgeInsets.only(
+        left: screenWidth * 0.04,
+        right: screenWidth * 0.04,
+        top: kToolbarHeight + 10,
+        bottom: screenHeight * 0.015,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -743,7 +745,9 @@ class _CompleteAyahWidget extends StatelessWidget {
                 ),
               ),
               padding: EdgeInsets.only(
-                bottom: screenHeight * 0.015,
+                bottom: (state.showTranslation || state.showTafsir)
+                    ? screenHeight * 0.012
+                    : screenHeight * 0.006,
                 top: screenHeight * 0.005,
               ),
               child: Column(
@@ -751,33 +755,31 @@ class _CompleteAyahWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (segment.isStartOfAyah)
-                    Padding(
-                      padding: EdgeInsets.only(bottom: screenHeight * 0.01),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.02,
-                            vertical: screenHeight * 0.005,
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        margin: EdgeInsets.only(bottom: screenHeight * 0.008),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.02,
+                          vertical: screenHeight * 0.005,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          border: Border.all(
+                            color: state.isCurrentAyat
+                                ? AppColors.getPrimary(context)
+                                : AppColors.getTextSecondary(context),
+                            width: 1,
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.transparent,
-                            border: Border.all(
-                              color: state.isCurrentAyat
-                                  ? AppColors.getPrimary(context)
-                                  : AppColors.getTextSecondary(context),
-                              width: 1,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '${segment.surahId}:${segment.ayahNumber}',
-                            style: TextStyle(
-                              color: state.isCurrentAyat
-                                  ? AppColors.getPrimary(context)
-                                  : AppColors.getTextPrimary(context),
-                              fontSize: screenWidth * 0.0275,
-                            ),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${segment.surahId}:${segment.ayahNumber}',
+                          style: TextStyle(
+                            color: state.isCurrentAyat
+                                ? AppColors.getPrimary(context)
+                                : AppColors.getTextPrimary(context),
+                            fontSize: screenWidth * 0.0275,
                           ),
                         ),
                       ),
@@ -814,8 +816,9 @@ class _CompleteAyahWidget extends StatelessWidget {
                     ),
                   ),
 
-                  // ✅ TRANSLATION & TAFSIR: Honor user visibility settings
-                  if (segment.isStartOfAyah && state.showTranslation)
+                  // ✅ TRANSLATION & TAFSIR: Use tight spacing
+                  if (segment.isStartOfAyah && state.showTranslation) ...[
+                    const SizedBox(height: 6),
                     AyahTranslationWidget(
                       key: ValueKey(
                         'trans_${segment.surahId}_${segment.ayahNumber}',
@@ -823,7 +826,9 @@ class _CompleteAyahWidget extends StatelessWidget {
                       surahId: segment.surahId,
                       ayahNumber: segment.ayahNumber,
                     ),
-                  if (segment.isStartOfAyah && state.showTafsir)
+                  ],
+                  if (segment.isStartOfAyah && state.showTafsir) ...[
+                    const SizedBox(height: 8),
                     AyahTafsirWidget(
                       key: ValueKey(
                         'tafsir_${segment.surahId}_${segment.ayahNumber}',
@@ -831,6 +836,7 @@ class _CompleteAyahWidget extends StatelessWidget {
                       surahId: segment.surahId,
                       ayahNumber: segment.ayahNumber,
                     ),
+                  ],
                 ],
               ),
             ),

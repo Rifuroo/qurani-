@@ -58,7 +58,14 @@ class WordData {
   final int ayah;
   final int wordNumber;
   final String text;
+  final String
+  cleanText; // ✅ PRECOMPUTED: text without markers for faster building
   final bool hasDigit; // ✅ PRECOMPUTED: true if matches RegExp(r'[٠-٩0-9]')
+
+  // ✅ STATIC regex for pre-processing (shared instance)
+  static final RegExp _markerStripper = RegExp(
+    r'[\u0660-\u0669\u06F0-\u06F90-9\u06DD\uFD3E\uFD3F\u06D4\u066B\u066C\u0600-\u060F\(\)\[\]\{\}]',
+  );
 
   WordData({
     required this.id,
@@ -67,6 +74,7 @@ class WordData {
     required this.ayah,
     required this.wordNumber,
     required this.text,
+    required this.cleanText,
     required this.hasDigit,
   });
 
@@ -79,6 +87,7 @@ class WordData {
       ayah: row['ayah'] as int,
       wordNumber: row['word'] as int,
       text: textStr,
+      cleanText: textStr.replaceAll(_markerStripper, ''),
       hasDigit: RegExp(r'[٠-٩0-9]').hasMatch(textStr),
     );
   }
