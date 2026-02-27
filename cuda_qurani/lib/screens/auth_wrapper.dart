@@ -25,11 +25,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
     super.initState();
     // ✅ Listen for widget clicks when app is already running
     HomeWidget.widgetClicked.listen(_handleDeepLink);
-
-    // Only verify deep link if NOT passed via constructor (legacy/fallback)
-    if (widget.initialPageId == null) {
-      HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleDeepLink);
-    }
   }
 
   Future<void> _handleDeepLink(Uri? uri) async {

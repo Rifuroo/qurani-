@@ -114,7 +114,38 @@ class _QuranListViewState extends State<QuranListView> {
       _preloadPaused = false;
       _detectTopVerseAndUpdateController();
       _startSmartPreload(_currentVisiblePage);
+      _pruneVerseKeys();
     });
+  }
+
+  /// Prunes GlobalKeys for ayahs that are far from the viewport.
+  void _pruneVerseKeys() {
+    if (!mounted) return;
+
+    final controller = context.read<SttController>();
+    final totalPages = controller.totalPages;
+
+    // Radius of pages to keep keys for
+    const keepRadius = 5;
+    final minPage = (_currentVisiblePage - keepRadius).clamp(1, totalPages);
+    final maxPage = (_currentVisiblePage + keepRadius).clamp(1, totalPages);
+
+    final Set<int> keysToKeep = {};
+
+    for (int p = minPage; p <= maxPage; p++) {
+      final lines = controller.pageCache[p];
+      if (lines == null) continue;
+
+      for (var line in lines) {
+        if (line.ayahSegments != null) {
+          for (var ayah in line.ayahSegments!) {
+            keysToKeep.add(ayah.id);
+          }
+        }
+      }
+    }
+
+    _verseKeys.removeWhere((id, _) => !keysToKeep.contains(id));
   }
 
   /// Detects which verse is at the top of the viewport.
@@ -166,8 +197,8 @@ class _QuranListViewState extends State<QuranListView> {
     double maxVisible = 0.0;
 
     for (
-      int page = (scanCenter - 10).clamp(1, totalPages);
-      page <= (scanCenter + 10).clamp(1, totalPages);
+      int page = (scanCenter - 3).clamp(1, totalPages);
+      page <= (scanCenter + 3).clamp(1, totalPages);
       page++
     ) {
       // Check the first verse of each page
@@ -198,6 +229,9 @@ class _QuranListViewState extends State<QuranListView> {
                   maxVisible = visibleHeight;
                   bestPage = page;
                 }
+
+                // Early exit: if visibility > 80% screen, this is definitely the best page
+                if (visibleHeight > screenHeight * 0.8) return page;
               }
             }
           }
@@ -663,25 +697,33 @@ class _CompleteAyahWidget extends StatelessWidget {
           final isCurrentAyat =
               ayatIndex >= 0 && ayatIndex == controller.currentAyatIndex;
 
+          // ✅ FIX: Use surahId/ayahNumber comparison instead of segment.id
+          // segment.id = surahId*1000+ayahNumber (localized), but
+          // navigatedAyahId is a GLOBAL index (1-6236) — they never match.
+          final isNavigatedHighlight =
+              controller.navigatedAyahId ==
+              GlobalAyatService.toGlobalAyat(
+                segment.surahId,
+                segment.ayahNumber,
+              );
+          final isSelected =
+              controller.selectedAyahForOptions?.surahId == segment.surahId &&
+              controller.selectedAyahForOptions?.ayahNumber ==
+                  segment.ayahNumber;
+
           return _AyahState(
             isCurrentAyat: isCurrentAyat,
-            wordStatusMap: controller.wordStatusMap[wordStatusKey],
+            isNavigatedHighlight: isNavigatedHighlight,
+            wordStatusMap: isCurrentAyat || isSelected
+                ? controller.wordStatusMap[wordStatusKey]
+                : null,
+            isSelected: isSelected,
+            wordStatusRevision: controller.wordStatusRevision,
+            showTranslation: controller.showTranslationInListView,
+            showTafsir: controller.showTafsirInListView,
             hideUnreadAyat: controller.hideUnreadAyat,
             isListeningMode: controller.isListeningMode,
             isHighlighted: controller.currentHighlightKey == wordStatusKey,
-            // ✅ FIX: Use surahId/ayahNumber comparison instead of segment.id
-            // segment.id = surahId*1000+ayahNumber (localized), but
-            // navigatedAyahId is a GLOBAL index (1-6236) — they never match.
-            isNavigatedHighlight:
-                controller.navigatedAyahId ==
-                GlobalAyatService.toGlobalAyat(
-                  segment.surahId,
-                  segment.ayahNumber,
-                ),
-            isSelected:
-                controller.selectedAyahForOptions?.surahId == segment.surahId &&
-                controller.selectedAyahForOptions?.ayahNumber ==
-                    segment.ayahNumber,
           );
         },
         shouldRebuild: (prev, next) => prev != next,
@@ -689,105 +731,108 @@ class _CompleteAyahWidget extends StatelessWidget {
           final screenWidth = MediaQuery.of(context).size.width;
           final screenHeight = MediaQuery.of(context).size.height;
 
-          return Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: AppColors.getBorderLight(context),
-                  width: 0.5,
+          return RepaintBoundary(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: AppColors.getBorderLight(context),
+                    width: 0.5,
+                  ),
                 ),
               ),
-            ),
-            padding: EdgeInsets.only(
-              bottom: screenHeight * 0.015,
-              top: screenHeight * 0.005,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (segment.isStartOfAyah)
-                  Padding(
-                    padding: EdgeInsets.only(bottom: screenHeight * 0.01),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.02,
-                          vertical: screenHeight * 0.005,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          border: Border.all(
-                            color: state.isCurrentAyat
-                                ? AppColors.getPrimary(context)
-                                : AppColors.getTextSecondary(context),
-                            width: 1,
+              padding: EdgeInsets.only(
+                bottom: screenHeight * 0.015,
+                top: screenHeight * 0.005,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (segment.isStartOfAyah)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: screenHeight * 0.01),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.02,
+                            vertical: screenHeight * 0.005,
                           ),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          '${segment.surahId}:${segment.ayahNumber}',
-                          style: TextStyle(
-                            color: state.isCurrentAyat
-                                ? AppColors.getPrimary(context)
-                                : AppColors.getTextPrimary(context),
-                            fontSize: screenWidth * 0.0275,
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            border: Border.all(
+                              color: state.isCurrentAyat
+                                  ? AppColors.getPrimary(context)
+                                  : AppColors.getTextSecondary(context),
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${segment.surahId}:${segment.ayahNumber}',
+                            style: TextStyle(
+                              color: state.isCurrentAyat
+                                  ? AppColors.getPrimary(context)
+                                  : AppColors.getTextPrimary(context),
+                              fontSize: screenWidth * 0.0275,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: (state.isNavigatedHighlight || state.isSelected)
-                          ? AppColors.getPrimary(context).withValues(alpha: 0.1)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    // ✅ FIXED: Always use fixed padding to prevent layout shifts ("loncat") when selected
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 2,
-                    ),
-                    child: Wrap(
-                      alignment: WrapAlignment.start,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 1,
-                      runSpacing: 4,
-                      children: _buildWords(
-                        context,
-                        segment,
-                        state,
-                        screenWidth,
-                        screenHeight,
+                  Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: (state.isNavigatedHighlight || state.isSelected)
+                            ? AppColors.getPrimary(
+                                context,
+                              ).withValues(alpha: 0.1)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      // ✅ FIXED: Always use fixed padding to prevent layout shifts ("loncat") when selected
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
+                      child: Wrap(
+                        alignment: WrapAlignment.start,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 1,
+                        runSpacing: 4,
+                        children: _buildWords(
+                          context,
+                          segment,
+                          state,
+                          screenWidth,
+                          screenHeight,
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                // ✅ TRANSLATION: Always show inline translation below Arabic text
-                // Only rendered for isStartOfAyah (full Ayah, not a split-line segment)
-                if (segment.isStartOfAyah)
-                  AyahTranslationWidget(
-                    key: ValueKey(
-                      'trans_${segment.surahId}_${segment.ayahNumber}',
+                  // ✅ TRANSLATION & TAFSIR: Honor user visibility settings
+                  if (segment.isStartOfAyah && state.showTranslation)
+                    AyahTranslationWidget(
+                      key: ValueKey(
+                        'trans_${segment.surahId}_${segment.ayahNumber}',
+                      ),
+                      surahId: segment.surahId,
+                      ayahNumber: segment.ayahNumber,
                     ),
-                    surahId: segment.surahId,
-                    ayahNumber: segment.ayahNumber,
-                  ),
-                if (segment.isStartOfAyah)
-                  AyahTafsirWidget(
-                    key: ValueKey(
-                      'tafsir_${segment.surahId}_${segment.ayahNumber}',
+                  if (segment.isStartOfAyah && state.showTafsir)
+                    AyahTafsirWidget(
+                      key: ValueKey(
+                        'tafsir_${segment.surahId}_${segment.ayahNumber}',
+                      ),
+                      surahId: segment.surahId,
+                      ayahNumber: segment.ayahNumber,
                     ),
-                    surahId: segment.surahId,
-                    ayahNumber: segment.ayahNumber,
-                  ),
-              ],
+                ],
+              ),
             ),
           );
         },
@@ -1007,46 +1052,59 @@ class _CompleteAyahWidget extends StatelessWidget {
 class _AyahState {
   final bool isCurrentAyat;
   final Map<int, WordStatus>? wordStatusMap;
+  final bool isNavigatedHighlight;
+  final bool isSelected;
+  final int wordStatusRevision;
+  final bool showTranslation;
+  final bool showTafsir;
   final bool hideUnreadAyat;
   final bool isListeningMode;
   final bool isHighlighted;
-  final bool isNavigatedHighlight;
-  final bool isSelected;
 
   const _AyahState({
     required this.isCurrentAyat,
+    required this.isNavigatedHighlight,
     required this.wordStatusMap,
+    required this.isSelected,
+    required this.wordStatusRevision,
+    required this.showTranslation,
+    required this.showTafsir,
     required this.hideUnreadAyat,
     required this.isListeningMode,
     required this.isHighlighted,
-    required this.isNavigatedHighlight,
-    required this.isSelected,
   });
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is _AyahState &&
+          runtimeType == other.runtimeType &&
           isCurrentAyat == other.isCurrentAyat &&
+          isNavigatedHighlight == other.isNavigatedHighlight &&
+          isSelected == other.isSelected &&
+          wordStatusRevision == other.wordStatusRevision &&
+          showTranslation == other.showTranslation &&
+          showTafsir == other.showTafsir &&
           hideUnreadAyat == other.hideUnreadAyat &&
           isListeningMode == other.isListeningMode &&
           isHighlighted == other.isHighlighted &&
-          isNavigatedHighlight == other.isNavigatedHighlight &&
-          isSelected == other.isSelected &&
           _mapEquals(wordStatusMap, other.wordStatusMap);
 
   @override
   int get hashCode => Object.hash(
     isCurrentAyat,
+    isNavigatedHighlight,
+    isSelected,
+    wordStatusRevision,
+    showTranslation,
+    showTafsir,
     hideUnreadAyat,
     isListeningMode,
     isHighlighted,
-    isNavigatedHighlight,
-    isSelected,
     wordStatusMap,
   );
 
-  bool _mapEquals(Map<int, WordStatus>? a, Map<int, WordStatus>? b) {
+  static bool _mapEquals(Map<int, WordStatus>? a, Map<int, WordStatus>? b) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return a == b;
     if (a.length != b.length) return false;

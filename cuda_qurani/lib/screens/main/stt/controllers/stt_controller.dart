@@ -549,8 +549,11 @@ class SttController extends ChangeNotifier {
   List<AyatData> get currentPageAyats => _currentPageAyats;
 
   // ✅ Translation toggle
-  bool _showTranslationInListView = false;
+  bool _showTranslationInListView = true;
   bool get showTranslationInListView => _showTranslationInListView;
+
+  bool _showTafsirInListView = true;
+  bool get showTafsirInListView => _showTafsirInListView;
 
   Future<void> setShowTranslation(bool value) async {
     if (_showTranslationInListView == value) return;
@@ -560,10 +563,19 @@ class SttController extends ChangeNotifier {
     await prefs.setBool('show_translation_list_view', value);
   }
 
+  Future<void> setShowTafsir(bool value) async {
+    if (_showTafsirInListView == value) return;
+    _showTafsirInListView = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('show_tafsir_list_view', value);
+  }
+
   Future<void> _loadTranslationSetting() async {
     final prefs = await SharedPreferences.getInstance();
     _showTranslationInListView =
-        prefs.getBool('show_translation_list_view') ?? false;
+        prefs.getBool('show_translation_list_view') ?? true;
+    _showTafsirInListView = prefs.getBool('show_tafsir_list_view') ?? true;
   }
 
   // ✅ ACCESSORS FOR MAPS
@@ -2374,6 +2386,9 @@ class SttController extends ChangeNotifier {
 
     // ✅ NEW: Precompute geometry immediately so highlights are ready
     _precomputeGeometryForPage(page);
+
+    // ✅ NEW: Prune cache if it grows too large
+    _cleanupDistantCache();
 
     if (page == _currentPage || page == _listViewCurrentPage) {
       notifyListeners();
