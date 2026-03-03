@@ -7,8 +7,8 @@ import '../controllers/stt_controller.dart';
 import '../data/models.dart';
 import '../services/quran_service.dart';
 import '../utils/constants.dart';
-import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/utils/language_helper.dart';
+import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/services/global_ayat_services.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/ayah_translation_widget.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/ayah_tafsir_widget.dart';
@@ -740,429 +740,413 @@ class _CompleteAyahWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.read<SttController>();
+    final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return GestureDetector(
       onLongPress: () => controller.handleListViewLongPress(context, segment),
       behavior: HitTestBehavior.opaque,
-      child: Selector<SttController, _AyahState>(
-        selector: (_, controller) {
-          final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
-
-          final ayatIndex = controller.ayahIndexMap[wordStatusKey] ?? -1;
-          final isCurrentAyat =
-              ayatIndex >= 0 && ayatIndex == controller.currentAyatIndex;
-
-          // ✅ FIX: Use surahId/ayahNumber comparison instead of segment.id
-          // segment.id = surahId*1000+ayahNumber (localized), but
-          // navigatedAyahId is a GLOBAL index (1-6236) — they never match.
-          final isNavigatedHighlight =
-              controller.navigatedAyahId ==
-              GlobalAyatService.toGlobalAyat(
-                segment.surahId,
-                segment.ayahNumber,
-              );
-          final isSelected =
-              controller.selectedAyahForOptions?.surahId == segment.surahId &&
-              controller.selectedAyahForOptions?.ayahNumber ==
-                  segment.ayahNumber;
-
-          return _AyahState(
-            isCurrentAyat: isCurrentAyat,
-            isNavigatedHighlight: isNavigatedHighlight,
-            wordStatusMap: isCurrentAyat || isSelected
-                ? controller.wordStatusMap[wordStatusKey]
-                : null,
-            isSelected: isSelected,
-            wordStatusRevision: controller.wordStatusRevision,
-            showTranslation: controller.showTranslationInListView,
-            showTafsir: controller.showTafsirInListView,
-            hideUnreadAyat: controller.hideUnreadAyat,
-            isListeningMode: controller.isListeningMode,
-            isHighlighted: controller.currentHighlightKey == wordStatusKey,
-          );
-        },
-        shouldRebuild: (prev, next) => prev != next,
-        builder: (context, state, _) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          final screenHeight = MediaQuery.of(context).size.height;
-
-          return RepaintBoundary(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: AppColors.getBorderLight(context),
-                    width: 0.5,
-                  ),
-                ),
+      child: RepaintBoundary(
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: AppColors.getBorderLight(context),
+                width: 0.5,
               ),
-              padding: EdgeInsets.only(
-                bottom: (state.showTranslation || state.showTafsir)
-                    ? screenHeight * 0.012
-                    : screenHeight * 0.006,
-                top: screenHeight * 0.005,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (segment.isStartOfAyah)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        margin: EdgeInsets.only(bottom: screenHeight * 0.008),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.02,
-                          vertical: screenHeight * 0.005,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          border: Border.all(
-                            color: state.isCurrentAyat
-                                ? AppColors.getPrimary(context)
-                                : AppColors.getTextSecondary(context),
-                            width: 1,
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          '${segment.surahId}:${segment.ayahNumber}',
-                          style: TextStyle(
-                            color: state.isCurrentAyat
-                                ? AppColors.getPrimary(context)
-                                : AppColors.getTextPrimary(context),
-                            fontSize: screenWidth * 0.0275,
-                          ),
-                        ),
-                      ),
-                    ),
-                  Directionality(
+            ),
+          ),
+          padding: EdgeInsets.only(
+            bottom: screenHeight * 0.006,
+            top: screenHeight * 0.005,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (segment.isStartOfAyah) _AyahHeader(segment: segment),
+
+              // Arabic Text & Background Highlight
+              Selector<SttController, _AyahLayoutState>(
+                selector: (_, ctrl) {
+                  final ayatIndex = ctrl.ayahIndexMap[wordStatusKey] ?? -1;
+                  final isCurrentAyat =
+                      ayatIndex >= 0 && ayatIndex == ctrl.currentAyatIndex;
+                  final isNavigatedHighlight =
+                      ctrl.navigatedAyahId ==
+                      GlobalAyatService.toGlobalAyat(
+                        segment.surahId,
+                        segment.ayahNumber,
+                      );
+                  final isSelected =
+                      ctrl.selectedAyahForOptions?.surahId == segment.surahId &&
+                      ctrl.selectedAyahForOptions?.ayahNumber ==
+                          segment.ayahNumber;
+                  final isHighlighted =
+                      ctrl.currentHighlightKey == wordStatusKey;
+
+                  return _AyahLayoutState(
+                    isCurrentAyat: isCurrentAyat,
+                    isNavigatedHighlight: isNavigatedHighlight,
+                    isSelected: isSelected,
+                    isHighlighted: isHighlighted,
+                  );
+                },
+                builder: (context, layoutState, _) {
+                  return Directionality(
                     textDirection: TextDirection.rtl,
                     child: Container(
                       decoration: BoxDecoration(
                         color:
-                            (state.isSelected ||
-                                state.isCurrentAyat ||
-                                state.isNavigatedHighlight)
+                            (layoutState.isSelected ||
+                                layoutState.isCurrentAyat ||
+                                layoutState.isHighlighted ||
+                                layoutState.isNavigatedHighlight)
                             ? AppColors.getPrimary(
                                 context,
                               ).withValues(alpha: 0.12)
                             : Colors.transparent,
-                        border: null,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      // ✅ FIXED: Always use fixed padding to prevent layout shifts ("loncat") when selected
                       padding: const EdgeInsets.symmetric(
                         horizontal: 4,
                         vertical: 2,
                       ),
-                      child: Wrap(
-                        alignment: WrapAlignment.start,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 1,
-                        runSpacing: 4,
-                        children: _buildWords(
-                          context,
-                          segment,
-                          state,
-                          screenWidth,
-                          screenHeight,
+                      child: Selector<SttController, _AyahContentState>(
+                        selector: (_, ctrl) => _AyahContentState(
+                          wordStatusMap:
+                              layoutState.isCurrentAyat ||
+                                  layoutState.isSelected
+                              ? ctrl.wordStatusMap[wordStatusKey]
+                              : null,
+                          wordStatusRevision: ctrl.wordStatusRevision,
+                          isListeningMode: ctrl.isListeningMode,
+                          isHighlighted: layoutState.isHighlighted,
+                          isCurrentAyat: layoutState.isCurrentAyat,
                         ),
+                        builder: (context, contentState, _) {
+                          return _buildAyahArabic(
+                            context,
+                            segment,
+                            contentState,
+                          );
+                        },
                       ),
                     ),
-                  ),
-
-                  // ✅ TRANSLATION & TAFSIR: Use tight spacing
-                  if (segment.isStartOfAyah && state.showTranslation) ...[
-                    const SizedBox(height: 6),
-                    AyahTranslationWidget(
-                      key: ValueKey(
-                        'trans_${segment.surahId}_${segment.ayahNumber}',
-                      ),
-                      surahId: segment.surahId,
-                      ayahNumber: segment.ayahNumber,
-                    ),
-                  ],
-                  if (segment.isStartOfAyah && state.showTafsir) ...[
-                    const SizedBox(height: 8),
-                    AyahTafsirWidget(
-                      key: ValueKey(
-                        'tafsir_${segment.surahId}_${segment.ayahNumber}',
-                      ),
-                      surahId: segment.surahId,
-                      ayahNumber: segment.ayahNumber,
-                    ),
-                  ],
-                ],
+                  );
+                },
               ),
-            ),
-          );
-        },
+
+              // Translation & Tafsir
+              Selector<SttController, _AyahExtraState>(
+                selector: (_, ctrl) => _AyahExtraState(
+                  showTranslation: ctrl.showTranslationInListView,
+                  showTafsir: ctrl.showTafsirInListView,
+                ),
+                builder: (context, extraState, _) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (segment.isStartOfAyah &&
+                          extraState.showTranslation) ...[
+                        const SizedBox(height: 6),
+                        AyahTranslationWidget(
+                          key: ValueKey(
+                            'trans_${segment.surahId}_${segment.ayahNumber}',
+                          ),
+                          surahId: segment.surahId,
+                          ayahNumber: segment.ayahNumber,
+                        ),
+                      ],
+                      if (segment.isStartOfAyah && extraState.showTafsir) ...[
+                        const SizedBox(height: 8),
+                        AyahTafsirWidget(
+                          key: ValueKey(
+                            'tafsir_${segment.surahId}_${segment.ayahNumber}',
+                          ),
+                          surahId: segment.surahId,
+                          ayahNumber: segment.ayahNumber,
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  List<Widget> _buildWords(
+  Widget _buildAyahArabic(
     BuildContext context,
     AyahSegment segment,
-    _AyahState state,
-    double screenWidth,
-    double screenHeight,
+    _AyahContentState state,
   ) {
-    return segment.words.map((word) {
-      final rawIndex = word.wordNumber - 1;
-      final wordIndex = rawIndex < 0
-          ? 0
-          : (rawIndex >= segment.words.length
-                ? segment.words.length - 1
-                : rawIndex);
-      final wordStatus = state.wordStatusMap?[wordIndex];
-      Color wordBg = Colors.transparent;
-      double opacity = 1.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final controller = context.read<SttController>();
+    final isIndopak =
+        controller.mushafLayout == MushafLayout.indopak ||
+        fontFamily == 'IndoPak-Nastaleeq';
 
-      final isLastWordInAyah =
-          segment.isEndOfAyah && wordIndex == (segment.words.length - 1);
-      final hasNumber = word.hasDigit;
-
-      if (wordStatus != null) {
-        switch (wordStatus) {
-          case WordStatus.matched:
-          case WordStatus.correct:
-            wordBg = getCorrectColor(context).withValues(alpha: 0.4);
-            break;
-          case WordStatus.mismatched:
-          case WordStatus.incorrect:
-          case WordStatus.skipped:
-            wordBg = getErrorColor(context).withValues(alpha: 0.4);
-            break;
-          case WordStatus.processing:
-            wordBg = state.isListeningMode
-                ? AppColors.getTextTertiary(context).withValues(alpha: 0.5)
-                : AppColors.getInfo(context).withValues(alpha: 0.3);
-            break;
-          default:
-            break;
-        }
-      }
-
-      // ✅ Phase 8: Remove redundant per-word highlight for navigated/static states.
-      // We only use word-level background for ACTIVE listening/matching (STT).
-      // Static highlights (click/jump) use the block-level background in the parent.
-      if (state.isListeningMode &&
-          (state.isCurrentAyat || state.isHighlighted) &&
-          wordBg == Colors.transparent) {
-        wordBg = AppColors.getPrimary(context).withValues(alpha: 0.15);
-      }
-
-      if (state.hideUnreadAyat) {
-        if (wordStatus != null && wordStatus != WordStatus.pending) {
-          opacity = 1.0;
-        } else if (state.isCurrentAyat) {
-          opacity = (hasNumber || isLastWordInAyah) ? 1.0 : 0.0;
-        } else {
-          opacity = (hasNumber || isLastWordInAyah) ? 1.0 : 0.0;
-        }
-      }
-
-      if (isLastWordInAyah) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
         final baseFontSize = screenWidth * 0.0625;
 
-        return Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: 0,
-            vertical: screenHeight * 0.00125,
-          ),
-          child: Container(
-            width: baseFontSize * 1.2,
-            height: baseFontSize,
-            alignment: Alignment.center,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                Transform.translate(
-                  offset: Offset(0, -baseFontSize * 0.15),
-                  child: Transform.scale(
-                    scale: 1.2,
-                    child: Text(
-                      '\u06DD',
-                      style: TextStyle(
-                        fontSize: baseFontSize,
-                        fontFamily: 'IndoPak-Nastaleeq',
-                        foreground: Paint()
-                          ..color = AppColors.getAyahNumber(context)
-                          ..colorFilter = ColorFilter.mode(
-                            AppColors.getAyahNumber(context),
-                            BlendMode.srcIn,
-                          ),
-                        height: 1.0,
-                      ),
-                      textDirection: TextDirection.rtl,
-                      softWrap: false,
-                      overflow: TextOverflow.visible,
-                    ),
+        final wordStyle = TextStyle(
+          fontSize: baseFontSize,
+          fontFamily: fontFamily,
+          height: isIndopak ? 1.5 : 1.6,
+          color: AppColors.getTextPrimary(context),
+        );
+
+        // 1. Build TWO span lists:
+        //    - displaySpans: for RichText (includes WidgetSpan end marker)
+        //    - measureSpans: for TextPainter measurement (text-only, no WidgetSpan)
+        final List<InlineSpan> displaySpans = [];
+        final List<InlineSpan> measureSpans = [];
+
+        for (int i = 0; i < segment.words.length; i++) {
+          final word = segment.words[i];
+          final isLastWord =
+              segment.isEndOfAyah && i == segment.words.length - 1;
+
+          if (isLastWord) {
+            // Display: WidgetSpan for visual end marker
+            displaySpans.add(
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: _buildAyahEndMarker(context, segment, baseFontSize),
+              ),
+            );
+            // Measure: placeholder text (won't need highlight on end marker)
+            measureSpans.add(TextSpan(text: ' ', style: wordStyle));
+          } else {
+            final span = TextSpan(text: word.text, style: wordStyle);
+            displaySpans.add(span);
+            measureSpans.add(span);
+            // Non-breaking space between words
+            const spacer = TextSpan(text: '\u00A0');
+            displaySpans.add(spacer);
+            measureSpans.add(spacer);
+          }
+        }
+
+        // TextPainter for highlight measurement (text-only, safe to layout)
+        final textPainter = TextPainter(
+          text: TextSpan(children: measureSpans),
+          textDirection: TextDirection.rtl,
+          textAlign: isIndopak ? TextAlign.justify : TextAlign.start,
+        )..layout(maxWidth: availableWidth);
+
+        // 2. Wrap in a Stack for highlight overlay
+        return Stack(
+          children: [
+            // Highlight Layer (only when needed)
+            if (state.isHighlighted ||
+                (state.wordStatusMap?.isNotEmpty ?? false))
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _AyatHighlightPainter(
+                    context: context,
+                    segment: segment,
+                    state: state,
+                    textPainter: textPainter,
+                    maxWidth: availableWidth,
                   ),
                 ),
-                Center(
-                  child: Text(
-                    LanguageHelper.toIndoPakDigits(segment.ayahNumber),
-                    style: TextStyle(
-                      fontSize: baseFontSize * 0.45,
-                      fontFamily: 'Quran-Common',
-                      foreground: Paint()
-                        ..color = AppColors.getAyahNumber(context)
-                        ..colorFilter = ColorFilter.mode(
-                          AppColors.getAyahNumber(context),
-                          BlendMode.srcIn,
-                        ),
-                      fontWeight: FontWeight.w800,
-                      height: 1.0,
-                    ),
-                    textAlign: TextAlign.center,
-                    textDirection: TextDirection.rtl,
-                    softWrap: false,
-                    overflow: TextOverflow.visible,
-                  ),
-                ),
-              ],
+              ),
+
+            // Text Layer (uses displaySpans with WidgetSpan)
+            RichText(
+              text: TextSpan(children: displaySpans),
+              textDirection: TextDirection.rtl,
+              textAlign: isIndopak ? TextAlign.justify : TextAlign.start,
             ),
-          ),
+          ],
         );
-      } else {
-        return Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.005,
-            vertical: 0,
-          ),
-          decoration: BoxDecoration(
-            color: wordBg,
-            borderRadius: BorderRadius.circular(3),
-            border: (state.hideUnreadAyat && !isLastWordInAyah)
-                ? Border(
-                    bottom: BorderSide(
-                      color: AppColors.getTextPrimary(
-                        context,
-                      ).withValues(alpha: 0.15),
-                      width: 0.3,
-                    ),
-                  )
-                : null,
-          ),
-          child: Opacity(
-            opacity: opacity,
-            child: _buildWordText(
-              context,
-              word.text,
-              fontFamily,
-              state.isCurrentAyat,
-              screenWidth,
-            ),
-          ),
-        );
-      }
-    }).toList();
+      },
+    );
   }
 
-  Widget _buildWordText(
+  Widget _buildAyahEndMarker(
     BuildContext context,
-    String text,
-    String fontFamily,
-    bool isCurrentAyat,
-    double screenWidth,
+    AyahSegment segment,
+    double baseFontSize,
   ) {
-    final controller = context.read<SttController>();
-    final isIndopakLayout = controller.mushafLayout == MushafLayout.indopak;
-    final isIndopakFont = fontFamily == 'IndoPak-Nastaleeq';
-    final effectiveIsIndopak = isIndopakLayout || isIndopakFont;
-
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: effectiveIsIndopak
-            ? screenWidth * 0.0625
-            : screenWidth * 0.0625,
-        fontFamily: fontFamily,
-        color: effectiveIsIndopak ? AppColors.getTextPrimary(context) : null,
-        foreground: effectiveIsIndopak
-            ? null
-            : (Paint()
-                ..color = AppColors.getTextPrimary(context)
-                ..colorFilter = ColorFilter.mode(
-                  AppColors.getTextPrimary(context),
-                  BlendMode.srcIn,
-                )),
-        fontWeight: FontWeight.normal,
-        height: effectiveIsIndopak ? 1.5 : 1.6,
-        letterSpacing: effectiveIsIndopak ? 0 : 0.0,
-        shadows: effectiveIsIndopak
-            ? null
-            : [
-                Shadow(
-                  color: AppColors.getTextPrimary(
-                    context,
-                  ).withValues(alpha: 0.7),
-                  offset: const Offset(0.0, 0.0),
-                  blurRadius: 0.2,
+    return Container(
+      width: baseFontSize * 1.2,
+      height: baseFontSize,
+      alignment: Alignment.center,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Transform.translate(
+            offset: Offset(0, -baseFontSize * 0.15),
+            child: Transform.scale(
+              scale: 1.2,
+              child: Text(
+                '\u06DD',
+                style: TextStyle(
+                  fontSize: baseFontSize,
+                  fontFamily: 'IndoPak-Nastaleeq',
+                  color: AppColors.getAyahNumber(context),
+                  height: 1.0,
                 ),
-              ],
+                textDirection: TextDirection.rtl,
+              ),
+            ),
+          ),
+          Center(
+            child: Text(
+              LanguageHelper.toIndoPakDigits(segment.ayahNumber),
+              style: TextStyle(
+                fontSize: baseFontSize * 0.45,
+                fontFamily: 'Quran-Common',
+                color: AppColors.getAyahNumber(context),
+                fontWeight: FontWeight.w800,
+                height: 1.0,
+              ),
+              textAlign: TextAlign.center,
+              textDirection: TextDirection.rtl,
+            ),
+          ),
+        ],
       ),
-      textDirection: TextDirection.rtl,
     );
   }
 }
 
-class _AyahState {
+class _AyatHighlightPainter extends CustomPainter {
+  final BuildContext context;
+  final AyahSegment segment;
+  final _AyahContentState state;
+  final TextPainter textPainter;
+  final double maxWidth;
+
+  _AyatHighlightPainter({
+    required this.context,
+    required this.segment,
+    required this.state,
+    required this.textPainter,
+    required this.maxWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (state.wordStatusMap == null && !state.isHighlighted) return;
+
+    final paint = Paint()..style = PaintingStyle.fill;
+    final primaryColor = AppColors.getPrimary(context);
+
+    for (int i = 0; i < segment.words.length; i++) {
+      final word = segment.words[i];
+      final wordStatus = state.wordStatusMap?[word.id];
+
+      if (wordStatus == null && !state.isHighlighted) continue;
+
+      int startOffset = 0;
+      for (int j = 0; j < i; j++) {
+        startOffset += segment.words[j].text.length + 1;
+      }
+      final endOffset = startOffset + word.text.length;
+
+      final boxes = textPainter.getBoxesForSelection(
+        TextSelection(baseOffset: startOffset, extentOffset: endOffset),
+      );
+
+      if (wordStatus != null) {
+        paint.color = primaryColor.withValues(alpha: 0.25);
+      } else {
+        paint.color = primaryColor.withValues(alpha: 0.12);
+      }
+
+      for (final box in boxes) {
+        final rect = box.toRect();
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(rect.inflate(2), const Radius.circular(4)),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _AyatHighlightPainter oldDelegate) {
+    return oldDelegate.state.wordStatusRevision != state.wordStatusRevision ||
+        oldDelegate.state.isHighlighted != state.isHighlighted ||
+        oldDelegate.state.isCurrentAyat != state.isCurrentAyat ||
+        oldDelegate.state.wordStatusMap != state.wordStatusMap;
+  }
+}
+
+class _AyahLayoutState {
   final bool isCurrentAyat;
-  final Map<int, WordStatus>? wordStatusMap;
   final bool isNavigatedHighlight;
   final bool isSelected;
-  final int wordStatusRevision;
-  final bool showTranslation;
-  final bool showTafsir;
-  final bool hideUnreadAyat;
-  final bool isListeningMode;
   final bool isHighlighted;
 
-  const _AyahState({
+  const _AyahLayoutState({
     required this.isCurrentAyat,
     required this.isNavigatedHighlight,
-    required this.wordStatusMap,
     required this.isSelected,
-    required this.wordStatusRevision,
-    required this.showTranslation,
-    required this.showTafsir,
-    required this.hideUnreadAyat,
-    required this.isListeningMode,
     required this.isHighlighted,
   });
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is _AyahState &&
-          runtimeType == other.runtimeType &&
+      other is _AyahLayoutState &&
           isCurrentAyat == other.isCurrentAyat &&
           isNavigatedHighlight == other.isNavigatedHighlight &&
           isSelected == other.isSelected &&
-          wordStatusRevision == other.wordStatusRevision &&
-          showTranslation == other.showTranslation &&
-          showTafsir == other.showTafsir &&
-          hideUnreadAyat == other.hideUnreadAyat &&
-          isListeningMode == other.isListeningMode &&
-          isHighlighted == other.isHighlighted &&
-          _mapEquals(wordStatusMap, other.wordStatusMap);
+          isHighlighted == other.isHighlighted;
 
   @override
   int get hashCode => Object.hash(
     isCurrentAyat,
     isNavigatedHighlight,
     isSelected,
+    isHighlighted,
+  );
+}
+
+class _AyahContentState {
+  final Map<int, WordStatus>? wordStatusMap;
+  final int wordStatusRevision;
+  final bool isListeningMode;
+  final bool isHighlighted;
+  final bool isCurrentAyat;
+
+  const _AyahContentState({
+    required this.wordStatusMap,
+    required this.wordStatusRevision,
+    required this.isListeningMode,
+    required this.isHighlighted,
+    required this.isCurrentAyat,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _AyahContentState &&
+          wordStatusRevision == other.wordStatusRevision &&
+          isListeningMode == other.isListeningMode &&
+          isHighlighted == other.isHighlighted &&
+          isCurrentAyat == other.isCurrentAyat &&
+          _mapEquals(wordStatusMap, other.wordStatusMap);
+
+  @override
+  int get hashCode => Object.hash(
     wordStatusRevision,
-    showTranslation,
-    showTafsir,
-    hideUnreadAyat,
     isListeningMode,
     isHighlighted,
+    isCurrentAyat,
     wordStatusMap,
   );
 
@@ -1174,5 +1158,71 @@ class _AyahState {
       if (a[key] != b[key]) return false;
     }
     return true;
+  }
+}
+
+class _AyahExtraState {
+  final bool showTranslation;
+  final bool showTafsir;
+
+  const _AyahExtraState({
+    required this.showTranslation,
+    required this.showTafsir,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _AyahExtraState &&
+          showTranslation == other.showTranslation &&
+          showTafsir == other.showTafsir;
+
+  @override
+  int get hashCode => Object.hash(showTranslation, showTafsir);
+}
+
+class _AyahHeader extends StatelessWidget {
+  final AyahSegment segment;
+  const _AyahHeader({super.key, required this.segment});
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isCurrentAyat = context.select<SttController, bool>((ctrl) {
+      final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
+      final ayatIndex = ctrl.ayahIndexMap[wordStatusKey] ?? -1;
+      return ayatIndex >= 0 && ayatIndex == ctrl.currentAyatIndex;
+    });
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: EdgeInsets.only(bottom: screenHeight * 0.008),
+        padding: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.02,
+          vertical: screenHeight * 0.005,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          border: Border.all(
+            color: isCurrentAyat
+                ? AppColors.getPrimary(context)
+                : AppColors.getTextSecondary(context),
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          '${segment.surahId}:${segment.ayahNumber}',
+          style: TextStyle(
+            color: isCurrentAyat
+                ? AppColors.getPrimary(context)
+                : AppColors.getTextPrimary(context),
+            fontSize: screenWidth * 0.0275,
+          ),
+        ),
+      ),
+    );
   }
 }
