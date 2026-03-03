@@ -2139,6 +2139,10 @@ class SttController extends ChangeNotifier {
       _activeSurahId = surahId;
       _activeAyahNumber = ayahNumber;
       _updateSurahNameForPageSync(page);
+
+      // ✅ SYNC APP BAR IMMEDIATELY
+      updateVisiblePageQuiet(page);
+
       notifyListeners();
     }
   }

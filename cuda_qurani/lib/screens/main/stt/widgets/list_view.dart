@@ -78,13 +78,13 @@ class _QuranListViewState extends State<QuranListView> {
       _lastScrolledAyahId = globalId;
       Scrollable.ensureVisible(
         key.currentContext!,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeInOutCubic,
-        alignment: 0.2, // Center-ish
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        alignment: 0.15, // Land slightly below the top
       );
-    } else if (retryCount < 5) {
+    } else if (retryCount < 10) {
       // If we jumped to a new page, slivers might take a frame to populate keys
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 50));
       if (mounted) {
         _scrollToVerse(globalId, retryCount: retryCount + 1);
       }
@@ -167,7 +167,11 @@ class _QuranListViewState extends State<QuranListView> {
       for (var line in lines) {
         if (line.ayahSegments != null) {
           for (var ayah in line.ayahSegments!) {
-            keysToKeep.add(ayah.id);
+            final globalId = GlobalAyatService.toGlobalAyat(
+              ayah.surahId,
+              ayah.ayahNumber,
+            );
+            keysToKeep.add(globalId);
           }
         }
       }
@@ -194,13 +198,17 @@ class _QuranListViewState extends State<QuranListView> {
         if (segments == null) continue;
 
         for (var ayah in segments) {
-          final key = _verseKeys[ayah.id];
+          final globalId = GlobalAyatService.toGlobalAyat(
+            ayah.surahId,
+            ayah.ayahNumber,
+          );
+          final key = _verseKeys[globalId];
           final renderBox =
               key?.currentContext?.findRenderObject() as RenderBox?;
           if (renderBox != null) {
             final position = renderBox.localToGlobal(Offset.zero).dy;
             if (position >= -100 && position <= 50) {
-              controller.updateTopVerse(ayah.id, p);
+              controller.updateTopVerse(globalId, p);
               return;
             }
           }
@@ -235,7 +243,11 @@ class _QuranListViewState extends State<QuranListView> {
 
       for (final lineModel in renderModel.lines) {
         if (lineModel is AyahLineModel) {
-          final verseKey = _verseKeys[lineModel.segment.id];
+          final globalId = GlobalAyatService.toGlobalAyat(
+            lineModel.segment.surahId,
+            lineModel.segment.ayahNumber,
+          );
+          final verseKey = _verseKeys[globalId];
           if (verseKey?.currentContext != null) {
             final renderBox =
                 verseKey!.currentContext!.findRenderObject() as RenderBox?;
@@ -421,7 +433,7 @@ class _QuranListViewState extends State<QuranListView> {
       controller: _scrollController,
       center: _forwardListKey,
       physics: const BouncingScrollPhysics(),
-      cacheExtent: 800,
+      cacheExtent: 2000,
       slivers: [
         // ═══════════════════════════════════════════
         // REVERSE SLIVER: Pages before anchor (scroll UP)
@@ -828,23 +840,15 @@ class _CompleteAyahWidget extends StatelessWidget {
                     textDirection: TextDirection.rtl,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: state.isSelected
+                        color:
+                            (state.isSelected ||
+                                state.isCurrentAyat ||
+                                state.isNavigatedHighlight)
                             ? AppColors.getPrimary(
                                 context,
-                              ).withValues(alpha: 0.1)
-                            : state.isNavigatedHighlight
-                            ? AppColors.getPrimary(
-                                context,
-                              ).withValues(alpha: 0.25)
+                              ).withValues(alpha: 0.12)
                             : Colors.transparent,
-                        border: state.isNavigatedHighlight
-                            ? Border.all(
-                                color: AppColors.getPrimary(
-                                  context,
-                                ).withValues(alpha: 0.5),
-                                width: 1.5,
-                              )
-                            : null,
+                        border: null,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       // ✅ FIXED: Always use fixed padding to prevent layout shifts ("loncat") when selected
