@@ -311,9 +311,6 @@ class _SttPageState extends State<SttPage> {
                 )
               : const SizedBox.shrink(),
         ),
-
-        // ✅ NEW: SMART ACTION HUB
-        SmartActionHub(),
       ],
     );
   }

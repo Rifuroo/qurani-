@@ -136,10 +136,10 @@ class _QuranAppBarState extends State<QuranAppBar> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    final iconSize = screenWidth * 0.060;
-    final titleSize = screenWidth * 0.028;
-    final subtitleSize = screenWidth * 0.028;
-    final badgeSize = screenWidth * 0.028;
+    final iconSize = screenWidth * 0.050; // Increased
+    final titleSize = screenWidth * 0.028; // Increased
+    final subtitleSize = screenWidth * 0.028; // Increased
+    final badgeSize = screenWidth * 0.028; // Increased
 
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
@@ -159,95 +159,149 @@ class _QuranAppBarState extends State<QuranAppBar> {
             onPressed: () => Navigator.pop(context),
           ),
 
-          // ✅ FIX UTAMA: Gunakan ValueListenableBuilder agar JUDUL update instan tanpa rebuild seluruh AppBar
-          title: ValueListenableBuilder<PageDisplayData>(
-            valueListenable: controller.appBarNotifier,
-            builder: (context, data, _) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 4,
-                  horizontal: 16,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo
-                    Image.asset(
-                      'assets/images/qurani-white-text.png',
-                      height: screenHeight * 0.016,
-                      fit: BoxFit.contain,
-                      alignment: Alignment.centerLeft,
-                    ),
-                    SizedBox(height: screenHeight * 0.006),
+          title: Transform.translate(
+            offset: const Offset(-1, 0), // <--- BIAR MINUS DI SINI BANG!
+            child: ValueListenableBuilder<PageDisplayData>(
+              valueListenable: controller.appBarNotifier,
+              builder: (context, data, _) {
+                return Padding(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo
+                      Image.asset(
+                        'assets/images/qurani-white-text.png',
+                        height: screenHeight * 0.020, // Gedein dikit bang
+                        fit: BoxFit.contain,
+                        alignment: Alignment.centerLeft,
+                      ),
+                      SizedBox(height: screenHeight * 0.007),
 
-                    // Info Row with structured layout
-                    Row(
-                      children: [
-                        // Surah Name (Dari Notifier)
-                        Text(
-                          data.surahName,
-                          style: TextStyle(
-                            fontSize: titleSize,
-                            fontWeight: FontWeight.bold,
-                            color: _getAppBarTextColor(context),
-                            height: 1.1,
+                      // Info Row with structured layout
+                      Row(
+                        children: [
+                          // Surah Name
+                          Text(
+                            data.surahName,
+                            style: TextStyle(
+                              fontSize: titleSize, // Reverted to full size
+                              fontWeight: FontWeight.bold,
+                              color: _getAppBarTextColor(context),
+                              height: 1.1,
+                            ),
                           ),
-                        ),
 
-                        SizedBox(width: screenWidth * 0.02),
-                        _buildSeparator(context, screenHeight),
-                        SizedBox(width: screenWidth * 0.02),
+                          _buildSeparator(context, screenHeight),
+                          const SizedBox(width: 4),
 
-                        // Juz Badge (Dari Notifier)
-                        Text(
-                          '${LanguageHelper.tr(_translations, "app_bar.juz_text")} ${context.formatNumber(data.juzNumber)}',
-                          style: TextStyle(
-                            fontSize: badgeSize,
-                            fontWeight: FontWeight.w500,
-                            color: _getAppBarTextColor(
-                              context,
-                            ).withOpacity(0.9),
-                            height: 1.1,
+                          // Juz Badge
+                          Text(
+                            '${LanguageHelper.tr(_translations, "app_bar.juz_text")} ${context.formatNumber(data.juzNumber)}',
+                            style: TextStyle(
+                              fontSize: badgeSize, // Gedein dikit bang
+                              fontWeight: FontWeight.w500,
+                              color: _getAppBarTextColor(
+                                context,
+                              ).withOpacity(0.9),
+                              height: 1.1,
+                            ),
                           ),
-                        ),
 
-                        SizedBox(width: screenWidth * 0.02),
-                        _buildSeparator(context, screenHeight),
-                        SizedBox(width: screenWidth * 0.02),
+                          const SizedBox(width: 4),
+                          _buildSeparator(context, screenHeight),
+                          const SizedBox(width: 4),
 
-                        // Page Number (Dari Notifier)
-                        Text(
-                          '${LanguageHelper.tr(_translations, "app_bar.page_text")} ${context.formatNumber(data.pageNumber)}',
-                          style: TextStyle(
-                            fontSize: subtitleSize,
-                            fontWeight: FontWeight.w500,
-                            color: _getAppBarTextColor(
-                              context,
-                            ).withOpacity(0.9),
-                            height: 1.1,
+                          // Page Number
+                          Text(
+                            '${LanguageHelper.tr(_translations, "app_bar.page_text")} ${context.formatNumber(data.pageNumber)}',
+                            style: TextStyle(
+                              fontSize: subtitleSize, // Gedein dikit bang
+                              fontWeight: FontWeight.w500,
+                              color: _getAppBarTextColor(
+                                context,
+                              ).withOpacity(0.9),
+                              height: 1.1,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
           titleSpacing: 0,
 
-          // ✅ ACTIONS: Search, Visibility, Settings
+          // ✅ ACTIONS: Options moved from Floating Button + Search, Settings
           actions: [
+            // Bookmark
+            IconButton(
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+              icon: Icon(
+                Icons.bookmark_outline,
+                size: iconSize * 1,
+                color: _getAppBarTextColor(context),
+              ),
+              padding: EdgeInsets.zero,
+              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
+              constraints: const BoxConstraints(),
+              splashRadius: iconSize,
+              tooltip: 'Penanda',
+            ),
+
+            // View Mode
+            IconButton(
+              onPressed: () => controller.toggleQuranMode(),
+              icon: Icon(
+                context.select<SttController, bool>((c) => c.isQuranMode)
+                    ? Icons.auto_stories
+                    : Icons.vertical_split,
+                size: iconSize * 0.8,
+                color: _getAppBarTextColor(context),
+              ),
+              padding: EdgeInsets.zero,
+              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
+              constraints: const BoxConstraints(),
+              splashRadius: iconSize,
+              tooltip: 'Tampilan',
+            ),
+
+            // Visibility (Highlight)
+            IconButton(
+              onPressed: () => controller.toggleHideUnread(),
+              icon: Icon(
+                context.select<SttController, bool>((c) => c.hideUnreadAyat)
+                    ? Icons.visibility
+                    : Icons.visibility_off,
+                size: iconSize * 1,
+                color: _getAppBarTextColor(context),
+              ),
+              padding: EdgeInsets.zero,
+              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
+              constraints: const BoxConstraints(),
+              splashRadius: iconSize,
+              tooltip: 'Sorotan',
+            ),
+
+            // Search
             IconButton(
               onPressed: () => AyahSearchModal.show(context),
               icon: Icon(
                 Icons.search,
-                size: iconSize * 0.9,
+                size: iconSize * 1,
                 color: _getAppBarTextColor(context),
               ),
-              splashRadius: iconSize * 1.1,
+              padding: EdgeInsets.zero,
+              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
+              constraints: const BoxConstraints(),
+              splashRadius: iconSize,
+              tooltip: 'Cari',
             ),
+
+            // Settings
             IconButton(
               onPressed: () => Navigator.push(
                 context,
@@ -283,10 +337,14 @@ class _QuranAppBarState extends State<QuranAppBar> {
               ),
               icon: Icon(
                 Icons.settings,
-                size: iconSize * 0.9,
+                size: iconSize * 1,
                 color: _getAppBarTextColor(context),
               ),
-              splashRadius: iconSize * 1.1,
+              padding: EdgeInsets.zero,
+              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
+              constraints: const BoxConstraints(),
+              splashRadius: iconSize,
+              tooltip: 'Pengaturan',
             ),
           ],
         ),
@@ -1417,259 +1475,4 @@ void showSimpleSnackBar(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
     ),
   );
-}
-
-/// ✅ INOVASI: Smart Draggable Action Hub
-/// Pindahkan 3 opsi utama (Bookmark, View Mode, Visibility) ke sini agar AppBar tetap bersih.
-/// Fitur: Draggable, Edge Snapping, Ghost Mode (Transparan saat idle).
-class SmartActionHub extends StatefulWidget {
-  const SmartActionHub({Key? key}) : super(key: key);
-
-  @override
-  State<SmartActionHub> createState() => _SmartActionHubState();
-}
-
-class _SmartActionHubState extends State<SmartActionHub>
-    with TickerProviderStateMixin {
-  Offset? _position;
-  bool _isExpanded = false;
-  bool _isDragging = false;
-
-  late AnimationController _expandController;
-  late Animation<double> _expandAnimation;
-
-  // 🫁 Breathe Animation for discoverability
-  late AnimationController _breatheController;
-  late Animation<double> _breatheAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _expandController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _expandAnimation = CurvedAnimation(
-      parent: _expandController,
-      curve: Curves.easeOutBack,
-    );
-
-    _breatheController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-    _breatheAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
-      CurvedAnimation(parent: _breatheController, curve: Curves.easeInOutSine),
-    );
-  }
-
-  @override
-  void dispose() {
-    _expandController.dispose();
-    _breatheController.dispose();
-    super.dispose();
-  }
-
-  void _toggleExpanded() {
-    AppHaptics.light();
-    setState(() {
-      _isExpanded = !_isExpanded;
-      if (_isExpanded) {
-        _expandController.forward();
-      } else {
-        _expandController.reverse();
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isUIVisible = context.read<SttController>().isUIVisible;
-    final controller = context.read<SttController>();
-
-    if (_position == null) {
-      _position = Offset(size.width - 60, size.height * 0.45);
-    }
-
-    const double handleWidth = 48.0;
-    final double safeX = _position!.dx.clamp(
-      10.0,
-      size.width - handleWidth - 10.0,
-    );
-    final double safeY = _position!.dy.clamp(80.0, size.height - 180.0);
-    final bool isLeftAnchor = safeX < size.width / 2;
-
-    // 👻 GHOST MODE: Highly transparent when idle (0.25), solid when active (1.0)
-    final double ghostOpacity = (_isExpanded || _isDragging) ? 1.0 : 0.25;
-    final double finalOpacity = isUIVisible ? ghostOpacity : 0.0;
-
-    return AnimatedPositioned(
-      duration: _isDragging ? Duration.zero : const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-      left: isLeftAnchor ? safeX : null,
-      right: isLeftAnchor ? null : (size.width - safeX - handleWidth),
-      top: safeY,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 300),
-        opacity: finalOpacity,
-        child: IgnorePointer(
-          ignoring: !isUIVisible,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: isLeftAnchor
-                ? CrossAxisAlignment.start
-                : CrossAxisAlignment.end,
-            children: [
-              // Menu Items
-              SizeTransition(
-                sizeFactor: _expandAnimation,
-                axis: Axis.vertical,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Column(
-                    children: [
-                      _buildHubItem(
-                        icon: Icons.bookmark_outline,
-                        label: 'Penanda',
-                        onTap: () {
-                          _toggleExpanded();
-                          Scaffold.of(context).openEndDrawer();
-                        },
-                        isLeft: isLeftAnchor,
-                      ),
-                      const SizedBox(height: 10),
-                      _buildHubItem(
-                        icon:
-                            context.select<SttController, bool>(
-                              (c) => c.isQuranMode,
-                            )
-                            ? Icons.auto_stories
-                            : Icons.vertical_split,
-                        label: 'Tampilan',
-                        onTap: () => controller.toggleQuranMode(),
-                        isLeft: isLeftAnchor,
-                      ),
-                      const SizedBox(height: 10),
-                      _buildHubItem(
-                        icon:
-                            context.select<SttController, bool>(
-                              (c) => c.hideUnreadAyat,
-                            )
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                        label: 'Sorotan',
-                        onTap: () => controller.toggleHideUnread(),
-                        isLeft: isLeftAnchor,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Main Handle with Breathing Effect
-              GestureDetector(
-                onPanStart: (_) => setState(() => _isDragging = true),
-                onPanUpdate: (details) {
-                  setState(() {
-                    _position = _position! + details.delta;
-                  });
-                },
-                onPanEnd: (_) {
-                  setState(() {
-                    _isDragging = false;
-                    final targetX = _position!.dx < size.width / 2
-                        ? 15.0
-                        : size.width - handleWidth - 15.0;
-                    _position = Offset(targetX, _position!.dy);
-                  });
-                  AppHaptics.light();
-                },
-                onTap: _toggleExpanded,
-                child: ScaleTransition(
-                  scale: (!_isExpanded && !_isDragging)
-                      ? _breatheAnimation
-                      : const AlwaysStoppedAnimation(1.0),
-                  child: Material(
-                    elevation: (_isExpanded || _isDragging) ? 10 : 0,
-                    shape: const CircleBorder(),
-                    color: AppColors.getPrimary(
-                      context,
-                    ).withOpacity(_isExpanded || _isDragging ? 0.8 : 0.5),
-                    child: Container(
-                      width: handleWidth,
-                      height: handleWidth,
-                      decoration: const BoxDecoration(shape: BoxShape.circle),
-                      child: Icon(
-                        _isExpanded ? Icons.close : Icons.tune,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHubItem({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    required bool isLeft,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!isLeft) _buildLabel(label),
-            Material(
-              elevation: 4,
-              shape: const CircleBorder(),
-              color: AppColors.getSurface(context),
-              child: Container(
-                width: 38,
-                height: 38,
-                child: Icon(
-                  icon,
-                  size: 18,
-                  color: AppColors.getPrimary(context),
-                ),
-              ),
-            ),
-            if (isLeft) _buildLabel(label),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLabel(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      margin: EdgeInsets.only(
-        left: _position!.dx < MediaQuery.of(context).size.width / 2 ? 12 : 0,
-        right: _position!.dx < MediaQuery.of(context).size.width / 2 ? 0 : 12,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
 }
