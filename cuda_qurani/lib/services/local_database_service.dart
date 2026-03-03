@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/screens/main/stt/controllers/stt_controller.dart';
 import 'package:cuda_qurani/services/mushaf_settings_service.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -370,8 +371,11 @@ class LocalDatabaseService {
     }
   }
 
-  /// Search verses by Arabic text OR surah name (Latin/Arabic)
-  static Future<List<Map<String, dynamic>>> searchVerses(String query) async {
+  /// Search verses by Arabic text OR surah name (Latin/Arabic) OR Translation text
+  static Future<List<Map<String, dynamic>>> searchVerses(
+    String query, {
+    String? translationDbName,
+  }) async {
     await _ensureInitialized();
 
     if (query.trim().isEmpty) {
@@ -603,6 +607,64 @@ class LocalDatabaseService {
           'surah_name_arabic': metadata?['name_arabic'] ?? '',
           'match_type': 'verse_text', // Indicate this matched by verse text
         });
+      }
+    }
+
+    // 3. Search by TRANSLATION TEXT - ONLY if no surah or verse text matches (or maybe always?)
+    // Actually, let's always try translation search if dbName is provided and no results yet
+    if (results.isEmpty && translationDbName != null && query.length >= 2) {
+      try {
+        final docsDir = await getApplicationDocumentsDirectory();
+        final path = join(docsDir.path, 'resources', '$translationDbName.db');
+
+        if (await File(path).exists()) {
+          final transDb = await openDatabase(path, readOnly: true);
+
+          // Probe for table
+          final tables = await transDb.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table'",
+          );
+          final tableNames = tables.map((t) => t['name'] as String).toList();
+          String tableName = tableNames.contains('translation')
+              ? 'translation'
+              : (tableNames.contains('resources') ? 'resources' : '');
+
+          if (tableName.isNotEmpty) {
+            final transMatches = await transDb.query(
+              tableName,
+              where: 'text LIKE ?',
+              whereArgs: ['%$query%'],
+              limit: 50,
+            );
+
+            for (var match in transMatches) {
+              final ayahKey = (match['ayah_key'] ?? match['id']) as String;
+              final parts = ayahKey.split(':');
+              if (parts.length == 2) {
+                final surahNum = int.parse(parts[0]);
+                final ayahNum = int.parse(parts[1]);
+                final transText = match['text'] as String;
+
+                // Get surah metadata
+                final metadata = await getSurahMetadata(surahNum);
+
+                results.add({
+                  'surah_number': surahNum,
+                  'ayah_number': ayahNum,
+                  'text':
+                      '', // We'll fetch Arabic text if needed or leave empty
+                  'translation_text': transText,
+                  'surah_name': metadata?['name_simple'] ?? 'Surah $surahNum',
+                  'surah_name_arabic': metadata?['name_arabic'] ?? '',
+                  'match_type': 'translation',
+                });
+              }
+            }
+          }
+          await transDb.close();
+        }
+      } catch (e) {
+        print('[DB] Error searching translation: $e');
       }
     }
 

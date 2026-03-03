@@ -31,12 +31,14 @@ class _QuranListViewState extends State<QuranListView> {
   // ✅ PHASE 7: Anchor page — the page placed at offset 0.0
   int _anchorPage = 1;
 
+  bool _hasJumped = false;
+  int? _lastScrolledAyahId;
+
   // State tracking
   int _currentVisiblePage = 1;
   bool _userScrolling = false;
   bool _preloadPaused = false;
   Timer? _debounceTimer;
-  bool _hasJumped = false;
 
   // ✅ PHASE 7: Center key for the forward sliver
   final GlobalKey _forwardListKey = GlobalKey(debugLabel: 'forward_sliver');
@@ -60,7 +62,33 @@ class _QuranListViewState extends State<QuranListView> {
       // ✅ PHASE 7: No jump needed! The anchor page is already at offset 0.
       // Just start preloading adjacent pages.
       _startSmartPreload(targetPage);
+
+      // ✅ Scroll to verse if needed on initial jump
+      if (controller.navigatedAyahId != null) {
+        _scrollToVerse(controller.navigatedAyahId!);
+      }
     });
+  }
+
+  Future<void> _scrollToVerse(int globalId, {int retryCount = 0}) async {
+    if (!mounted || _userScrolling) return;
+
+    final key = _verseKeys[globalId];
+    if (key != null && key.currentContext != null) {
+      _lastScrolledAyahId = globalId;
+      Scrollable.ensureVisible(
+        key.currentContext!,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.2, // Center-ish
+      );
+    } else if (retryCount < 5) {
+      // If we jumped to a new page, slivers might take a frame to populate keys
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (mounted) {
+        _scrollToVerse(globalId, retryCount: retryCount + 1);
+      }
+    }
   }
 
   /// ✅ PHASE 7: Jump = Rebuild with new anchor
@@ -378,6 +406,14 @@ class _QuranListViewState extends State<QuranListView> {
       });
     }
 
+    // ✅ Handle pinpoint navigation (Scroll to Verse)
+    if (controller.navigatedAyahId != null &&
+        controller.navigatedAyahId != _lastScrolledAyahId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToVerse(controller.navigatedAyahId!);
+      });
+    }
+
     // ✅ PHASE 7: CustomScrollView with center key
     // The forward sliver starts at _anchorPage (placed at offset 0.0).
     // The reverse sliver renders pages before the anchor (scrolling up).
@@ -554,10 +590,14 @@ class _VerticalPageContent extends StatelessWidget {
         widgets.add(const _Basmallah());
       } else if (lineModel is AyahLineModel) {
         final segment = lineModel.segment;
+        final globalId = GlobalAyatService.toGlobalAyat(
+          segment.surahId,
+          segment.ayahNumber,
+        );
         widgets.add(
           _CompleteAyahWidget(
-            key: verseKeys[segment.id] ??= GlobalKey(
-              debugLabel: 'verse_${segment.id}',
+            key: verseKeys[globalId] ??= GlobalKey(
+              debugLabel: 'verse_$globalId',
             ),
             segment: segment,
             fontFamily: fontFamily,
@@ -788,11 +828,23 @@ class _CompleteAyahWidget extends StatelessWidget {
                     textDirection: TextDirection.rtl,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: (state.isNavigatedHighlight || state.isSelected)
+                        color: state.isSelected
                             ? AppColors.getPrimary(
                                 context,
                               ).withValues(alpha: 0.1)
+                            : state.isNavigatedHighlight
+                            ? AppColors.getPrimary(
+                                context,
+                              ).withValues(alpha: 0.25)
                             : Colors.transparent,
+                        border: state.isNavigatedHighlight
+                            ? Border.all(
+                                color: AppColors.getPrimary(
+                                  context,
+                                ).withValues(alpha: 0.5),
+                                width: 1.5,
+                              )
+                            : null,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       // ✅ FIXED: Always use fixed padding to prevent layout shifts ("loncat") when selected

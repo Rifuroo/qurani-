@@ -1,3 +1,4 @@
+import 'package:cuda_qurani/services/quran_resource_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/stt_controller.dart';
@@ -60,7 +61,18 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
 
     setState(() => _isLoading = true);
     try {
-      final results = await LocalDatabaseService.searchVerses(query);
+      final resourceSvc = context.read<QuranResourceService>();
+
+      // The naming pattern for DB is actually more complex in QuranResourceService.
+      // Let's use the actual active DB name if possible.
+      // After checking QuranResourceService, there isn't a direct getter for the DB name,
+      // but we can infer it or add a getter.
+      // For now, let's try to match how it's built in loadTranslation.
+
+      final results = await LocalDatabaseService.searchVerses(
+        query,
+        translationDbName: resourceSvc.getTranslationDbName(),
+      );
       if (mounted) {
         setState(() {
           _searchResults = results;
@@ -181,6 +193,18 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
   }
 
   Widget _buildInitialState() {
+    final resourceSvc = context.read<QuranResourceService>();
+    final lang = resourceSvc.selectedTranslationLanguage?.toLowerCase() ?? '';
+    final isIndo = lang.contains('indonesia');
+    final isEnglish = lang.contains('english');
+
+    List<String> hints = ['Al-Baqarah', '36:1', 'الحمد لله'];
+    if (isIndo) {
+      hints.add('Musa');
+    } else if (isEnglish) {
+      hints.add('Moses');
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -198,12 +222,7 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [
-              _buildHintChip('Al-Baqarah'),
-              _buildHintChip('36:1'),
-              _buildHintChip('الحمد لله'),
-              _buildHintChip('اهدنا الصراط'),
-            ],
+            children: hints.map((h) => _buildHintChip(h)).toList(),
           ),
         ],
       ),
@@ -248,6 +267,8 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
         final text = result['text'] as String;
         final surahName = result['surah_name'] as String;
 
+        final translationText = result['translation_text'] as String?;
+
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 24,
@@ -261,11 +282,28 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
               fontSize: 14,
             ),
           ),
-          subtitle: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'UthmanTN', fontSize: 16),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (text.isNotEmpty)
+                Text(
+                  text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'UthmanTN', fontSize: 16),
+                ),
+              if (translationText != null)
+                Text(
+                  translationText,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.getTextSecondary(context),
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+            ],
           ),
           onTap: () {
             final effectiveController =

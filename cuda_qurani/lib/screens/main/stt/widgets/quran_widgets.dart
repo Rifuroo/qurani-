@@ -160,7 +160,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
           ),
 
           title: Transform.translate(
-            offset: const Offset(-1, 0), // <--- BIAR MINUS DI SINI BANG!
+            offset: const Offset(-3, 0), // <--- BIAR MINUS DI SINI BANG!
             child: ValueListenableBuilder<PageDisplayData>(
               valueListenable: controller.appBarNotifier,
               builder: (context, data, _) {

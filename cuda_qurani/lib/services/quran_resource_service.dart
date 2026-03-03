@@ -37,6 +37,8 @@ class QuranResourceService extends ChangeNotifier {
   String? get selectedTafsirLanguage => _selectedTafsirLanguage;
   String? get selectedTranslationLanguage => _selectedTranslationLanguage;
 
+  String? getTranslationDbName() => _activeTranslationDbName;
+
   static const Map<String, String> _langMap = {
     'العربية': 'Arabic',
     'বাংলা': 'Bengali',
