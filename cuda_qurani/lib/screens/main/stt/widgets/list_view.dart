@@ -940,7 +940,7 @@ class _CompleteAyahWidget extends StatelessWidget {
         final textPainter = TextPainter(
           text: TextSpan(children: measureSpans),
           textDirection: TextDirection.rtl,
-          textAlign: isIndopak ? TextAlign.justify : TextAlign.start,
+          textAlign: TextAlign.right,
         )..layout(maxWidth: availableWidth);
 
         // 2. Wrap in a Stack for highlight overlay
