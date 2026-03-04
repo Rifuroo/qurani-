@@ -581,14 +581,18 @@ class _VerticalPageContent extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _PageHeader(pageNumber: pageNumber, juzNumber: renderModel.juzNumber),
-          ..._buildLinesInOrder(context),
+          ..._buildLinesInOrder(context, screenWidth, screenHeight),
           SizedBox(height: screenHeight * 0.025),
         ],
       ),
     );
   }
 
-  List<Widget> _buildLinesInOrder(BuildContext context) {
+  List<Widget> _buildLinesInOrder(
+    BuildContext context,
+    double screenWidth,
+    double screenHeight,
+  ) {
     final widgets = <Widget>[];
     final controller = context.read<SttController>();
     final fontFamily = controller.mushafLayout.isGlyphBased
@@ -613,6 +617,8 @@ class _VerticalPageContent extends StatelessWidget {
             ),
             segment: segment,
             fontFamily: fontFamily,
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
           ),
         );
       }
@@ -730,18 +736,21 @@ class _Basmallah extends StatelessWidget {
 class _CompleteAyahWidget extends StatelessWidget {
   final AyahSegment segment;
   final String fontFamily;
+  final double screenWidth;
+  final double screenHeight;
 
   const _CompleteAyahWidget({
     super.key,
     required this.segment,
     required this.fontFamily,
+    required this.screenWidth,
+    required this.screenHeight,
   });
 
   @override
   Widget build(BuildContext context) {
     final controller = context.read<SttController>();
     final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
-    final screenHeight = MediaQuery.of(context).size.height;
 
     return GestureDetector(
       onLongPress: () => controller.handleListViewLongPress(context, segment),
@@ -765,7 +774,12 @@ class _CompleteAyahWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (segment.isStartOfAyah) _AyahHeader(segment: segment),
+              if (segment.isStartOfAyah)
+                _AyahHeader(
+                  segment: segment,
+                  screenWidth: screenWidth,
+                  screenHeight: screenHeight,
+                ),
 
               // Arabic Text & Background Highlight
               Selector<SttController, _AyahLayoutState>(
@@ -886,7 +900,6 @@ class _CompleteAyahWidget extends StatelessWidget {
     AyahSegment segment,
     _AyahContentState state,
   ) {
-    final screenWidth = MediaQuery.of(context).size.width;
     final controller = context.read<SttController>();
     final isIndopak =
         controller.mushafLayout == MushafLayout.indopak ||
@@ -1183,12 +1196,17 @@ class _AyahExtraState {
 
 class _AyahHeader extends StatelessWidget {
   final AyahSegment segment;
-  const _AyahHeader({super.key, required this.segment});
+  final double screenWidth;
+  final double screenHeight;
+  const _AyahHeader({
+    super.key,
+    required this.segment,
+    required this.screenWidth,
+    required this.screenHeight,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     final isCurrentAyat = context.select<SttController, bool>((ctrl) {
       final wordStatusKey = '${segment.surahId}:${segment.ayahNumber}';
       final ayatIndex = ctrl.ayahIndexMap[wordStatusKey] ?? -1;

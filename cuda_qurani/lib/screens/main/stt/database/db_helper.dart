@@ -18,6 +18,7 @@ enum DBType {
 
 class DBHelper {
   static final Map<DBType, Database> _dbInstances = {};
+  static final Map<DBType, Future<Database>> _pendingOpens = {};
 
   static Future<Database> openDB(DBType type) async {
     // ✅ Check if already open
@@ -26,11 +27,28 @@ class DBHelper {
       if (db.isOpen) {
         return db;
       } else {
-        print('[DBHelper] Database $type was closed, removing from cache...');
         _dbInstances.remove(type);
       }
     }
 
+    // ✅ CRITICAL: If another call is already opening this type, wait for it
+    if (_pendingOpens.containsKey(type)) {
+      return await _pendingOpens[type]!;
+    }
+
+    // ✅ Create the open future and store it so concurrent callers can await it
+    final openFuture = _openDBInternal(type);
+    _pendingOpens[type] = openFuture;
+
+    try {
+      final db = await openFuture;
+      return db;
+    } finally {
+      _pendingOpens.remove(type);
+    }
+  }
+
+  static Future<Database> _openDBInternal(DBType type) async {
     // mapping lokasi assets + nama database
     final dbConfig = {
       DBType.metadata: {
