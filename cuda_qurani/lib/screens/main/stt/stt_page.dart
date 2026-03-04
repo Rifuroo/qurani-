@@ -107,33 +107,41 @@ class _SttPageState extends State<SttPage> {
         ),
         Provider(create: (_) => QuranService()),
       ],
-      child: Consumer<SttController>(
-        builder: (context, controller, child) {
-          // Handle achievement popup logic
-          if (controller.newlyEarnedAchievements.isNotEmpty) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _showAchievementPopup(context, controller);
-            });
-          }
+      child: Scaffold(
+        backgroundColor: AppColors.getBackground(context),
+        resizeToAvoidBottomInset: false,
+        extendBodyBehindAppBar: true,
+        appBar: const QuranAppBar(),
+        endDrawer: Consumer<SttController>(
+          builder: (context, controller, _) =>
+              BookmarkDrawer(controller: controller),
+        ),
+        endDrawerEnableOpenDragGesture:
+            false, // Prevents accidental swipe-to-open
+        body:
+            Selector<
+              SttController,
+              ({String? errorMessage, bool isLoading, bool isOverlayVisible})
+            >(
+              selector: (_, c) => (
+                errorMessage: c.errorMessage,
+                isLoading: c.isLoading,
+                isOverlayVisible: c.isOverlayVisible,
+              ),
+              builder: (context, data, _) {
+                if (data.isLoading) return const SizedBox.shrink();
 
-          return Scaffold(
-            backgroundColor: AppColors.getBackground(context),
-            resizeToAvoidBottomInset: false,
-            extendBodyBehindAppBar: true,
-            appBar: const QuranAppBar(),
-            endDrawer: BookmarkDrawer(controller: controller),
-            endDrawerEnableOpenDragGesture:
-                false, // Prevents accidental swipe-to-open
-            body: Selector<SttController, String?>(
-              selector: (_, c) => c.errorMessage,
-              builder: (context, errorMessage, _) {
-                final isLoading = context.select<SttController, bool>(
-                  (c) => c.isLoading,
-                );
+                final controller = context.read<SttController>();
 
-                if (isLoading) return const SizedBox.shrink();
+                // Handle achievement popup logic - only if not in overlay mode
+                if (!data.isOverlayVisible &&
+                    controller.newlyEarnedAchievements.isNotEmpty) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _showAchievementPopup(context, controller);
+                  });
+                }
 
-                if (errorMessage?.isNotEmpty ?? false) {
+                if (data.errorMessage?.isNotEmpty ?? false) {
                   return Column(
                     children: [
                       SizedBox(height: kToolbarHeight * 0.86),
@@ -152,7 +160,7 @@ class _SttPageState extends State<SttPage> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                errorMessage!,
+                                data.errorMessage!,
                                 style: TextStyle(color: AppColors.textInverse),
                               ),
                             ),
@@ -168,7 +176,11 @@ class _SttPageState extends State<SttPage> {
                       ),
                       Expanded(
                         child: GestureDetector(
-                          onTap: controller.toggleUIVisibility,
+                          onTap: () {
+                            if (!controller.isOverlayVisible) {
+                              controller.toggleUIVisibility();
+                            }
+                          },
                           child: Column(
                             children: [
                               Expanded(child: _buildMainContent(context)),
@@ -187,7 +199,11 @@ class _SttPageState extends State<SttPage> {
                 }
 
                 return GestureDetector(
-                  onTap: controller.toggleUIVisibility,
+                  onTap: () {
+                    if (!controller.isOverlayVisible) {
+                      controller.toggleUIVisibility();
+                    }
+                  },
                   child: MushafPaperBackground(
                     child: Column(
                       children: [
@@ -204,8 +220,6 @@ class _SttPageState extends State<SttPage> {
                 );
               },
             ),
-          );
-        },
       ),
     );
   }

@@ -9,9 +9,10 @@ class AyahSearchModal extends StatefulWidget {
   final SttController? controller;
   const AyahSearchModal({super.key, this.controller});
 
-  static Future<void> show(BuildContext context) {
+  static Future<void> show(BuildContext context) async {
     final controller = Provider.of<SttController>(context, listen: false);
-    return showGeneralDialog(
+    controller.setOverlayVisible(true);
+    await showGeneralDialog(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Search',
@@ -33,6 +34,7 @@ class AyahSearchModal extends StatefulWidget {
         );
       },
     );
+    controller.setOverlayVisible(false);
   }
 
   @override
@@ -125,10 +127,10 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
                       ),
                       decoration: InputDecoration(
                         hintText:
-                            'Search Surah or Verse (e.g. Al-Fatihah, 36:1)',
+                            'Cari Surah atau Ayat (misal: Al-Baqarah, 1:1)',
                         prefixIcon: Icon(
                           Icons.search,
-                          color: AppColors.getPrimary(context),
+                          color: AppColors.getPrimary(context).withOpacity(0.5),
                         ),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
@@ -136,6 +138,7 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
                                 onPressed: () {
                                   _searchController.clear();
                                   _performSearch('');
+                                  setState(() {});
                                 },
                               )
                             : null,
@@ -156,10 +159,32 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
                           fontSize: 14,
                         ),
                       ),
-                      onChanged: _performSearch,
+                      onChanged: (val) {
+                        if (val.isEmpty) {
+                          _performSearch('');
+                        }
+                        setState(() {});
+                      },
+                      onSubmitted: _performSearch,
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // 🔥 TOMBOL SEARCH EXPLICIT
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.getSurfaceContainerHigh(context),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      onPressed: () => _performSearch(_searchController.text),
+                      icon: Icon(
+                        Icons.search,
+                        color: AppColors.getTextPrimary(context),
+                      ),
+                      tooltip: 'Cari',
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: Icon(

@@ -325,6 +325,17 @@ class SttController extends ChangeNotifier {
   bool _isDataLoaded = false;
   bool _isDisposed = false;
   bool _isTransitioningMode = false; // ✅ NEW Phase 3: Input latency guard
+  bool _isOverlayVisible =
+      false; // ✅ NEW: Prevents background rebuilds when modal is open
+  bool get isOverlayVisible => _isOverlayVisible;
+
+  void setOverlayVisible(bool visible) {
+    if (_isOverlayVisible == visible) return;
+    _isOverlayVisible = visible;
+    // We notify here so parts of the UI can react (like pausing animations)
+    notifyListeners();
+  }
+
   List<AyatData> _currentPageAyats = [];
   final ScrollController _scrollController = ScrollController();
 

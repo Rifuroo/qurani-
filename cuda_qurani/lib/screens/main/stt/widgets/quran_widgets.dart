@@ -676,6 +676,9 @@ class _QuranBottomBarState extends State<QuranBottomBar>
       (c) => c.isRecording,
     );
     final isPaused = context.select<SttController, bool>((c) => c.isPaused);
+    final isOverlayVisible = context.select<SttController, bool>(
+      (c) => c.isOverlayVisible,
+    );
 
     // ✅ Track session state for wiggle guard (includes paused)
     _isSessionActive = isListening || isRecording;
@@ -686,8 +689,11 @@ class _QuranBottomBarState extends State<QuranBottomBar>
       _dragPosition = 0.0;
     }
 
-    // Stop wiggle when any session is active (including paused)
-    if (_isSessionActive || _isDragging || _activeMode != null) {
+    // Stop wiggle when any session is active (including paused) or overlay is visible
+    if (_isSessionActive ||
+        _isDragging ||
+        _activeMode != null ||
+        isOverlayVisible) {
       _lastActivityTime = DateTime.now();
       _stopWiggle();
     }
