@@ -1,12 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
-import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'resource_database_helper.dart';
+import '../screens/main/stt/utils/translation_html_parser.dart';
 
 class QuranResourceService extends ChangeNotifier {
   static final QuranResourceService _instance =
@@ -404,7 +403,11 @@ class QuranResourceService extends ChangeNotifier {
 
     if (text == null) return null;
 
-    // 5. Detect Real Range
+    // 5. Clean HTML and artifacts
+    final (groupInfo, cleanRaw) = TranslationHtmlParser.extractGroupInfo(text);
+    text = TranslationHtmlParser.cleanContent(cleanRaw, ayah);
+
+    // 6. Detect Real Range
     if (hasGroupKey && groupKey != null) {
       final allVerses = await db.query(
         tableName,
@@ -422,9 +425,9 @@ class QuranResourceService extends ChangeNotifier {
         if (lang == 'bahasa indonesia' ||
             lang == 'indonesian' ||
             lang == 'indonesia') {
-          text = 'GROUP_INFO|Ayat $first sampai $last|$text';
+          return 'GROUP_INFO|Ayat $first sampai $last|$text';
         } else {
-          text = 'GROUP_INFO|verses from $first to $last|$text';
+          return 'GROUP_INFO|verses from $first to $last|$text';
         }
       }
     }
@@ -552,11 +555,16 @@ class QuranResourceService extends ChangeNotifier {
       debugPrint('getTranslationText: Text is null for $key');
       return null;
     }
+
+    // 4. Clean HTML and artifacts
+    final (groupInfo, cleanRaw) = TranslationHtmlParser.extractGroupInfo(text);
+    text = TranslationHtmlParser.cleanContent(cleanRaw, ayah);
+
     debugPrint(
       'getTranslationText: Found text for $key (length: ${text.length})',
     );
 
-    // 4. Detect Real Range
+    // 5. Detect Real Range
     if (hasGroupKey && groupKey != null) {
       final allVerses = await db.query(
         tableName,
@@ -574,9 +582,9 @@ class QuranResourceService extends ChangeNotifier {
         if (lang == 'bahasa indonesia' ||
             lang == 'indonesian' ||
             lang == 'indonesia') {
-          text = 'GROUP_INFO|Ayat $first sampai $last|$text';
+          return 'GROUP_INFO|Ayat $first sampai $last|$text';
         } else {
-          text = 'GROUP_INFO|verses from $first to $last|$text';
+          return 'GROUP_INFO|verses from $first to $last|$text';
         }
       }
     }

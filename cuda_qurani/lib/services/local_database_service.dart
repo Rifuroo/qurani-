@@ -372,31 +372,41 @@ class LocalDatabaseService {
   }
 
   /// Search verses by Arabic text OR surah name (Latin/Arabic) OR Translation text
-  static Future<List<Map<String, dynamic>>> searchVerses(
+  /// Returns a Map with 'results' (List) and 'totalCount' (int)
+  static Future<Map<String, dynamic>> searchVerses(
     String query, {
     String? translationDbName,
+    int offset = 0,
+    int limit = 50,
   }) async {
     await _ensureInitialized();
 
     if (query.trim().isEmpty) {
-      return [];
+      return {'results': [], 'totalCount': 0};
     }
 
-    print('[DB] Searching for: "$query"');
+    print('[DB] Searching for: "$query" (offset: $offset, limit: $limit)');
 
     List<Map<String, dynamic>> results = [];
+    int totalCount = 0;
 
-    // 0. CHECK FOR DIRECT VERSE REFERENCE (e.g. "36:1", "1 1", "36 : 1")
+    // 0. CHECK FOR DIRECT VERSE REFERENCE (e.g. "36:1", "1 1", "36 : 1", or just "36")
+    final trimQuery = query.trim();
+
+    // Pattern for "surah:ayah"
     final verseRefMatch = RegExp(
       r'^(\d+)\s*[:\s-]\s*(\d+)$',
-    ).firstMatch(query.trim());
+    ).firstMatch(trimQuery);
+
+    // Pattern for just "surah" (digits only)
+    final surahOnlyMatch = RegExp(r'^(\d+)$').firstMatch(trimQuery);
+
     if (verseRefMatch != null) {
       final surahNum = int.parse(verseRefMatch.group(1)!);
       final ayahNum = int.parse(verseRefMatch.group(2)!);
 
       print('[DB] Direct verse reference detected: $surahNum:$ayahNum');
 
-      // Basic validation (Quran limits)
       if (surahNum >= 1 && surahNum <= 114) {
         final metadata = await getSurahMetadata(surahNum);
         final ayahWords = await _wordsDb!.query(
@@ -407,26 +417,84 @@ class LocalDatabaseService {
         );
 
         if (ayahWords.isNotEmpty) {
-          return [
-            {
+          totalCount = 1;
+          if (offset == 0) {
+            results = [
+              {
+                'surah_number': surahNum,
+                'ayah_number': ayahNum,
+                'text': ayahWords.map((w) => w['text'] as String).join(' '),
+                'surah_name': metadata?['name_simple'] ?? 'Surah $surahNum',
+                'surah_name_arabic': metadata?['name_arabic'] ?? '',
+                'match_type': 'verse_reference',
+              },
+            ];
+          }
+          return {'results': results, 'totalCount': totalCount};
+        }
+      }
+    } else if (surahOnlyMatch != null) {
+      final surahNum = int.parse(surahOnlyMatch.group(1)!);
+      print('[DB] Surah only reference detected: $surahNum');
+
+      if (surahNum >= 1 && surahNum <= 114) {
+        final metadata = await getSurahMetadata(surahNum);
+        // Get total count of verses in this surah
+        final countResult = await _wordsDb!.rawQuery(
+          'SELECT COUNT(DISTINCT ayah) as count FROM words WHERE surah = ?',
+          [surahNum],
+        );
+        totalCount = Sqflite.firstIntValue(countResult) ?? 0;
+
+        // Fetch paginated words
+        // We need to fetch enough words to cover the requested verses.
+        // This is a bit tricky with words table where we group by ayah.
+        // Better: first find which ayah numbers fit the pagination.
+        final ayahBatch = await _wordsDb!.rawQuery(
+          'SELECT DISTINCT ayah FROM words WHERE surah = ? ORDER BY ayah ASC LIMIT ? OFFSET ?',
+          [surahNum, limit, offset],
+        );
+
+        if (ayahBatch.isNotEmpty) {
+          final startAyah = ayahBatch.first['ayah'] as int;
+          final endAyah = ayahBatch.last['ayah'] as int;
+
+          final versesInSurah = await _wordsDb!.query(
+            'words',
+            where: 'surah = ? AND ayah >= ? AND ayah <= ?',
+            whereArgs: [surahNum, startAyah, endAyah],
+            orderBy: 'ayah ASC, word ASC',
+          );
+
+          // Group by ayah
+          Map<int, List<String>> ayahWordsMap = {};
+          for (var word in versesInSurah) {
+            int ayahNum = word['ayah'] as int;
+            String wordText = word['text'] as String;
+
+            if (!ayahWordsMap.containsKey(ayahNum)) {
+              ayahWordsMap[ayahNum] = [];
+            }
+            ayahWordsMap[ayahNum]!.add(wordText);
+          }
+
+          for (var entry in ayahWordsMap.entries) {
+            results.add({
               'surah_number': surahNum,
-              'ayah_number': ayahNum,
-              'text': ayahWords.map((w) => w['text'] as String).join(' '),
+              'ayah_number': entry.key,
+              'text': entry.value.join(' '),
               'surah_name': metadata?['name_simple'] ?? 'Surah $surahNum',
               'surah_name_arabic': metadata?['name_arabic'] ?? '',
-              'match_type': 'verse_reference',
-            },
-          ];
+              'match_type': 'surah_number',
+            });
+          }
         }
+        return {'results': results, 'totalCount': totalCount};
       }
     }
 
     // 1. Search by SURAH NAME (Latin or Arabic)
-    // Use case-insensitive search with LOWER()
     String queryLower = query.toLowerCase().trim();
-
-    // Try multiple variations for better matching
-    // Remove spaces, hyphens, and normalize
     String queryNorm = queryLower.replaceAll(' ', '').replaceAll('-', '');
 
     final surahMatches = await _chaptersDb!.rawQuery(
@@ -450,69 +518,67 @@ class LocalDatabaseService {
     if (surahMatches.isNotEmpty) {
       print('[DB] Found ${surahMatches.length} matching surahs by name');
 
-      // Return all verses from matching surahs (first 10 verses only)
-      for (var surahMeta in surahMatches) {
-        int surahNum = surahMeta['id'] as int;
+      // For surah name search, we usually return verses from ALL matching surahs.
+      // We need to calculate total verses across all matching surahs.
+      final List<int> surahIds = surahMatches
+          .map((s) => s['id'] as int)
+          .toList();
+      final placeholders = List.filled(surahIds.length, '?').join(',');
 
-        // Get first 10 verses of this surah
-        final versesInSurah = await _wordsDb!.query(
-          'words',
-          where: 'surah = ?',
-          whereArgs: [surahNum],
-          orderBy: 'ayah ASC, word ASC',
-          limit: 100, // Get words for ~10 verses
-        );
+      final countResult = await _wordsDb!.rawQuery(
+        'SELECT COUNT(DISTINCT surah || ":" || ayah) as count FROM words WHERE surah IN ($placeholders)',
+        surahIds,
+      );
+      totalCount = Sqflite.firstIntValue(countResult) ?? 0;
 
-        // Group by ayah
-        Map<int, List<String>> ayahWordsMap = {};
-        for (var word in versesInSurah) {
-          int ayahNum = word['ayah'] as int;
-          String wordText = word['text'] as String;
+      // Find which (surah, ayah) pairs fit the pagination
+      final ayahPairs = await _wordsDb!.rawQuery(
+        '''
+        SELECT DISTINCT surah, ayah FROM words 
+        WHERE surah IN ($placeholders) 
+        ORDER BY surah ASC, ayah ASC 
+        LIMIT ? OFFSET ?
+        ''',
+        [...surahIds, limit, offset],
+      );
 
-          if (!ayahWordsMap.containsKey(ayahNum)) {
-            ayahWordsMap[ayahNum] = [];
-          }
-          ayahWordsMap[ayahNum]!.add(wordText);
+      if (ayahPairs.isNotEmpty) {
+        // Fetch words for these pairs
+        for (var pair in ayahPairs) {
+          final sNum = pair['surah'] as int;
+          final aNum = pair['ayah'] as int;
+          final metadata = surahMatches.firstWhere((m) => m['id'] == sNum);
 
-          // Limit to 10 verses
-          if (ayahWordsMap.length > 10) break;
-        }
+          final ayahWords = await _wordsDb!.query(
+            'words',
+            where: 'surah = ? AND ayah = ?',
+            whereArgs: [sNum, aNum],
+            orderBy: 'word ASC',
+          );
 
-        // Build results
-        for (var entry in ayahWordsMap.entries) {
           results.add({
-            'surah_number': surahNum,
-            'ayah_number': entry.key,
-            'text': entry.value.join(' '),
-            'surah_name': surahMeta['name_simple'] ?? 'Surah $surahNum',
-            'surah_name_arabic': surahMeta['name_arabic'] ?? '',
-            'match_type': 'surah_name', // Indicate this matched by surah name
+            'surah_number': sNum,
+            'ayah_number': aNum,
+            'text': ayahWords.map((w) => w['text'] as String).join(' '),
+            'surah_name': metadata['name_simple'] ?? 'Surah $sNum',
+            'surah_name_arabic': metadata['name_arabic'] ?? '',
+            'match_type': 'surah_name',
           });
         }
       }
-
-      // 🔒 IMPORTANT: If surah name matched, SKIP verse text search
-      // This prevents "al baqarah" from returning random verses with "al" (which is very common)
-      print('[DB] Surah name matched, skipping verse text search');
-      print('[DB] Found ${results.length} total results (surah name only)');
-      return results;
+      return {'results': results, 'totalCount': totalCount};
     }
 
-    // 2. Search by VERSE TEXT (Arabic) - ONLY if no surah name match
-    // Skip if query is too short (common words like "al" would match too many)
+    // 2. Search by VERSE TEXT (Arabic)
     if (query.length < 2) {
-      // Relaxed to 2 for short Arabic words
-      print('[DB] Query too short for verse text search (min 2 characters)');
-      return results;
+      return {'results': [], 'totalCount': 0};
     }
 
-    // Normalize query for diacritic-insensitive matching
     String normalizedQuery = _normalizeArabic(query.trim());
     final List<String> searchWords = normalizedQuery.split(RegExp(r'\s+'));
 
-    final List<Map<String, dynamic>> words;
     if (searchWords.length > 1) {
-      // Multi-word search using INTERSECT
+      // Multi-word search
       final StringBuffer intersectQuery = StringBuffer();
       for (int i = 0; i < searchWords.length; i++) {
         intersectQuery.write('SELECT surah, ayah FROM words WHERE text GLOB ?');
@@ -524,94 +590,71 @@ class LocalDatabaseService {
       final intersectArgs = searchWords
           .map((w) => _generateSearchPatternGlob(w))
           .toList();
-      final List<Map<String, dynamic>> ayahPairs = await _wordsDb!.rawQuery(
+      final List<Map<String, dynamic>> allAyahPairs = await _wordsDb!.rawQuery(
         intersectQuery.toString(),
         intersectArgs,
       );
 
-      if (ayahPairs.isEmpty) {
-        print('[DB] No results found for multi-word query: $searchWords');
-        // Debug: Check individual words
-        for (int i = 0; i < searchWords.length; i++) {
-          final count = Sqflite.firstIntValue(
-            await _wordsDb!.rawQuery(
-              'SELECT COUNT(*) FROM words WHERE text GLOB ?',
-              [intersectArgs[i]],
-            ),
-          );
-          print(
-            '      - Word "$i" (${searchWords[i]}) pattern (${intersectArgs[i]}): $count matches',
-          );
-        }
-        return [];
-      }
+      totalCount = allAyahPairs.length;
+      final paginatedPairs = allAyahPairs.skip(offset).take(limit).toList();
 
-      // Fetch all words for these ayahs to build the preview
-      final List<Map<String, dynamic>> allMatchedWords = [];
-      for (final pair in ayahPairs.take(20)) {
-        // Limit to top 20 ayahs for performance
-        final surah = pair['surah'];
-        final ayah = pair['ayah'];
+      for (final pair in paginatedPairs) {
+        final surah = pair['surah'] as int;
+        final ayah = pair['ayah'] as int;
+        final metadata = await getSurahMetadata(surah);
         final ayahWords = await _wordsDb!.query(
           'words',
           where: 'surah = ? AND ayah = ?',
           whereArgs: [surah, ayah],
           orderBy: 'word ASC',
         );
-        allMatchedWords.addAll(ayahWords);
-      }
-      words = allMatchedWords;
-    } else {
-      // Single word search
-      words = await _wordsDb!.query(
-        'words',
-        where: 'text GLOB ?',
-        whereArgs: [_generateSearchPatternGlob(normalizedQuery)],
-        orderBy: 'surah ASC, ayah ASC, word ASC',
-        limit: 100, // Limit results
-      );
-    }
-
-    if (words.isNotEmpty) {
-      print('[DB] Found ${words.length} matching words by text');
-
-      // Group by surah and ayah
-      Map<String, List<String>> ayahWordsMap = {};
-      for (var word in words) {
-        int surahNum = word['surah'] as int;
-        int ayahNum = word['ayah'] as int;
-        String wordText = word['text'] as String;
-
-        String key = '$surahNum:$ayahNum';
-        if (!ayahWordsMap.containsKey(key)) {
-          ayahWordsMap[key] = [];
-        }
-        ayahWordsMap[key]!.add(wordText);
-      }
-
-      // Build result list
-      for (var entry in ayahWordsMap.entries) {
-        final parts = entry.key.split(':');
-        final surahNum = int.parse(parts[0]);
-        final ayahNum = int.parse(parts[1]);
-        final fullText = entry.value.join(' ');
-
-        // Get surah metadata
-        final metadata = await getSurahMetadata(surahNum);
 
         results.add({
-          'surah_number': surahNum,
-          'ayah_number': ayahNum,
-          'text': fullText,
-          'surah_name': metadata?['name_simple'] ?? 'Surah $surahNum',
+          'surah_number': surah,
+          'ayah_number': ayah,
+          'text': ayahWords.map((w) => w['text'] as String).join(' '),
+          'surah_name': metadata?['name_simple'] ?? 'Surah $surah',
           'surah_name_arabic': metadata?['name_arabic'] ?? '',
-          'match_type': 'verse_text', // Indicate this matched by verse text
+          'match_type': 'verse_text',
+        });
+      }
+    } else {
+      // Single word search
+      // Get total count first
+      final countResult = await _wordsDb!.rawQuery(
+        'SELECT COUNT(DISTINCT surah || ":" || ayah) as count FROM words WHERE text GLOB ?',
+        [_generateSearchPatternGlob(normalizedQuery)],
+      );
+      totalCount = Sqflite.firstIntValue(countResult) ?? 0;
+
+      final ayahPairs = await _wordsDb!.rawQuery(
+        'SELECT DISTINCT surah, ayah FROM words WHERE text GLOB ? ORDER BY surah ASC, ayah ASC LIMIT ? OFFSET ?',
+        [_generateSearchPatternGlob(normalizedQuery), limit, offset],
+      );
+
+      for (var pair in ayahPairs) {
+        final surah = pair['surah'] as int;
+        final ayah = pair['ayah'] as int;
+        final metadata = await getSurahMetadata(surah);
+        final ayahWords = await _wordsDb!.query(
+          'words',
+          where: 'surah = ? AND ayah = ?',
+          whereArgs: [surah, ayah],
+          orderBy: 'word ASC',
+        );
+
+        results.add({
+          'surah_number': surah,
+          'ayah_number': ayah,
+          'text': ayahWords.map((w) => w['text'] as String).join(' '),
+          'surah_name': metadata?['name_simple'] ?? 'Surah $surah',
+          'surah_name_arabic': metadata?['name_arabic'] ?? '',
+          'match_type': 'verse_text',
         });
       }
     }
 
-    // 3. Search by TRANSLATION TEXT - ONLY if no surah or verse text matches (or maybe always?)
-    // Actually, let's always try translation search if dbName is provided and no results yet
+    // 3. Search by TRANSLATION TEXT
     if (results.isEmpty && translationDbName != null && query.length >= 2) {
       try {
         final docsDir = await getApplicationDocumentsDirectory();
@@ -619,8 +662,6 @@ class LocalDatabaseService {
 
         if (await File(path).exists()) {
           final transDb = await openDatabase(path, readOnly: true);
-
-          // Probe for table
           final tables = await transDb.rawQuery(
             "SELECT name FROM sqlite_master WHERE type='table'",
           );
@@ -630,11 +671,18 @@ class LocalDatabaseService {
               : (tableNames.contains('resources') ? 'resources' : '');
 
           if (tableName.isNotEmpty) {
+            final countResult = await transDb.rawQuery(
+              'SELECT COUNT(*) as count FROM $tableName WHERE text LIKE ?',
+              ['%$query%'],
+            );
+            totalCount = Sqflite.firstIntValue(countResult) ?? 0;
+
             final transMatches = await transDb.query(
               tableName,
               where: 'text LIKE ?',
               whereArgs: ['%$query%'],
-              limit: 50,
+              limit: limit,
+              offset: offset,
             );
 
             for (var match in transMatches) {
@@ -643,17 +691,13 @@ class LocalDatabaseService {
               if (parts.length == 2) {
                 final surahNum = int.parse(parts[0]);
                 final ayahNum = int.parse(parts[1]);
-                final transText = match['text'] as String;
-
-                // Get surah metadata
                 final metadata = await getSurahMetadata(surahNum);
 
                 results.add({
                   'surah_number': surahNum,
                   'ayah_number': ayahNum,
-                  'text':
-                      '', // We'll fetch Arabic text if needed or leave empty
-                  'translation_text': transText,
+                  'text': '',
+                  'translation_text': stripHtml(match['text'] as String),
                   'surah_name': metadata?['name_simple'] ?? 'Surah $surahNum',
                   'surah_name_arabic': metadata?['name_arabic'] ?? '',
                   'match_type': 'translation',
@@ -668,13 +712,7 @@ class LocalDatabaseService {
       }
     }
 
-    if (results.isEmpty) {
-      print('[DB] No results found');
-    } else {
-      print('[DB] Found ${results.length} total results');
-    }
-
-    return results;
+    return {'results': results, 'totalCount': totalCount};
   }
 
   static Future<int> getPageNumber(int surahId, int ayahNumber) async {
@@ -986,6 +1024,39 @@ class LocalDatabaseService {
     // result = result.replaceAll('ة', 'ه');
 
     return result;
+  }
+
+  /// ✅ NEW: Strip HTML tags and artifacts for clean UI display
+  static String stripHtml(String text) {
+    if (text.isEmpty) return text;
+
+    String cleaned = text;
+
+    // 1. Remove <sup>...</sup> and its content (footnotes)
+    cleaned = cleaned.replaceAll(
+      RegExp(r'<sup[^>]*>.*?</sup>', caseSensitive: false),
+      '',
+    );
+
+    // 2. Remove other bracketed footnote patterns: [1], (1), [a]
+    cleaned = cleaned.replaceAll(RegExp(r'[\(\[]\d+[\)\]]'), '');
+
+    // 3. Remove standalone superscript-style numbers attached to punctuation: ,1 .1 ;1
+    cleaned = cleaned.replaceAll(RegExp(r'([,\.;:])\d+(?=\s|$)'), r'\1');
+
+    // 4. Remove any remaining HTML tags but keep their content
+    cleaned = cleaned.replaceAll(RegExp(r'<[^>]*>'), '');
+
+    // 5. HTML entity decoding (basic)
+    cleaned = cleaned
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&rsquo;', "'")
+        .replaceAll('&lsquo;', "'");
+
+    // 6. Clean up extra spaces and trim
+    return cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   /// ✅ Generate a wildcard pattern for GLOB (SQLite) - supports character classes

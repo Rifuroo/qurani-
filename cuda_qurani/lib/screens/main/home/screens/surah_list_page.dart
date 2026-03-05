@@ -166,7 +166,8 @@ class _SurahListPageState extends State<SurahListPage> {
       }
 
       // Search by text (database query for verses)
-      final textResults = await LocalDatabaseService.searchVerses(query);
+      final searchResult = await LocalDatabaseService.searchVerses(query);
+      final textResults = searchResult['results'] as List<Map<String, dynamic>>;
       for (final result in textResults) {
         if (result['match_type'] == 'surah_name') {
           final surahNum = result['surah_number'] as int;

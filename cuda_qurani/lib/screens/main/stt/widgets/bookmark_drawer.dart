@@ -122,7 +122,7 @@ class _BookmarkDrawerState extends State<BookmarkDrawer> {
               child: Row(
                 children: [
                   Text(
-                    'Urut berdasarkan',
+                    'Urut',
                     style: TextStyle(
                       fontSize: 14,
                       color: AppColors.getTextSecondary(context),
@@ -335,8 +335,33 @@ class _BookmarkDrawerState extends State<BookmarkDrawer> {
                       color: AppColors.getTextSecondary(context),
                     ),
                     onPressed: () async {
-                      await BookmarkService().removeBookmark(surahId, ayahNum);
-                      _refreshBookmarks();
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Hapus Penanda?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Batal'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text(
+                                'Hapus',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirmed == true) {
+                        await BookmarkService().removeBookmark(
+                          surahId,
+                          ayahNum,
+                        );
+                        _refreshBookmarks();
+                      }
                     },
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),

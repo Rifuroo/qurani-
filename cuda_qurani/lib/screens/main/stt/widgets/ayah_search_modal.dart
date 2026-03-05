@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cuda_qurani/services/quran_resource_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -43,46 +44,123 @@ class AyahSearchModal extends StatefulWidget {
 
 class _AyahSearchModalState extends State<AyahSearchModal> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   List<Map<String, dynamic>> _searchResults = [];
   bool _isLoading = false;
+  bool _isFetchingMore = false;
+  bool _hasMore = false;
+  int _totalCount = 0;
+  int _currentOffset = 0;
+  final int _pagingLimit = 50;
+  String _lastQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isFetchingMore &&
+        _hasMore) {
+      _loadMoreResults();
+    }
+  }
+
   Future<void> _performSearch(String query) async {
-    if (query.length < 2) {
+    final trimQuery = query.trim();
+    if (trimQuery.length < 2 && trimQuery.isNotEmpty) {
       setState(() {
         _searchResults = [];
         _isLoading = false;
+        _totalCount = 0;
+        _hasMore = false;
       });
       return;
     }
 
-    setState(() => _isLoading = true);
+    if (trimQuery.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isLoading = false;
+        _totalCount = 0;
+        _hasMore = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _searchResults = [];
+      _currentOffset = 0;
+      _lastQuery = trimQuery;
+    });
+
     try {
       final resourceSvc = context.read<QuranResourceService>();
-
-      // The naming pattern for DB is actually more complex in QuranResourceService.
-      // Let's use the actual active DB name if possible.
-      // After checking QuranResourceService, there isn't a direct getter for the DB name,
-      // but we can infer it or add a getter.
-      // For now, let's try to match how it's built in loadTranslation.
-
-      final results = await LocalDatabaseService.searchVerses(
-        query,
+      final searchResult = await LocalDatabaseService.searchVerses(
+        trimQuery,
         translationDbName: resourceSvc.getTranslationDbName(),
+        offset: 0,
+        limit: _pagingLimit,
       );
-      if (mounted) {
-        setState(() {
-          _searchResults = results;
-          _isLoading = false;
-        });
-      }
+
+      final results = (searchResult['results'] as List)
+          .cast<Map<String, dynamic>>();
+      final total = searchResult['totalCount'] as int;
+
+      if (!mounted) return;
+      setState(() {
+        _searchResults = results;
+        _totalCount = total;
+        _isLoading = false;
+        _currentOffset = results.length;
+        _hasMore = _searchResults.length < _totalCount;
+      });
     } catch (e) {
+      print('Search error: $e');
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadMoreResults() async {
+    if (_isFetchingMore || !_hasMore) return;
+
+    setState(() {
+      _isFetchingMore = true;
+    });
+
+    try {
+      final resourceSvc = context.read<QuranResourceService>();
+      final searchResult = await LocalDatabaseService.searchVerses(
+        _lastQuery,
+        translationDbName: resourceSvc.getTranslationDbName(),
+        offset: _currentOffset,
+        limit: _pagingLimit,
+      );
+
+      final results = (searchResult['results'] as List)
+          .cast<Map<String, dynamic>>();
+
+      if (!mounted) return;
+      setState(() {
+        _searchResults.addAll(results);
+        _currentOffset += results.length;
+        _isFetchingMore = false;
+        _hasMore = _searchResults.length < _totalCount;
+      });
+    } catch (e) {
+      print('Load more error: $e');
+      if (mounted) setState(() => _isFetchingMore = false);
     }
   }
 
@@ -160,9 +238,6 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
                         ),
                       ),
                       onChanged: (val) {
-                        if (val.isEmpty) {
-                          _performSearch('');
-                        }
                         setState(() {});
                       },
                       onSubmitted: _performSearch,
@@ -279,65 +354,94 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
   }
 
   Widget _buildResultsList() {
-    return ListView.separated(
-      shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      itemCount: _searchResults.length,
-      separatorBuilder: (context, index) =>
-          const Divider(height: 1, indent: 24, endIndent: 24),
-      itemBuilder: (context, index) {
-        final result = _searchResults[index];
-        final surahId = result['surah_number'] as int;
-        final ayahNum = result['ayah_number'] as int;
-        final text = result['text'] as String;
-        final surahName = result['surah_name'] as String;
-
-        final translationText = result['translation_text'] as String?;
-
-        return ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 4,
-          ),
-          title: Text(
-            '$surahName ($surahId:$ayahNum)',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+          child: Text(
+            '$_totalCount hasil ditemukan',
             style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.getTextPrimary(context),
-              fontSize: 14,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.getPrimary(context).withOpacity(0.7),
             ),
           ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (text.isNotEmpty)
-                Text(
-                  text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'UthmanTN', fontSize: 16),
+        ),
+        Expanded(
+          child: ListView.separated(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            itemCount: _searchResults.length + (_hasMore ? 1 : 0),
+            separatorBuilder: (context, index) =>
+                const Divider(height: 1, indent: 24, endIndent: 24),
+            itemBuilder: (context, index) {
+              if (index == _searchResults.length) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+              }
+              final result = _searchResults[index];
+              final surahId = result['surah_number'] as int;
+              final ayahNum = result['ayah_number'] as int;
+              final text = result['text'] as String;
+              final surahName = result['surah_name'] as String;
+
+              final translationText = result['translation_text'] as String?;
+
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 4,
                 ),
-              if (translationText != null)
-                Text(
-                  translationText,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                title: Text(
+                  '$surahName ($surahId:$ayahNum)',
                   style: TextStyle(
-                    color: AppColors.getTextSecondary(context),
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(context),
+                    fontSize: 14,
                   ),
                 ),
-            ],
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (text.isNotEmpty)
+                      Text(
+                        text,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'UthmanTN',
+                          fontSize: 16,
+                        ),
+                      ),
+                    if (translationText != null)
+                      Text(
+                        translationText,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.getTextSecondary(context),
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                  ],
+                ),
+                onTap: () {
+                  final effectiveController =
+                      widget.controller ?? context.read<SttController>();
+                  effectiveController.jumpToAyah(surahId, ayahNum);
+                  Navigator.pop(context);
+                },
+              );
+            },
           ),
-          onTap: () {
-            final effectiveController =
-                widget.controller ?? context.read<SttController>();
-            effectiveController.jumpToAyah(surahId, ayahNum);
-            Navigator.pop(context);
-          },
-        );
-      },
+        ),
+      ],
     );
   }
 
