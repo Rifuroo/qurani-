@@ -237,55 +237,6 @@ class _QuranAppBarState extends State<QuranAppBar> {
 
           // ✅ ACTIONS: Options moved from Floating Button + Search, Settings
           actions: [
-            // Bookmark
-            IconButton(
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
-              icon: Icon(
-                Icons.bookmark_outline,
-                size: iconSize * 1,
-                color: _getAppBarTextColor(context),
-              ),
-              padding: EdgeInsets.zero,
-              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-              constraints: const BoxConstraints(),
-              splashRadius: iconSize,
-              tooltip: 'Penanda',
-            ),
-
-            // View Mode
-            IconButton(
-              onPressed: () => controller.toggleQuranMode(),
-              icon: Icon(
-                context.select<SttController, bool>((c) => c.isQuranMode)
-                    ? Icons.auto_stories
-                    : Icons.vertical_split,
-                size: iconSize * 0.8,
-                color: _getAppBarTextColor(context),
-              ),
-              padding: EdgeInsets.zero,
-              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-              constraints: const BoxConstraints(),
-              splashRadius: iconSize,
-              tooltip: 'Tampilan',
-            ),
-
-            // Visibility (Highlight)
-            IconButton(
-              onPressed: () => controller.toggleHideUnread(),
-              icon: Icon(
-                context.select<SttController, bool>((c) => c.hideUnreadAyat)
-                    ? Icons.visibility
-                    : Icons.visibility_off,
-                size: iconSize * 1,
-                color: _getAppBarTextColor(context),
-              ),
-              padding: EdgeInsets.zero,
-              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-              constraints: const BoxConstraints(),
-              splashRadius: iconSize,
-              tooltip: 'Sorotan',
-            ),
-
             // Search
             IconButton(
               onPressed: () => AyahSearchModal.show(context),
@@ -301,7 +252,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
               tooltip: 'Cari',
             ),
 
-            // Settings
+             // Settings
             IconButton(
               onPressed: () => Navigator.push(
                 context,
@@ -345,6 +296,84 @@ class _QuranAppBarState extends State<QuranAppBar> {
               constraints: const BoxConstraints(),
               splashRadius: iconSize,
               tooltip: 'Pengaturan',
+            ),
+            
+            PopupMenuButton<String>(
+              icon: Icon(
+                Icons.more_vert,
+                size: iconSize * 1.0,
+                color: _getAppBarTextColor(context),
+              ),
+              padding: EdgeInsets.zero,
+              tooltip: 'Menu',
+              onSelected: (value) {
+                switch (value) {
+                  case 'bookmark':
+                    Scaffold.of(context).openEndDrawer();
+                    break;
+                  case 'view_mode':
+                    controller.toggleQuranMode();
+                    break;
+                  case 'visibility':
+                    controller.toggleHideUnread();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                // Bookmark
+                PopupMenuItem(
+                  value: 'bookmark',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.bookmark_outline,
+                        size: 20,
+                        color: AppColors.getPrimary(context),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text('Penanda'),
+                    ],
+                  ),
+                ),
+                // View Mode
+                PopupMenuItem(
+                  value: 'view_mode',
+                  child: Row(
+                    children: [
+                      Icon(
+                        context.select<SttController, bool>(
+                              (c) => c.isQuranMode,
+                            )
+                            ? Icons.auto_stories
+                            : Icons.vertical_split,
+                        size: 20,
+                        color: AppColors.getPrimary(context),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text('Tampilan'),
+                    ],
+                  ),
+                ),
+                // Visibility
+                PopupMenuItem(
+                  value: 'visibility',
+                  child: Row(
+                    children: [
+                      Icon(
+                        context.select<SttController, bool>(
+                              (c) => c.hideUnreadAyat,
+                            )
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        size: 20,
+                        color: AppColors.getPrimary(context),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text('Sorotan'),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
