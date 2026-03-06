@@ -6,14 +6,10 @@ import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/main.dart';
 import 'package:cuda_qurani/models/playback_settings_model.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/settings_page.dart';
-import 'package:cuda_qurani/screens/main/home/screens/surah_list_page.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/playback_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/stt_controller.dart';
-import '../utils/constants.dart';
-import 'package:cuda_qurani/core/providers/language_provider.dart';
-import 'package:cuda_qurani/services/metadata_cache_service.dart';
 import 'ayah_search_modal.dart';
 
 class QuranAppBar extends StatefulWidget implements PreferredSizeWidget {
@@ -58,7 +54,10 @@ class _QuranAppBarState extends State<QuranAppBar> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.getSurface(context),
         title: Text(
-          'Select Mushaf Layout',
+          LanguageHelper.tr(
+            _translations,
+            'app_bar_actions.layout_picker_title',
+          ),
           style: TextStyle(
             fontSize: 16,
             color: AppColors.getTextPrimary(context),
@@ -70,14 +69,22 @@ class _QuranAppBarState extends State<QuranAppBar> {
             final isSelected = controller.mushafLayout == layout;
             return RadioListTile<MushafLayout>(
               title: Text(
-                '${layout.displayName} (${layout.totalPages} pages)',
+                '${layout.displayName} (${layout.totalPages} ${LanguageHelper.tr(_translations, 'app_bar_actions.layout_pages_suffix')})',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.getTextPrimary(context),
                 ),
               ),
               subtitle: Text(
-                layout.isGlyphBased ? 'Glyph-based fonts' : 'Single font',
+                layout.isGlyphBased
+                    ? LanguageHelper.tr(
+                        _translations,
+                        'app_bar_actions.layout_glyph_desc',
+                      )
+                    : LanguageHelper.tr(
+                        _translations,
+                        'app_bar_actions.layout_font_desc',
+                      ),
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.getTextSecondary(context),
@@ -99,7 +106,7 @@ class _QuranAppBarState extends State<QuranAppBar> {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text(
-              'Cancel',
+              LanguageHelper.tr(_translations, 'app_bar_actions.cancel_text'),
               style: TextStyle(color: AppColors.getTextPrimary(context)),
             ),
           ),
@@ -245,14 +252,14 @@ class _QuranAppBarState extends State<QuranAppBar> {
                 size: iconSize * 1,
                 color: _getAppBarTextColor(context),
               ),
-              padding: EdgeInsets.zero,
-              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-              constraints: const BoxConstraints(),
               splashRadius: iconSize,
-              tooltip: 'Cari',
+              tooltip: LanguageHelper.tr(
+                _translations,
+                'app_bar_actions.search_tooltip',
+              ),
             ),
 
-             // Settings
+            // Settings
             IconButton(
               onPressed: () => Navigator.push(
                 context,
@@ -291,13 +298,13 @@ class _QuranAppBarState extends State<QuranAppBar> {
                 size: iconSize * 1,
                 color: _getAppBarTextColor(context),
               ),
-              padding: EdgeInsets.zero,
-              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-              constraints: const BoxConstraints(),
               splashRadius: iconSize,
-              tooltip: 'Pengaturan',
+              tooltip: LanguageHelper.tr(
+                _translations,
+                'app_bar_actions.settings_tooltip',
+              ),
             ),
-            
+
             PopupMenuButton<String>(
               icon: Icon(
                 Icons.more_vert,
@@ -305,7 +312,10 @@ class _QuranAppBarState extends State<QuranAppBar> {
                 color: _getAppBarTextColor(context),
               ),
               padding: EdgeInsets.zero,
-              tooltip: 'Menu',
+              tooltip: LanguageHelper.tr(
+                _translations,
+                'app_bar_actions.menu_tooltip',
+              ),
               onSelected: (value) {
                 switch (value) {
                   case 'bookmark':
@@ -331,7 +341,12 @@ class _QuranAppBarState extends State<QuranAppBar> {
                         color: AppColors.getPrimary(context),
                       ),
                       const SizedBox(width: 12),
-                      const Text('Penanda'),
+                      Text(
+                        LanguageHelper.tr(
+                          _translations,
+                          'app_bar_actions.bookmark_text',
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -350,7 +365,12 @@ class _QuranAppBarState extends State<QuranAppBar> {
                         color: AppColors.getPrimary(context),
                       ),
                       const SizedBox(width: 12),
-                      const Text('Ganti tampilan'),
+                      Text(
+                        LanguageHelper.tr(
+                          _translations,
+                          'app_bar_actions.view_mode_text',
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -369,7 +389,12 @@ class _QuranAppBarState extends State<QuranAppBar> {
                         color: AppColors.getPrimary(context),
                       ),
                       const SizedBox(width: 12),
-                      const Text('Sembunyikan ayat'),
+                      Text(
+                        LanguageHelper.tr(
+                          _translations,
+                          'app_bar_actions.visibility_text',
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1058,10 +1083,32 @@ class _QuranBottomBarState extends State<QuranBottomBar>
   }
 }
 
-class QuranLoadingWidget extends StatelessWidget {
+class QuranLoadingWidget extends StatefulWidget {
   final String errorMessage;
   const QuranLoadingWidget({Key? key, required this.errorMessage})
     : super(key: key);
+
+  @override
+  State<QuranLoadingWidget> createState() => _QuranLoadingWidgetState();
+}
+
+class _QuranLoadingWidgetState extends State<QuranLoadingWidget> {
+  Map<String, dynamic> _translations = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTranslations();
+  }
+
+  Future<void> _loadTranslations() async {
+    final trans = await context.loadTranslations('stt');
+    if (mounted) {
+      setState(() {
+        _translations = trans;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1094,7 +1141,7 @@ class QuranLoadingWidget extends StatelessWidget {
           ),
           SizedBox(height: screenHeight * 0.015),
           Text(
-            'Initializing App...',
+            LanguageHelper.tr(_translations, 'initialization.title'),
             style: TextStyle(
               fontSize: titleSize,
               fontWeight: FontWeight.bold,
@@ -1103,7 +1150,12 @@ class QuranLoadingWidget extends StatelessWidget {
           ),
           SizedBox(height: screenHeight * 0.005),
           Text(
-            errorMessage.isNotEmpty ? errorMessage : 'Loading Quran data...',
+            widget.errorMessage.isNotEmpty
+                ? widget.errorMessage
+                : LanguageHelper.tr(
+                    _translations,
+                    'initialization.loading_data',
+                  ),
             style: TextStyle(
               fontSize: messageSize,
               color: AppColors.getTextSecondary(context),
@@ -1116,8 +1168,30 @@ class QuranLoadingWidget extends StatelessWidget {
   }
 }
 
-class QuranErrorWidget extends StatelessWidget {
+class QuranErrorWidget extends StatefulWidget {
   const QuranErrorWidget({Key? key}) : super(key: key);
+
+  @override
+  State<QuranErrorWidget> createState() => _QuranErrorWidgetState();
+}
+
+class _QuranErrorWidgetState extends State<QuranErrorWidget> {
+  Map<String, dynamic> _translations = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTranslations();
+  }
+
+  Future<void> _loadTranslations() async {
+    final trans = await context.loadTranslations('stt');
+    if (mounted) {
+      setState(() {
+        _translations = trans;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1156,7 +1230,7 @@ class QuranErrorWidget extends StatelessWidget {
             ),
             SizedBox(height: screenHeight * 0.015),
             Text(
-              'App Initialization Error',
+              LanguageHelper.tr(_translations, 'initialization.error_title'),
               style: TextStyle(
                 fontSize: titleSize,
                 fontWeight: FontWeight.bold,
@@ -1173,7 +1247,11 @@ class QuranErrorWidget extends StatelessWidget {
                 border: Border.all(color: AppColors.getBorderLight(context)),
               ),
               child: Text(
-                controller.errorMessage ?? 'Unknown error occurred',
+                controller.errorMessage ??
+                    LanguageHelper.tr(
+                      _translations,
+                      'initialization.unknown_error',
+                    ),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: messageSize,
@@ -1189,7 +1267,10 @@ class QuranErrorWidget extends StatelessWidget {
                   onPressed: controller.initializeApp,
                   icon: Icon(Icons.refresh, size: iconButtonSize),
                   label: Text(
-                    'Retry',
+                    LanguageHelper.tr(
+                      _translations,
+                      'initialization.retry_button',
+                    ),
                     style: TextStyle(fontSize: buttonTextSize),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -1210,7 +1291,10 @@ class QuranErrorWidget extends StatelessWidget {
                     color: AppColors.getTextPrimary(context),
                   ),
                   label: Text(
-                    'View Logs',
+                    LanguageHelper.tr(
+                      _translations,
+                      'initialization.logs_button',
+                    ),
                     style: TextStyle(
                       fontSize: buttonTextSize,
                       color: AppColors.getTextPrimary(context),
@@ -1226,8 +1310,30 @@ class QuranErrorWidget extends StatelessWidget {
   }
 }
 
-class QuranLogsPanel extends StatelessWidget {
+class QuranLogsPanel extends StatefulWidget {
   const QuranLogsPanel({Key? key}) : super(key: key);
+
+  @override
+  State<QuranLogsPanel> createState() => _QuranLogsPanelState();
+}
+
+class _QuranLogsPanelState extends State<QuranLogsPanel> {
+  Map<String, dynamic> _translations = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTranslations();
+  }
+
+  Future<void> _loadTranslations() async {
+    final trans = await context.loadTranslations('stt');
+    if (mounted) {
+      setState(() {
+        _translations = trans;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1235,12 +1341,12 @@ class QuranLogsPanel extends StatelessWidget {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final panelHeight = screenHeight * 0.1875; // ✅ ~150px pada 800px
-    final iconSize = screenWidth * 0.04; // ✅ ~16px
+    final panelHeight = screenHeight * 0.1875;
+    final iconSize = screenWidth * 0.04;
     final titleSize = screenWidth * 0.03;
-    final logFontSize = screenWidth * 0.02; // ✅ ~8px
-    final paddingH = screenWidth * 0.02; // ✅ ~8px
-    final paddingV = screenHeight * 0.0075; // ✅ ~6px
+    final logFontSize = screenWidth * 0.02;
+    final paddingH = screenWidth * 0.02;
+    final paddingV = screenHeight * 0.0075;
 
     return Container(
       height: panelHeight,
@@ -1268,7 +1374,7 @@ class QuranLogsPanel extends StatelessWidget {
                 ),
                 SizedBox(width: screenWidth * 0.01),
                 Text(
-                  'API Debug Console',
+                  LanguageHelper.tr(_translations, 'logs.console_title'),
                   style: TextStyle(
                     color: AppColors.getTextInverse(context),
                     fontWeight: FontWeight.bold,
@@ -1343,7 +1449,10 @@ class QuranLogsPanel extends StatelessWidget {
   }
 }
 
-void showCompletionDialog(BuildContext context, SttController controller) {
+void showCompletionDialog(
+  BuildContext context,
+  SttController controller,
+) async {
   if (!context.mounted) return;
 
   final screenWidth = MediaQuery.of(context).size.width;
@@ -1360,6 +1469,12 @@ void showCompletionDialog(BuildContext context, SttController controller) {
       ? DateTime.now().difference(controller.sessionStartTime!).inMinutes
       : 0;
 
+  final Map<String, dynamic> translations = await context.loadTranslations(
+    'stt',
+  );
+
+  if (!context.mounted) return;
+
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -1375,7 +1490,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
             ),
             SizedBox(width: screenWidth * 0.02),
             Text(
-              'Surah Completed!',
+              LanguageHelper.tr(translations, 'dialogs.completion_title'),
               style: TextStyle(
                 fontSize: titleSize,
                 color: AppColors.getTextPrimary(context),
@@ -1395,7 +1510,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
               child: Column(
                 children: [
                   Text(
-                    '🎉 Congratulations! 🎉',
+                    LanguageHelper.tr(translations, 'dialogs.congratulations'),
                     style: TextStyle(
                       fontSize: congratsSize,
                       fontWeight: FontWeight.bold,
@@ -1405,7 +1520,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
                   ),
                   SizedBox(height: screenHeight * 0.01),
                   Text(
-                    'You have completed reading ${controller.suratNameSimple}',
+                    '${LanguageHelper.tr(translations, "dialogs.completed_reading")} ${controller.suratNameSimple}',
                     style: TextStyle(
                       fontSize: messageSize,
                       color: AppColors.getTextPrimary(context),
@@ -1417,14 +1532,14 @@ void showCompletionDialog(BuildContext context, SttController controller) {
                     children: [
                       _buildStatItem(
                         context,
-                        'Ayat',
+                        LanguageHelper.tr(translations, 'dialogs.stat_ayah'),
                         '${controller.ayatList.length}',
                         statLabelSize,
                         statValueSize,
                       ),
                       _buildStatItem(
                         context,
-                        'Time',
+                        LanguageHelper.tr(translations, 'dialogs.stat_time'),
                         '${sessionDuration}min',
                         statLabelSize,
                         statValueSize,
@@ -1446,7 +1561,7 @@ void showCompletionDialog(BuildContext context, SttController controller) {
               backgroundColor: AppColors.getPrimary(context),
             ),
             child: Text(
-              'Finish',
+              LanguageHelper.tr(translations, 'dialogs.finish_button'),
               style: TextStyle(color: AppColors.getTextInverse(context)),
             ),
           ),

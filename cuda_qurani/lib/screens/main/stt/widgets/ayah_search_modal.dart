@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../controllers/stt_controller.dart';
 import '../../../../services/local_database_service.dart';
 import '../../../../core/design_system/app_design_system.dart';
+import '../../../../core/utils/language_helper.dart';
 
 class AyahSearchModal extends StatefulWidget {
   final SttController? controller;
@@ -53,11 +54,22 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
   int _currentOffset = 0;
   final int _pagingLimit = 50;
   String _lastQuery = '';
+  Map<String, dynamic> _translations = {};
 
   @override
   void initState() {
     super.initState();
+    _loadTranslations();
     _scrollController.addListener(_onScroll);
+  }
+
+  Future<void> _loadTranslations() async {
+    final trans = await context.loadTranslations('stt');
+    if (mounted) {
+      setState(() {
+        _translations = trans;
+      });
+    }
   }
 
   @override
@@ -204,8 +216,10 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
                         color: AppColors.getTextPrimary(context),
                       ),
                       decoration: InputDecoration(
-                        hintText:
-                            'Cari Surah atau Ayat (misal: Al-Baqarah, 1:1)',
+                        hintText: LanguageHelper.tr(
+                          _translations,
+                          'search.hint_text',
+                        ),
                         prefixIcon: Icon(
                           Icons.search,
                           color: AppColors.getPrimary(context).withOpacity(0.5),
@@ -256,7 +270,10 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
                         Icons.search,
                         color: AppColors.getTextPrimary(context),
                       ),
-                      tooltip: 'Cari',
+                      tooltip: LanguageHelper.tr(
+                        _translations,
+                        'app_bar_actions.search_tooltip',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -298,7 +315,7 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
     final isIndo = lang.contains('indonesia');
     final isEnglish = lang.contains('english');
 
-    List<String> hints = ['Al-Baqarah', '36:1', 'الحمد لله'];
+    List<String> hints = ['Al-Baqarah', '36.1', 'الحمد لله'];
     if (isIndo) {
       hints.add('Musa');
     } else if (isEnglish) {
@@ -311,7 +328,7 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Examples:',
+            LanguageHelper.tr(_translations, 'search.examples_text'),
             style: TextStyle(
               color: AppColors.getTextSecondary(context),
               fontSize: 12,
@@ -343,8 +360,8 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
             const SizedBox(height: 12),
             Text(
               _searchController.text.length < 2
-                  ? 'Enter at least 2 characters'
-                  : 'No results found',
+                  ? LanguageHelper.tr(_translations, 'search.min_chars_text')
+                  : LanguageHelper.tr(_translations, 'search.no_results_text'),
               style: TextStyle(color: AppColors.getTextSecondary(context)),
             ),
           ],
@@ -360,7 +377,7 @@ class _AyahSearchModalState extends State<AyahSearchModal> {
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
           child: Text(
-            '$_totalCount hasil ditemukan',
+            '$_totalCount ${LanguageHelper.tr(_translations, "search.results_count")}',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,

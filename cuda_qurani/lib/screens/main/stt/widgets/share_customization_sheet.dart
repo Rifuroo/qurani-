@@ -5,6 +5,7 @@ import '../data/models.dart';
 import '../../../../services/local_database_service.dart';
 import '../../../../services/quran_resource_service.dart';
 import '../../../../core/design_system/app_design_system.dart';
+import '../../../../core/utils/language_helper.dart';
 import '../utils/translation_html_parser.dart';
 
 class ShareCustomizationSheet extends StatefulWidget {
@@ -40,6 +41,22 @@ class _ShareCustomizationSheetState extends State<ShareCustomizationSheet> {
   bool _includeArabic = true;
   bool _includeTranslation = true;
   bool _includeTransliteration = true;
+  Map<String, dynamic> _translations = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTranslations();
+  }
+
+  Future<void> _loadTranslations() async {
+    final trans = await context.loadTranslations('stt');
+    if (mounted) {
+      setState(() {
+        _translations = trans;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +77,7 @@ class _ShareCustomizationSheetState extends State<ShareCustomizationSheet> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
-                  'Share Options',
+                  LanguageHelper.tr(_translations, 'share.title'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -77,14 +94,20 @@ class _ShareCustomizationSheetState extends State<ShareCustomizationSheet> {
                   children: [
                     _buildModernToggle(
                       icon: Icons.article_outlined,
-                      title: 'Arabic Text',
+                      title: LanguageHelper.tr(
+                        _translations,
+                        'share.arabic_text',
+                      ),
                       value: _includeArabic,
                       onChanged: (val) => setState(() => _includeArabic = val),
                     ),
                     const SizedBox(height: 12),
                     _buildModernToggle(
                       icon: Icons.translate_outlined,
-                      title: 'Translation',
+                      title: LanguageHelper.tr(
+                        _translations,
+                        'share.translation_text',
+                      ),
                       value: _includeTranslation,
                       onChanged: (val) =>
                           setState(() => _includeTranslation = val),
@@ -92,7 +115,10 @@ class _ShareCustomizationSheetState extends State<ShareCustomizationSheet> {
                     const SizedBox(height: 12),
                     _buildModernToggle(
                       icon: Icons.abc_outlined,
-                      title: 'Transliteration',
+                      title: LanguageHelper.tr(
+                        _translations,
+                        'share.transliteration_text',
+                      ),
                       value: _includeTransliteration,
                       onChanged: (val) =>
                           setState(() => _includeTransliteration = val),
@@ -118,14 +144,14 @@ class _ShareCustomizationSheetState extends State<ShareCustomizationSheet> {
                       ),
                     ),
                     onPressed: () => _handleShare(context),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.share_outlined, size: 20),
+                        const Icon(Icons.share_outlined, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'Share Verse',
-                          style: TextStyle(
+                          LanguageHelper.tr(_translations, 'share.button_text'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -208,7 +234,9 @@ class _ShareCustomizationSheetState extends State<ShareCustomizationSheet> {
       final resourceService = context.read<QuranResourceService>();
       final StringBuffer buffer = StringBuffer();
 
-      buffer.writeln('${widget.surahName} - Ayat ${widget.segment.ayahNumber}');
+      buffer.writeln(
+        '${widget.surahName} - ${LanguageHelper.tr(_translations, "bookmarks.ayah_label")} ${widget.segment.ayahNumber}',
+      );
       buffer.writeln();
 
       if (_includeArabic) {
@@ -243,12 +271,16 @@ class _ShareCustomizationSheetState extends State<ShareCustomizationSheet> {
           widget.segment.ayahNumber,
         );
         if (rawTrans != null) {
-          buffer.writeln('Transliteration: $rawTrans');
+          buffer.writeln(
+            '${LanguageHelper.tr(_translations, "share.transliteration_text")}: $rawTrans',
+          );
           buffer.writeln();
         }
       }
 
-      buffer.write('- Shared from Qurani');
+      buffer.write(
+        '- ${LanguageHelper.tr(_translations, "share.footer_text")}',
+      );
 
       final finalContent = buffer.toString().trim();
 

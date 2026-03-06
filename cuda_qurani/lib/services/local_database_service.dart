@@ -395,7 +395,7 @@ class LocalDatabaseService {
 
     // Pattern for "surah:ayah"
     final verseRefMatch = RegExp(
-      r'^(\d+)\s*[:\s-]\s*(\d+)$',
+      r'^(\d+)\s*[:\s\.-]\s*(\d+)$',
     ).firstMatch(trimQuery);
 
     // Pattern for just "surah" (digits only)

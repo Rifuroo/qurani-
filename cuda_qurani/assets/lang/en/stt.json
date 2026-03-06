@@ -4,11 +4,75 @@
         "ayah_text": "Ayah",
         "page_text": "Page"
     },
+    "app_bar_actions": {
+        "search_tooltip": "Search",
+        "settings_tooltip": "Settings",
+        "menu_tooltip": "Menu",
+        "bookmark_text": "Bookmarks",
+        "view_mode_text": "Switch view",
+        "visibility_text": "Hide verses",
+        "layout_picker_title": "Select Mushaf Layout",
+        "layout_pages_suffix": "pages",
+        "layout_glyph_desc": "Glyph-based fonts",
+        "layout_font_desc": "Single font",
+        "cancel_text": "Cancel"
+    },
     "bottom_bar": {
         "listen_text": "Listen",
         "recite_text": "Recite",
-        "quick_guide_text":"Quick Guide",
-        "quick_guide_desc":"Slide left to listen, right to recite"
+        "quick_guide_text": "Quick Guide",
+        "quick_guide_desc": "Slide left to listen, right to recite"
+    },
+    "search": {
+        "hint_text": "Search Surah or Ayah (e.g., Al-Baqarah, 1:1)",
+        "examples_text": "Examples:",
+        "results_count": "results found",
+        "min_chars_text": "Enter at least 2 characters",
+        "no_results_text": "No results found"
+    },
+    "share": {
+        "title": "Share Options",
+        "arabic_text": "Arabic Text",
+        "translation_text": "Translation",
+        "transliteration_text": "Transliteration",
+        "button_text": "Share Verse",
+        "footer_text": "Shared from Qurani"
+    },
+    "bookmarks": {
+        "title": "Bookmarks",
+        "sort_label": "Sort",
+        "empty_state": "No bookmarks yet",
+        "page_prefix": "pg.",
+        "ayah_label": "Ayah",
+        "bookmarked_label": "Bookmarked:",
+        "last_visited_label": "Last Visited:",
+        "delete_confirm_title": "Delete Bookmark?",
+        "delete_button": "Delete",
+        "sort_quran_asc": "Quran order (asc)",
+        "sort_quran_desc": "Quran order (desc)",
+        "sort_first_bookmarked": "First bookmarked",
+        "sort_last_bookmarked": "Last bookmarked",
+        "sort_first_visited": "First visited",
+        "sort_last_visited": "Last visited"
+    },
+    "initialization": {
+        "title": "Initializing App...",
+        "loading_data": "Loading Quran data...",
+        "error_title": "App Initialization Error",
+        "unknown_error": "Unknown error occurred",
+        "retry_button": "Retry",
+        "logs_button": "View Logs"
+    },
+    "logs": {
+        "console_title": "API Debug Console"
+    },
+    "dialogs": {
+        "completion_title": "Surah Completed!",
+        "congratulations": "🎉 Congratulations! 🎉",
+        "completed_reading": "You have completed reading",
+        "stat_ayah": "Ayat",
+        "stat_time": "Time",
+        "finish_button": "Finish"
     },
     "mushaf_view": {
         "juz_text": "Juz"

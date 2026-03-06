@@ -4,6 +4,7 @@ import '../controllers/stt_controller.dart';
 import '../../../../services/bookmark_service.dart';
 import '../../../../services/local_database_service.dart';
 import '../../../../core/design_system/app_design_system.dart';
+import '../../../../core/utils/language_helper.dart';
 
 class BookmarkDrawer extends StatefulWidget {
   final SttController? controller;
@@ -25,11 +26,22 @@ enum BookmarkSortType {
 class _BookmarkDrawerState extends State<BookmarkDrawer> {
   late Future<List<Map<String, dynamic>>> _bookmarksFuture;
   BookmarkSortType _currentSort = BookmarkSortType.lastBookmarked;
+  Map<String, dynamic> _translations = {};
 
   @override
   void initState() {
     super.initState();
+    _loadTranslations();
     _refreshBookmarks();
+  }
+
+  Future<void> _loadTranslations() async {
+    final trans = await context.loadTranslations('stt');
+    if (mounted) {
+      setState(() {
+        _translations = trans;
+      });
+    }
   }
 
   void _refreshBookmarks() {
@@ -72,19 +84,26 @@ class _BookmarkDrawerState extends State<BookmarkDrawer> {
   }
 
   String _getSortLabel(BookmarkSortType type) {
+    if (_translations.isEmpty) return '';
     switch (type) {
       case BookmarkSortType.quranAsc:
-        return 'Urutan Quran naik';
+        return LanguageHelper.tr(_translations, 'bookmarks.sort_quran_asc');
       case BookmarkSortType.quranDesc:
-        return 'Urutan Quran turun';
+        return LanguageHelper.tr(_translations, 'bookmarks.sort_quran_desc');
       case BookmarkSortType.firstBookmarked:
-        return 'Pertama ditandai';
+        return LanguageHelper.tr(
+          _translations,
+          'bookmarks.sort_first_bookmarked',
+        );
       case BookmarkSortType.lastBookmarked:
-        return 'Terakhir ditandai';
+        return LanguageHelper.tr(
+          _translations,
+          'bookmarks.sort_last_bookmarked',
+        );
       case BookmarkSortType.firstVisited:
-        return 'Terawal dilihat';
+        return LanguageHelper.tr(_translations, 'bookmarks.sort_first_visited');
       case BookmarkSortType.lastVisited:
-        return 'Terakhir dilihat';
+        return LanguageHelper.tr(_translations, 'bookmarks.sort_last_visited');
     }
   }
 
@@ -96,36 +115,28 @@ class _BookmarkDrawerState extends State<BookmarkDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    // Pure white for light theme, fallback to surface for dark theme
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDarkMode ? AppColors.getSurface(context) : Colors.white;
+
     return Drawer(
       width: MediaQuery.of(context).size.width * 0.85,
-      backgroundColor: AppColors.getSurface(context),
+      backgroundColor: bgColor,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Title
+            // Compact Header & Sort
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-              child: Text(
-                'Penanda',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.getTextPrimary(context),
-                ),
-              ),
-            ),
-
-            // Sorting Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(20, 16, 8, 8),
               child: Row(
                 children: [
                   Text(
-                    'Urut',
+                    LanguageHelper.tr(_translations, 'bookmarks.title'),
                     style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.getTextSecondary(context),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.getTextPrimary(context),
                     ),
                   ),
                   const Spacer(),
@@ -141,35 +152,26 @@ class _BookmarkDrawerState extends State<BookmarkDrawer> {
                         .map(
                           (type) => PopupMenuItem(
                             value: type,
-                            child: Text(_getSortLabel(type)),
+                            child: Text(
+                              _getSortLabel(type),
+                              style: const TextStyle(fontSize: 14),
+                            ),
                           ),
                         )
                         .toList(),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _getSortLabel(_currentSort),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.getTextSecondary(context),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.unfold_more,
-                          size: 16,
-                          color: AppColors.getTextSecondary(context),
-                        ),
-                      ],
+                    icon: Icon(
+                      Icons.sort_rounded,
+                      color: AppColors.getTextSecondary(context),
+                      size: 22,
                     ),
                   ),
                 ],
               ),
             ),
-
-            const Divider(height: 1),
+            Divider(
+              height: 1,
+              color: AppColors.getBorderLight(context).withOpacity(0.5),
+            ),
 
             // List of Bookmarks
             Expanded(
@@ -190,12 +192,18 @@ class _BookmarkDrawerState extends State<BookmarkDrawer> {
                     return _buildEmptyState(context);
                   }
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                  return ListView.separated(
+                    padding: EdgeInsets.zero,
                     itemCount: bookmarks.length,
+                    separatorBuilder: (context, index) => Divider(
+                      height: 1,
+                      indent: 20,
+                      endIndent: 20,
+                      color: AppColors.getBorderLight(context).withOpacity(0.4),
+                    ),
                     itemBuilder: (context, index) {
                       final bookmark = bookmarks[index];
-                      return _buildBookmarkCard(context, bookmark);
+                      return _buildBookmarkItem(context, bookmark);
                     },
                   );
                 },
@@ -213,16 +221,16 @@ class _BookmarkDrawerState extends State<BookmarkDrawer> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.bookmark_border,
-            size: 64,
+            Icons.bookmark_border_rounded,
+            size: 48,
             color: AppColors.getTextSecondary(context).withOpacity(0.3),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Text(
-            'Belum ada penanda',
+            LanguageHelper.tr(_translations, 'bookmarks.empty_state'),
             style: TextStyle(
               color: AppColors.getTextSecondary(context),
-              fontSize: 16,
+              fontSize: 14,
             ),
           ),
         ],
@@ -230,7 +238,7 @@ class _BookmarkDrawerState extends State<BookmarkDrawer> {
     );
   }
 
-  Widget _buildBookmarkCard(
+  Widget _buildBookmarkItem(
     BuildContext context,
     Map<String, dynamic> bookmark,
   ) {
@@ -245,129 +253,58 @@ class _BookmarkDrawerState extends State<BookmarkDrawer> {
       builder: (context, pageSnapshot) {
         final pageNum = pageSnapshot.data ?? 0;
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: AppColors.getSurfaceVariant(context).withOpacity(0.3),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.getBorderLight(context).withOpacity(0.5),
-            ),
-          ),
-          child: InkWell(
-            onTap: () async {
-              Navigator.pop(context);
-              await BookmarkService().markAsVisited(surahId, ayahNum);
-              final effectiveController =
-                  widget.controller ?? context.read<SttController>();
-              effectiveController.jumpToAyah(surahId, ayahNum);
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left Box (Ayah Ref & Page)
-                  Container(
-                    width: 60,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.getSurface(context),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: AppColors.getPrimary(context).withOpacity(0.5),
+        return InkWell(
+          onTap: () async {
+            Navigator.pop(context);
+            await BookmarkService().markAsVisited(surahId, ayahNum);
+            final effectiveController =
+                widget.controller ?? context.read<SttController>();
+            effectiveController.jumpToAyah(surahId, ayahNum);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$surahName $surahId:$ayahNum',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.getTextPrimary(context),
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          '$surahId:$ayahNum',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.getPrimary(context),
-                          ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Hal $pageNum  •  ${_formatDate(lastVisited ?? timestamp)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.getTextSecondary(context),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'hlm. $pageNum',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: AppColors.getTextSecondary(context),
-                          ),
-                        ),
-                      ],
-                    ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
+                ),
 
-                  // Middle: Details
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$surahName - Ayat $ayahNum',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.getTextPrimary(context),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        _buildDateRow(context, 'Ditandai:', timestamp),
-                        if (lastVisited != null)
-                          _buildDateRow(
-                            context,
-                            'Terakhir Dikunjungi:',
-                            lastVisited,
-                          ),
-                      ],
-                    ),
+                // Keep delete button subtle
+                IconButton(
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: AppColors.getTextSecondary(context).withOpacity(0.6),
                   ),
-
-                  // Right: Delete
-                  IconButton(
-                    icon: Icon(
-                      Icons.close,
-                      size: 20,
-                      color: AppColors.getTextSecondary(context),
-                    ),
-                    onPressed: () async {
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Hapus Penanda?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: const Text('Batal'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, true),
-                              child: const Text(
-                                'Hapus',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (confirmed == true) {
-                        await BookmarkService().removeBookmark(
-                          surahId,
-                          ayahNum,
-                        );
-                        _refreshBookmarks();
-                      }
-                    },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
+                  onPressed: () => _confirmDelete(context, surahId, ayahNum),
+                  padding: const EdgeInsets.all(4),
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
           ),
         );
@@ -375,16 +312,39 @@ class _BookmarkDrawerState extends State<BookmarkDrawer> {
     );
   }
 
-  Widget _buildDateRow(BuildContext context, String label, int timestamp) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Text(
-        '$label ${_formatDate(timestamp)}',
-        style: TextStyle(
-          fontSize: 11,
-          color: AppColors.getTextSecondary(context),
+  Future<void> _confirmDelete(
+    BuildContext context,
+    int surahId,
+    int ayahNum,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          LanguageHelper.tr(_translations, 'bookmarks.delete_confirm_title'),
+          style: const TextStyle(fontSize: 18),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              LanguageHelper.tr(_translations, 'app_bar_actions.cancel_text'),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              LanguageHelper.tr(_translations, 'bookmarks.delete_button'),
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
       ),
     );
+
+    if (confirmed == true) {
+      await BookmarkService().removeBookmark(surahId, ayahNum);
+      if (mounted) _refreshBookmarks();
+    }
   }
 }

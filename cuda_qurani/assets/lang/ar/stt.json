@@ -4,11 +4,75 @@
         "ayah_text": "آية",
         "page_text": "صفحة"
     },
+    "app_bar_actions": {
+        "search_tooltip": "بحث",
+        "settings_tooltip": "الإعدادات",
+        "menu_tooltip": "القائمة",
+        "bookmark_text": "العلامات المرجعية",
+        "view_mode_text": "تبديل العرض",
+        "visibility_text": "إخفاء الآيات",
+        "layout_picker_title": "اختر تخطيط المصحف",
+        "layout_pages_suffix": "صفحات",
+        "layout_glyph_desc": "خطوط قائمة على رموز",
+        "layout_font_desc": "خط واحد",
+        "cancel_text": "إلغاء"
+    },
     "bottom_bar": {
         "listen_text": "استمع",
         "recite_text": "تلاوة",
         "quick_guide_text": "دليل سريع",
         "quick_guide_desc": "اسحب لليسار للاستماع، ولليمين للتلاوة"
+    },
+    "search": {
+        "hint_text": "ابحث عن سورة أو آية (مثلاً: البقرة، 1:1)",
+        "examples_text": "أمثلة:",
+        "results_count": "تم العثور على نتائج",
+        "min_chars_text": "أدخل حرفين على الأقل",
+        "no_results_text": "لم يتم العثور على نتائج"
+    },
+    "share": {
+        "title": "خيارات المشاركة",
+        "arabic_text": "النص العربي",
+        "translation_text": "الترجمة",
+        "transliteration_text": "الترجمة الصوتية",
+        "button_text": "مشاركة الآية",
+        "footer_text": "تمت المشاركة من قرآني"
+    },
+    "bookmarks": {
+        "title": "العلامات المرجعية",
+        "sort_label": "فرز",
+        "empty_state": "لا توجد علامات مرجعية بعد",
+        "page_prefix": "ص.",
+        "ayah_label": "آية",
+        "bookmarked_label": "تم وضعها كعلامة:",
+        "last_visited_label": "آخر زيارة:",
+        "delete_confirm_title": "حذف العلامة المرجعية؟",
+        "delete_button": "حذف",
+        "sort_quran_asc": "ترتيب القرآن (تصاعدي)",
+        "sort_quran_desc": "ترتيب القرآن (تنازلي)",
+        "sort_first_bookmarked": "أول علامة مضافة",
+        "sort_last_bookmarked": "آخر علامة مضافة",
+        "sort_first_visited": "أول زيارة",
+        "sort_last_visited": "آخر زيارة"
+    },
+    "initialization": {
+        "title": "جاري تهيئة التطبيق...",
+        "loading_data": "جاري تحميل بيانات القرآن...",
+        "error_title": "خطأ في تهيئة التطبيق",
+        "unknown_error": "حدث خطأ غير معروف",
+        "retry_button": "إعادة المحاولة",
+        "logs_button": "عرض السجلات"
+    },
+    "logs": {
+        "console_title": "وحدة تحكم تصحيح أخطاء واجهة البرمجيات"
+    },
+    "dialogs": {
+        "completion_title": "تمت السورة!",
+        "congratulations": "🎉 تهانينا! 🎉",
+        "completed_reading": "لقد أكملت قراءة",
+        "stat_ayah": "آية",
+        "stat_time": "وقت",
+        "finish_button": "إنهاء"
     },
     "mushaf_view": {
         "juz_text": "جزء"

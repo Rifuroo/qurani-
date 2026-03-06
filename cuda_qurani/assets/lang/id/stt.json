@@ -3,13 +3,77 @@
         "juz_text": "Juz",
         "ayah_text": "Ayat",
         "page_text": "Hal",
-        "page_short_text":"Hal"
+        "page_short_text": "Hal"
+    },
+    "app_bar_actions": {
+        "search_tooltip": "Cari",
+        "settings_tooltip": "Pengaturan",
+        "menu_tooltip": "Menu",
+        "bookmark_text": "Penanda",
+        "view_mode_text": "Ganti tampilan",
+        "visibility_text": "Sembunyikan ayat",
+        "layout_picker_title": "Pilih Tata Letak Mushaf",
+        "layout_pages_suffix": "halaman",
+        "layout_glyph_desc": "Font berbasis Glyph",
+        "layout_font_desc": "Satu font",
+        "cancel_text": "Batal"
     },
     "bottom_bar": {
         "listen_text": "Dengarkan",
         "recite_text": "Murotal",
         "quick_guide_text": "Panduan Cepat",
         "quick_guide_desc": "Geser kiri untuk mendengar, kanan untuk membaca"
+    },
+    "search": {
+        "hint_text": "Cari Surah atau Ayat (misal: Al-Baqarah, 1:1)",
+        "examples_text": "Contoh:",
+        "results_count": "hasil ditemukan",
+        "min_chars_text": "Masukkan minimal 2 karakter",
+        "no_results_text": "Tidak ada hasil ditemukan"
+    },
+    "share": {
+        "title": "Opsi Berbagi",
+        "arabic_text": "Teks Arab",
+        "translation_text": "Terjemahan",
+        "transliteration_text": "Transliterasi",
+        "button_text": "Bagikan Ayat",
+        "footer_text": "Dibagikan dari Qurani"
+    },
+    "bookmarks": {
+        "title": "Penanda",
+        "sort_label": "Urut",
+        "empty_state": "Belum ada penanda",
+        "page_prefix": "hlm.",
+        "ayah_label": "Ayat",
+        "bookmarked_label": "Ditandai:",
+        "last_visited_label": "Terakhir Dikunjungi:",
+        "delete_confirm_title": "Hapus Penanda?",
+        "delete_button": "Hapus",
+        "sort_quran_asc": "Urutan Quran naik",
+        "sort_quran_desc": "Urutan Quran turun",
+        "sort_first_bookmarked": "Pertama ditandai",
+        "sort_last_bookmarked": "Terakhir ditandai",
+        "sort_first_visited": "Terawal dilihat",
+        "sort_last_visited": "Terakhir dilihat"
+    },
+    "initialization": {
+        "title": "Menginisialisasi Aplikasi...",
+        "loading_data": "Memuat data Quran...",
+        "error_title": "Kesalahan Inisialisasi Aplikasi",
+        "unknown_error": "Terjadi kesalahan yang tidak diketahui",
+        "retry_button": "Coba Lagi",
+        "logs_button": "Lihat Log"
+    },
+    "logs": {
+        "console_title": "Konsol Debug API"
+    },
+    "dialogs": {
+        "completion_title": "Surah Selesai!",
+        "congratulations": "🎉 Selamat! 🎉",
+        "completed_reading": "Anda telah menyelesaikan membaca",
+        "stat_ayah": "Ayat",
+        "stat_time": "Waktu",
+        "finish_button": "Selesai"
     },
     "mushaf_view": {
         "juz_text": "Juz"
