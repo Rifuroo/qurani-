@@ -1351,35 +1351,10 @@ class _BookFoldTransformer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double absPosition = position.abs();
-
-    // 🚀 2D OPTIMIZED TRANSFORM: Simulation of fold using 2D math
-    // Faster for mid-range GPUs (like Redmi Note 12) than 3D matrices.
-
-    // 1. Horizontal "Squeeze" (Simulates turning away)
-    // ScaleX from 1.0 (straight) to 0.85 (folded)
-    final double scaleX = 1.0 - (absPosition * 0.15);
-
-    // 2. Subtle Verticall "Skew" (Simulates perspective tilt)
-    // Very cheap 2D tilt
-    final double skewY = position * 0.05;
-
-    final Matrix4 transform = Matrix4.identity()..scale(scaleX, 1.0);
-
-    // Simulating skewY without the undefined method
-    transform.setEntry(1, 0, skewY);
-
-    // 3. Dynamic Crease Shadow
-    final double dimAmount = absPosition.clamp(0.0, 0.45);
-
+    // ✅ FLAT SWIPE: No 3D transform, just spacing
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8.0), // ✅ Wider white gap
-      child: Transform(
-        transform: transform,
-        // RTL Logic for Spine Alignment
-        alignment: position < 0 ? Alignment.centerLeft : Alignment.centerRight,
-        child: child, // ✅ Removed gutter shadow
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: child,
     );
   }
 }
