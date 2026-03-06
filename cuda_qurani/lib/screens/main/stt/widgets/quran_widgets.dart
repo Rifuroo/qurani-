@@ -306,6 +306,10 @@ class _QuranAppBarState extends State<QuranAppBar> {
             ),
 
             PopupMenuButton<String>(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.getSurface(context)
+                  : Colors.white,
+              surfaceTintColor: Colors.transparent,
               icon: Icon(
                 Icons.more_vert,
                 size: iconSize * 1.0,
