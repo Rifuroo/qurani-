@@ -2,6 +2,7 @@
 
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:cuda_qurani/screens/main/auth/register/register_page.dart';
+import 'package:cuda_qurani/screens/main/auth/forgot_password/forgot_password_page.dart';
 import 'package:cuda_qurani/screens/main/home/screens/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -135,7 +136,9 @@ class _LoginPageState extends State<LoginPage> {
           _isGoogleLoginLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          AppComponentStyles.errorSnackBar(message: 'Terjadi kesalahan saat login'),
+          AppComponentStyles.errorSnackBar(
+            message: 'Terjadi kesalahan saat login',
+          ),
         );
       }
     }
@@ -295,9 +298,13 @@ class _LoginPageState extends State<LoginPage> {
           _buildTextField(
             controller: _emailController,
             label: _translations.isNotEmpty
-                ? LanguageHelper.tr(_translations, 'login.email_or_username_text')
+                ? LanguageHelper.tr(
+                    _translations,
+                    'login.email_or_username_text',
+                  )
                 : 'Email or Username',
-            icon: Icons.person_outline_rounded, // Changed to person icon as it's more general
+            icon: Icons
+                .person_outline_rounded, // Changed to person icon as it's more general
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             validator: (value) {
@@ -406,7 +413,9 @@ class _LoginPageState extends State<LoginPage> {
         ),
         suffixIcon: IconButton(
           icon: Icon(
-            isVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            isVisible
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
             color: AppColors.getTextTertiary(context),
             size: AppDesignSystem.iconLarge * s,
           ),
@@ -421,7 +430,10 @@ class _LoginPageState extends State<LoginPage> {
         }
         if (value.length < 6) {
           return _translations.isNotEmpty
-              ? LanguageHelper.tr(_translations, 'login.error_password_length_text')
+              ? LanguageHelper.tr(
+                  _translations,
+                  'login.error_password_length_text',
+                )
               : 'Password must be at least 6 characters';
         }
         return null;
@@ -446,14 +458,14 @@ class _LoginPageState extends State<LoginPage> {
                     _rememberMe = value ?? false;
                   });
                 },
-                fillColor: WidgetStateProperty.resolveWith<Color?>(
-                  (Set<WidgetState> states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return AppColors.getPrimary(context);
-                    }
-                    return null;
-                  },
-                ),
+                fillColor: WidgetStateProperty.resolveWith<Color?>((
+                  Set<WidgetState> states,
+                ) {
+                  if (states.contains(WidgetState.selected)) {
+                    return AppColors.getPrimary(context);
+                  }
+                  return null;
+                }),
                 checkColor: AppColors.getTextInverse(context),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(
@@ -481,7 +493,11 @@ class _LoginPageState extends State<LoginPage> {
               ? LanguageHelper.tr(_translations, 'login.forgot_password_text')
               : 'Forgot Password?',
           onPressed: () {
-            // Handle forgot password
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const ForgotPasswordPage(),
+              ),
+            );
           },
           color: AppColors.getPrimary(context),
         ),
@@ -506,7 +522,10 @@ class _LoginPageState extends State<LoginPage> {
     return Row(
       children: [
         Expanded(
-          child: AppDivider(color: AppColors.getDivider(context), thickness: 1 * s),
+          child: AppDivider(
+            color: AppColors.getDivider(context),
+            thickness: 1 * s,
+          ),
         ),
         Padding(
           padding: EdgeInsets.symmetric(
@@ -523,7 +542,10 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
         Expanded(
-          child: AppDivider(color: AppColors.getDivider(context), thickness: 1 * s),
+          child: AppDivider(
+            color: AppColors.getDivider(context),
+            thickness: 1 * s,
+          ),
         ),
       ],
     );
@@ -553,7 +575,9 @@ class _LoginPageState extends State<LoginPage> {
                 width: AppDesignSystem.scale(context, 20),
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.getPrimary(context)),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.getPrimary(context),
+                  ),
                 ),
               )
             : Row(
@@ -602,7 +626,10 @@ class _LoginPageState extends State<LoginPage> {
           _translations.isNotEmpty
               ? LanguageHelper.tr(_translations, 'login.null_account_text')
               : 'Don\'t have an account?',
-          style: AppTypography.body(context, color: AppColors.getTextSecondary(context)),
+          style: AppTypography.body(
+            context,
+            color: AppColors.getTextSecondary(context),
+          ),
         ),
         AppTextButton(
           text: _translations.isNotEmpty
