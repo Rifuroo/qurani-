@@ -21,8 +21,6 @@ class AuthService {
   static const String _webClientId =
       '590267340989-afs4u84qlt053lpifpmchh8ts1b3elcm.apps.googleusercontent.com';
 
-
-
   GoogleSignIn? _googleSignIn;
 
   // Getters
@@ -37,7 +35,7 @@ class AuthService {
   /// Also pre-initializes the Google Sign-In instance.
   Future<void> initialize() async {
     print('🔐 Initializing AuthService...');
-    
+
     final token = await _storage.read(key: 'access_token');
     if (token != null) {
       print('🔑 Token found, fetching profile...');
@@ -77,12 +75,15 @@ class AuthService {
     try {
       print('📝 Signing up: $email ($username)');
 
-      final response = await _dio.post('/api/v1/Auth/register', data: {
-        'email': email,
-        'username': username,
-        'password': password,
-        'name': name,
-      });
+      final response = await _dio.post(
+        '/api/v1/Auth/register',
+        data: {
+          'email': email,
+          'username': username,
+          'password': password,
+          'name': name,
+        },
+      );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         print('✅ Sign up successful');
@@ -106,23 +107,23 @@ class AuthService {
     try {
       print('🔑 Signing in: $email');
 
-      final response = await _dio.post('/api/v1/Auth/login', data: {
-        'emailOrUsername': email,
-        'password': password,
-      });
+      final response = await _dio.post(
+        '/api/v1/Auth/login',
+        data: {'emailOrUsername': email, 'password': password},
+      );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data['data'];
-        
+
         _accessToken = data['accessToken'];
         await _storage.write(key: 'access_token', value: _accessToken);
         await _storage.write(key: 'refresh_token', value: data['refreshToken']);
-        
+
         // Map userId to id for UserModel
         final userMap = Map<String, dynamic>.from(data);
         userMap['id'] = data['userId'];
         _currentUser = UserModel.fromMap(userMap);
-        
+
         print('✅ Sign in successful for ${_currentUser?.email}');
         return true;
       }
@@ -156,7 +157,7 @@ class AuthService {
       }
 
       final authCode = googleUser.serverAuthCode;
-      
+
       print('📦 Google Auth: authCode: $authCode');
 
       if (authCode == null) {
@@ -165,24 +166,27 @@ class AuthService {
 
       print('☁️ Sending Google authCode to API...');
       // Note: We use authCode which is the standard for server-side exchange (v2)
-      final response = await _dio.post('/api/v1/OAuth/google/callback', data: {
-        'code': authCode,
-        'redirectUri': 'postmessage', // Required for serverAuthCode exchange
-        'state': null,
-      });
+      final response = await _dio.post(
+        '/api/v1/OAuth/google/callback',
+        data: {
+          'code': authCode,
+          'redirectUri': 'postmessage', // Required for serverAuthCode exchange
+          'state': null,
+        },
+      );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data['data'];
-        
+
         _accessToken = data['accessToken'];
         await _storage.write(key: 'access_token', value: _accessToken);
         await _storage.write(key: 'refresh_token', value: data['refreshToken']);
-        
+
         // Map userId to id for UserModel
         final userMap = Map<String, dynamic>.from(data);
         userMap['id'] = data['userId'];
         _currentUser = UserModel.fromMap(userMap);
-        
+
         print('✅ Google sign in successful for ${_currentUser?.email}');
         return true;
       }
@@ -255,5 +259,53 @@ class AuthService {
       print('❌ Delete account failed: $e');
     }
     return false;
+  }
+
+  /// Sends a forgot password OTP to the given email address.
+  ///
+  /// Returns `true` if the API accepted the request (does not confirm email existence).
+  Future<bool> forgotPassword(String email) async {
+    try {
+      print('📧 Requesting forgot password OTP for: $email');
+      final response = await _dio.post(
+        '/api/v1/Auth/forgot-password',
+        data: {'email': email},
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        print('✅ Forgot password OTP sent');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Forgot password request failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Resets the user's password using an OTP code.
+  ///
+  /// Returns `true` if the password was successfully reset.
+  Future<bool> resetPassword({
+    required String email,
+    required String otpCode,
+    required String newPassword,
+  }) async {
+    try {
+      print('🔑 Resetting password for: $email');
+      final response = await _dio.post(
+        '/api/v1/Auth/reset-password',
+        data: {'email': email, 'otpCode': otpCode, 'newPassword': newPassword},
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        print('✅ Password reset successful');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Password reset failed: $e');
+      rethrow;
+    }
   }
 }

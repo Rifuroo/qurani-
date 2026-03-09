@@ -7,9 +7,13 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
 
   bool _isLoading = true;
+  bool _isLoadingForgot = false;
+  bool _isLoadingReset = false;
   String? _errorMessage;
 
   bool get isLoading => _isLoading;
+  bool get isLoadingForgot => _isLoadingForgot;
+  bool get isLoadingReset => _isLoadingReset;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _authService.isAuthenticated;
   UserModel? get currentUser => _authService.currentUser;
@@ -19,14 +23,16 @@ class AuthProvider extends ChangeNotifier {
   AuthProvider() {
     _initialize();
   }
-  
+
   Future<void> _initialize() async {
     print('🔧 AuthProvider: Initializing...');
     _setLoading(true);
-    
+
     try {
       await _authService.initialize();
-      print('✅ AuthProvider: Initialized (isAuthenticated=${_authService.isAuthenticated})');
+      print(
+        '✅ AuthProvider: Initialized (isAuthenticated=${_authService.isAuthenticated})',
+      );
     } catch (e) {
       print('❌ AuthProvider: Initialization failed: $e');
     } finally {
@@ -81,7 +87,7 @@ class AuthProvider extends ChangeNotifier {
         password: password,
         rememberMe: rememberMe,
       );
-      
+
       _setLoading(false);
       return success;
     } catch (e) {
@@ -98,9 +104,11 @@ class AuthProvider extends ChangeNotifier {
     try {
       print('🔑 AuthProvider: Starting Native Google Sign In...');
       final success = await _authService.signInWithGoogle();
-      
+
       _setLoading(false);
-      print('🔑 AuthProvider: Google Sign In ${success ? "SUCCESS" : "FAILED"}');
+      print(
+        '🔑 AuthProvider: Google Sign In ${success ? "SUCCESS" : "FAILED"}',
+      );
       return success;
     } catch (e) {
       print('❌ AuthProvider: Google Sign In error: $e');
@@ -116,6 +124,52 @@ class AuthProvider extends ChangeNotifier {
       await _authService.signOut();
     } finally {
       _setLoading(false);
+    }
+  }
+
+  /// Requests a forgot password OTP for the given email.
+  Future<bool> requestForgotPassword(String email) async {
+    _isLoadingForgot = true;
+    _clearError();
+    notifyListeners();
+
+    try {
+      final success = await _authService.forgotPassword(email);
+      _isLoadingForgot = false;
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _setError(_parseError(e));
+      _isLoadingForgot = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Resets the user's password using an OTP code.
+  Future<bool> resetPasswordWithOtp({
+    required String email,
+    required String otpCode,
+    required String newPassword,
+  }) async {
+    _isLoadingReset = true;
+    _clearError();
+    notifyListeners();
+
+    try {
+      final success = await _authService.resetPassword(
+        email: email,
+        otpCode: otpCode,
+        newPassword: newPassword,
+      );
+      _isLoadingReset = false;
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _setError(_parseError(e));
+      _isLoadingReset = false;
+      notifyListeners();
+      return false;
     }
   }
 
@@ -141,12 +195,12 @@ class AuthProvider extends ChangeNotifier {
         if (data['message'] != null) {
           return data['message'];
         }
-        
+
         // 2. Check for multi-field validation errors (ASP.NET Core style)
         if (data['errors'] != null && data['errors'] is Map) {
           final errorsMap = data['errors'] as Map;
           final List<String> errorMessages = [];
-          
+
           errorsMap.forEach((key, value) {
             if (value is List) {
               errorMessages.addAll(value.map((e) => e.toString()));
@@ -154,7 +208,7 @@ class AuthProvider extends ChangeNotifier {
               errorMessages.add(value.toString());
             }
           });
-          
+
           if (errorMessages.isNotEmpty) {
             return errorMessages.join('\n');
           }
@@ -170,5 +224,3 @@ class AuthProvider extends ChangeNotifier {
     return error.toString();
   }
 }
-
-
