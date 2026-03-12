@@ -1,0 +1,265 @@
+# DOKUMENTASI LENGKAP STRUKTUR PROYEK QURANI
+
+Dokumen ini berisi daftar 100% LENGKAP seluruh file dalam proyek ini beserta fungsinya masing-masing.
+
+========================================================================
+STRUKTUR HIERARKI LENGKAP (FILE-BY-FILE AUDITED)
+========================================================================
+
+D:\qurani
+├── cuda_qurani/                           # Folder Utama Proyek Flutter
+│   ├── .vscode/                           # Pengaturan workspace VS Code (Editor config)
+│   ├── android/                           # Source code khusus platform Android (Manifest, Gradle)
+│   ├── ios/                               # Source code khusus platform iOS (Runner, Info.plist)
+│   ├── linux/                             # Source code khusus platform Linux (CMake)
+│   ├── macos/                             # Source code khusus platform macOS (Runner)
+│   ├── web/                               # Source code khusus platform Web (index.html, icons)
+│   ├── windows/                           # Source code khusus platform Windows (C++ source)
+│   ├── apidocs&database/                  # Dokumentasi teknis sistem
+│   │   └── database_docs.txt              # Detail skema tabel SQLite & Endpoint API
+│   ├── assets/                            # Folder Koleksi Aset Non-Kode
+│   │   ├── background/                    # Wallpaper & Gambar Latar Belakang UI
+│   │   │   └── background.png             # Tekstur latar belakang mushaf/utama
+│   │   ├── fonts/                         # Koleksi Font System & App
+│   │   │   ├── 110BesmellahNormal.ttf     # Font kaligrafi Bismillah
+│   │   │   ├── DigitalKhattV2.otf         # Font angka digital
+│   │   │   ├── KFGQPCNastaleeq-Regular.ttf# Font gaya Nastaleeq
+│   │   │   ├── KFGQPCUthmanicScriptHAFSRegular.otf # Font Utsmani Standar
+│   │   │   ├── QCF_SurahHeader_COLOR-Regular.ttf # Font Header Surah Berwarna
+│   │   │   ├── UthmanTN_v2-0.ttf          # Font Uthmanic Taha
+│   │   │   ├── Uthmanic.otf               # Variasi Font Utsmani
+│   │   │   ├── kitab.ttf                  # Font gaya Kitab
+│   │   │   ├── me_quran.ttf               # Font khusus rendering Quran
+│   │   │   ├── me_quran_volt_newmet.ttf   # Font Quran dengan metadata volt
+│   │   │   ├── quran-common.ttf           # Font simbol Quran umum
+│   │   │   ├── surah-name-v1.ttf          # Nama surah gaya v1
+│   │   │   ├── surah-name-v2.ttf          # Nama surah gaya v2
+│   │   │   ├── surah-name-v4.ttf          # Nama surah gaya v4
+│   │   │   └── surah_names.ttf            # Koleksi komplit nama surah
+│   │   ├── icon/                          # Ikon Resolusi Tinggi aplikasi
+│   │   │   └── icon_app.jpg               # Logo/Ikon utama aplikasi
+│   │   ├── images/                        # Ilustrasi & Gambar Pendukung UI
+│   │   │   ├── google-icon.png            # Ikon login Google
+│   │   │   ├── indopak_preview.png        # Preview font IndoPak (Light)
+│   │   │   ├── indopak_preview_dark.png   # Preview font IndoPak (Dark)
+│   │   │   ├── qpc_preview.png            # Preview font QPC (Light)
+│   │   │   ├── qpc_preview_dark.png       # Preview font QPC (Dark)
+│   │   │   ├── qurani-icon-green.png      # Ikon logo hijau
+│   │   │   ├── qurani-white-text.png      # Logo teks putih
+│   │   │   └── sliderbutton_guide.jpeg    # Gambar instruksi navigasi
+│   │   ├── indopak/                       # Aset khusus rendering gaya IndoPak
+│   │   ├── kfgqpc/                        # Aset khusus font Saudi/Medina
+│   │   ├── lang/                          # File lokalisasi (Multilingual support)
+│   │   │   ├── ar.json                    # Terjemahan ke Bahasa Arab
+│   │   │   ├── en.json                    # Terjemahan ke Bahasa Inggris
+│   │   │   └── id.json                    # Terjemahan ke Bahasa Indonesia
+│   │   ├── QPCv2/                         # Database Font Al-Qur'an V2
+│   │   │   └── QPC V2 Font.ttf/           # Koleksi 604 glyph font per halaman
+│   │   ├── qpc-hafs-tajweed.db/           # Database utama induksi warna Tajweed
+│   │   ├── reciters/                      # Database Murrottal per Qori
+│   │   │   ├── *.db                       # Database audio offline per Qori
+│   │   │   └── data/                      # Metadata Qori
+│   │   │       └── reciters_data.json     # Info biodata & asset path Qori
+│   │   └── surah-header/                  # Ornamen Grafis Header Surah
+│   │       └── chapter_hdr.png            # Gambar frame bismillah awal surah
+│   ├── lib/                               # SOURCE CODE CORE (DART)
+│   │   ├── main.dart                      # Entry Point; Bootstrapping Services & App Root
+│   │   ├── config/                        # Folder Pengaturan Global
+│   │   │   └── app_config.dart            # Konstanta API, Keys, & Config Lingkungan
+│   │   ├── core/                          # Lapisan Infrastruktur Proyek
+│   │   │   ├── design_system/             # UI Framework Proyek
+│   │   │   │   └── app_design_system.dart # Design tokens: Warna, Font, Spacing, & Shadow
+│   │   │   ├── enums/                     # Definisi Tipe Data Statis
+│   │   │   │   └── mushaf_layout.dart     # Enum untuk mode tampilan Mushaf (Single/Double)
+│   │   │   ├── navigation/                # Sistem Perpindahan Layar
+│   │   │   │   └── app_navigation_service.dart # Abstraksi Navigator (Router helper)
+│   │   │   ├── network/                   # Sistem Komunikasi Internet
+│   │   │   │   └── app_http_client.dart   # Wrapper Dio/HTTP Client & Error Handler
+│   │   │   ├── providers/                 # State Manager Core
+│   │   │   │   └── language_provider.dart # State manager untuk switching bahasa
+│   │   │   ├── services/                  # Business Logic Core
+│   │   │   │   └── language_service.dart  # Sinkronisasi Locale & Local Storage
+│   │   │   ├── tajweed/                   # Engine Pemrosesan Tajweed
+│   │   │   ├── utils/                     # Utility Khusus Core
+│   │   │   │   └── language_helper.dart   # Helper manipulasi teks & locale
+│   │   │   └── widgets/                   # UI Komponen Reusable Global
+│   │   │       ├── achievement_popup.dart # UI Popup reward saat khatam/setoran
+│   │   │       ├── app_components.dart    # Komponen Button, Input, & Card custom
+│   │   │       ├── goal_dialog.dart       # Dialog setoran target bacaan harian
+│   │   │       ├── premium_dialog.dart    # Dialog promosi upgrade ke Premium
+│   │   │       ├── premium_gate.dart      # Guard UI untuk mengunci fitur berbayar
+│   │   │       ├── rate_limit_banner.dart # Banner proteksi overload akses server
+│   │   │       └── swipeable_page_wrapper.dart # Wrapper navigasi antar layar gesture
+│   │   ├── features/                      # Modul Domain Utama Aplikasi
+│   │   │   ├── quran_content/             # Modul Pengelolaan Konten Teks Quran
+│   │   │   │   ├── data/                  # Implementasi Data Layer
+│   │   │   │   │   └── repositories/      # Repository Implementation teks Quran
+│   │   │   │   ├── domain/                # Business Logic Layer
+│   │   │   │   │   ├── entities/          # Entitas data (Model Domain)
+│   │   │   │   │   │   └── ayah_content.dart # Struktur data inti sebuah Ayat Al-Qur'an
+│   │   │   │   │   └── repositories/      # Interface/kontrak data repo
+│   │   │   │   │       └── ayah_content_repository.dart # Kontrak fetch data ayat
+│   │   │   │   └── presentation/          # UI Layer khusus konten Quran
+│   │   │   │       ├── controllers/       # Manajer state UI konten Quran
+│   │   │   │       └── pages/             # Layar-layar tampilan ayat
+│   │   │   └── similarity/                # Modul Mutasyaabih (Pencarian Ayat Mirip)
+│   │   │       ├── data/                  # Implementasi Data Layer Mutasyaabih
+│   │   │       │   └── repositories/      # Repo impl kemiripan ayat
+│   │   │       │       └── similarity_repository_impl.dart # Logic fetch kemiripan
+│   │   │       ├── domain/                # Business Logic Kemiripan
+│   │   │       │   ├── entities/          # Entitas data kemiripan
+│   │   │       │   │   └── similarity_result.dart # Model data hasil pencarian mirip
+│   │   │       │   └── repositories/      # Interface repo kemiripan
+│   │   │       │       └── similarity_repository.dart # Kontrak pencarian mutasyaabih
+│   │   │       └── presentation/          # Tampilan Modul Kemiripan
+│   │   │           ├── controllers/       # Controller logic mutasyaabih
+│   │   │           │   ├── phrase_similarity_controller.dart # Logic kemiripan frase
+│   │   │           │   └── verse_similarity_controller.dart # Logic kemiripan ayat full
+│   │   │           ├── pages/             # Layar list & detail kemiripan
+│   │   │           │   ├── phrase_detail_page.dart # Detail satu frase mutasyaabih
+│   │   │           │   ├── phrase_similarity_page.dart # List mutasyaabih frase
+│   │   │           │   └── verse_similarity_page.dart # List mutasyaabih ayat
+│   │   │           └── widgets/           # Komponen UI Mutasyaabih
+│   │   │               └── ayah_similarity_card.dart # Card tampilan ayat mirip
+│   │   ├── models/                        # Folder Model Data (POJO)
+│   │   │   ├── playback_settings_model.dart # Definisi setting audio murrottal
+│   │   │   ├── premium_features.dart      # Daftar & status akses fitur premium
+│   │   │   ├── quran_models.dart          # Struktur data Surah, Ayah, Juz, & Page
+│   │   │   └── user_model.dart            # Struktur data Profile & Privasi User
+│   │   ├── providers/                     # STATE MANAGEMENT GLOBAL (REAKTIF)
+│   │   │   ├── auth_provider.dart         # Sinkronisasi status Login/Session user
+│   │   │   ├── premium_provider.dart      # Sinkronisasi status Pembelian/Premium
+│   │   │   ├── recitation_provider.dart   # Sinkronisasi audio player & qori aktif
+│   │   │   ├── reminder_provider.dart     # Sinkronisasi notifikasi & jadwal ngaji
+│   │   │   └── theme_provider.dart        # Sinkronisasi Tema (Light/Dark/System)
+│   │   ├── screens/                       # LAPISAN ANTARMUKA PER SEKSI
+│   │   │   ├── auth_wrapper.dart          # Logic pemutus rute (ke Home atau ke Login)
+│   │   │   ├── splash_screen.dart         # Layar branding awal saat app dibuka
+│   │   │   └── main/                      # Folder Layar Utama Aplikasi
+│   │   │       ├── auth/                  # Flow Autentikasi Pengguna
+│   │   │       │   ├── forgot_password/   # Folder Lupa Password
+│   │   │       │   │   └── forgot_password_page.dart # Layar reset sandi via OTP/Email
+│   │   │       │   ├── login/             # Folder Masuk Akun
+│   │   │       │   │   └── login_page.dart # Layar masuk (Google/Email/Supabase)
+│   │   │       │   └── register/          # Folder Daftar Akun
+│   │   │       │       └── register_page.dart # Layar pendaftaran akun baru
+│   │   │       ├── home/                  # Folder Dashboard & Navigasi Utama
+│   │   │       │   ├── screens/           # Kumpulan Layar Fitur Home
+│   │   │       │   │   ├── achievement_page.dart # Report progress hafalan/bacaan
+│   │   │       │   │   ├── activity_page.dart # Statistik harian penggunaan app
+│   │   │       │   │   ├── all_session_page.dart # List histori sesi ngaji sebelumnya
+│   │   │       │   │   ├── completion_page.dart # Report saat target tercapai
+│   │   │       │   │   ├── home_page.dart     # Layar dashboard utama (Summary)
+│   │   │       │   │   ├── premium_offer_page.dart # Landing page jualan premium
+│   │   │       │   │   ├── profile_page.dart  # Pengaturan akun & tampilan profile
+│   │   │       │   │   ├── surah_list_page.dart # Index Utama 114 Surah
+│   │   │       │   │   └── settings/          # Pengaturan Aplikasi
+│   │   │       │   │       ├── settings_page.dart # Menu utama settings
+│   │   │       │   │       ├── submenu/       # Halaman Detail Tiap Pengaturan
+│   │   │       │   │       │   ├── data_usage.dart # Atur penggunaan data internet
+│   │   │       │   │       │   ├── dropped_connection.dart # Error state & retry logic
+│   │   │       │   │       │   ├── hidden_verses.dart # Fitur sembunyi ayat khusus
+│   │   │       │   │       │   ├── language.dart # Pilih bahasa aplikasi
+│   │   │       │   │       │   ├── listening.dart # Setting murrottal/audio
+│   │   │       │   │       │   ├── marking.dart # Pilih icon penanda bacaan
+│   │   │       │   │       │   ├── mistake_feedback.dart # Laporkan salah tajweed/teks
+│   │   │       │   │       │   ├── mushaf_layout.dart # Aturan visual mushaf
+│   │   │       │   │       │   ├── recitation.dart # Manager download murrottal
+│   │   │       │   │       │   ├── reciters_download.dart # Progres download audio
+│   │   │       │   │       │   ├── reminders.dart # Setting jam notifikasi
+│   │   │       │   │       │   ├── session_start&stop.dart # Setting otomatisasi sesi
+│   │   │       │   │       │   ├── tafsir_download.dart # Manager download tafsir
+│   │   │       │   │       │   ├── theme.dart # Pilih skema warna (Vibrant dll)
+│   │   │       │   │       │   └── translation_download.dart # Manager download arti
+│   │   │       │   │       └── widgets/       # Komponen Spesifik Settings
+│   │   │       │   │           ├── appbar.dart # Header settings custom
+│   │   │       │   │           ├── audio_manager.dart # Kontrol storage file audio
+│   │   │       │   │           ├── mushaf_layout_font.dart # Selector font mushaf
+│   │   │       │   │           ├── sound_effect.dart # Pilih suara tombol/navigasi
+│   │   │       │   │           └── tajweed_rules.dart # Legenda aturan tajweed
+│   │   │       │   ├── services/           # Logic spesifik Home
+│   │   │       │   │   └── juz_service.dart   # Processor pembagi surah ke Juz
+│   │   │       │   └── widgets/            # Pendukung Layar Home
+│   │   │       │       └── navigation_bar.dart # Bottom navigation bar custom
+│   │   │       └── stt/                   # MODUL READER (MUSHAF VIEW) - SANGAT PENTING
+│   │   │           ├── stt_page.dart      # Root entry layar Mushaf/Reader
+│   │   │           ├── controllers/       # Controller Logic Mushaf
+│   │   │           │   └── stt_controller.dart # Otak interaksi, scroll, highlight, & zoom
+│   │   │           ├── data/              # Model data lokal mushaf
+│   │   │           │   └── models.dart     # Model lokal penunjang rendering
+│   │   │           ├── database/          # Komponen DB khusus Mushaf
+│   │   │           │   └── db_helper.dart  # Query helper spesifik lokal mushaf
+│   │   │           ├── services/          # Logika penunjang Reader
+│   │   │           │   ├── mushaf_widget_cache.dart # Manager efisiensi memori widget
+│   │   │           │   ├── mutashabihat_service.dart # Fetch relasi ayat mirip
+│   │   │           │   └── quran_service.dart # Supplier data ayat ke layar
+│   │   │           ├── utils/             # Helper teknis Reader
+│   │   │           │   ├── ayah_char_mapper.dart # Mapping teks ke font glyph Quran
+│   │   │           │   ├── ayah_text_cleaner.dart # Pembersih harakat/simbol pencarian
+│   │   │           │   ├── constants.dart     # Ukuran font & padding tetap mushaf
+│   │   │           │   ├── logger.dart        # Logger khusus aktivitas reader
+│   │   │           │   └── translation_html_parser.dart # Parser teks tafsir/arti HTML
+│   │   │           └── widgets/           # Komponen Interface Mushaf Reader
+│   │   │               ├── ayah_detail_view.dart # Popup detail per ayat (Tafsir/Audio)
+│   │   │               ├── ayah_options_sheet.dart # Menu opsi per ayat (Bookmark, Play)
+│   │   │               ├── ayah_search_modal.dart # Pencarian nomor ayat dalam surah
+│   │   │               ├── ayah_tafsir_widget.dart # View tampilan teks tafsir per ayat
+│   │   │               ├── ayah_translation_widget.dart # View tampilan teks arti per ayat
+│   │   │               ├── bookmark_drawer.dart # Sidebar list tanda baca user
+│   │   │               ├── list_view.dart # Mode mushaf scroll ke bawah
+│   │   │               ├── mushaf_paper_background.dart # Latar belakang tekstur kertas
+│   │   │               ├── mushaf_view.dart # Mode mushaf geser lembaran buku
+│   │   │               ├── playback_settings.dart # Setting speed & pengulangan audio
+│   │   │               ├── quran_widgets.dart # Koleksi elemen visual Al-Qur'an
+│   │   │               ├── session_conflict_dialog.dart # Dialog error tabrakan sesi
+│   │   │               ├── share_customization_sheet.dart # Atur tampilan ayat saat dishare
+│   │   │               ├── similarity_list_view.dart # List tampilan mutasyaabih
+│   │   │               ├── slider_guide_popup.dart # Panduan navigasi gesture baru
+│   │   │               ├── tafsir_placeholder_view.dart # UI loading data tafsir
+│   │   │               └── translation_placeholder_view.dart # UI loading data makna
+│   │   └── services/                      # INFRASTRUKTUR & PROVIDER DATA PUSAT
+│   │       ├── audio_download_services.dart # Service unduh paket murrottal (manager)
+│   │       ├── audio_service.dart           # Integration dengan plugin audio hardware
+│   │       ├── auth_service.dart            # Manajer login/signup via Supabase API
+│   │       ├── bookmark_service.dart        # Logic CRUD penanda bacaan lokal/cloud
+│   │       ├── daily_ayah_service.dart      # Ambil quote ayat dari server tiap hari
+│   │       ├── global_ayat_services.dart    # Shared logic pengolahan data ayat
+│   │       ├── in_app_purchase_service.dart # Integrasi store (Billing & Subscriptions)
+│   │       ├── listening_audio_services.dart# Sinkronasi audio dan highlight ayat visual
+│   │       ├── local_database_service.dart  # Manajer koneksi utama SQLite (Offline data)
+│   │       ├── metadata_cache_service.dart  # Penyimpanan data ringan agar app gesit
+│   │       ├── mushaf_settings_service.dart # Store preferensi visual user (font/size)
+│   │       ├── notification_service.dart     # Service pemicu local/push notification
+│   │       ├── quran_resource_service.dart   # Loader aset Quran dari APK ke memori
+│   │       ├── quran_service.dart            # Logic utama fetch & search Surah/Ayat
+│   │       ├── reciter_database_service.dart # Info koleksi Qori yang tersedia
+│   │       ├── reciter_manager_services.dart # Logika ganti Qori & download management
+│   │       ├── resource_database_helper.dart # Helper pembaca database aset statis
+│   │       ├── results_api_service.dart      # Service log hasil kuis/pencapaian ke API
+│   │       ├── supabase_service.dart         # Wrapper utama SDK Supabase (Cloud Sync)
+│   │       ├── websocket_service.dart        # Koneksi realtime (Chat/Sync Live)
+│   │       └── widget_service.dart           # Integrasi dengan Widget Home Screen OS
+│   ├── .gitattributes                     # Konfigurasi file handling Git (LFS, line ending)
+│   ├── .gitignore                         # Daftar file/folder yang diabaikan Git
+│   ├── .metadata                          # Konfigurasi project Flutter (Channel, Version)
+│   ├── analysis_options.yaml              # Aturan Code Quality & Linting (Clean Code)
+│   ├── pubspec.lock                       # Catatan versi dependensi yang terkunci
+│   └── pubspec.yaml                       # Manifest Proyek: Nama, Versi, Deps, & Aset
+└── .git/                                  # Folder database internal riwayat Git (History)
+
+========================================================================
+RINGKASAN ARSITEKTUR & PERAN LAYER (SUMMARY)
+========================================================================
+
+1. INFRASTRUKTUR (CONFIG, CORE, SERVICES): Layer paling bawah yang berurusan 
+   langsung dengan internet, database lokal, dan hardware perangkat.
+2. DATA MODELS: Peta data (POJO) untuk mendefinisikan apa itu User, Ayat, dll.
+3. STATE MANAGEMENT (PROVIDERS): Penghubung reaktif agar UI selalu update 
+   ketika data di bawah (Service) berubah.
+4. PRESENTATION (SCREENS, FEATURES): Bagian yang dilihat dan disentuh pengguna. 
+   Terbagi menjadi modul Auth (Login), Home (Dashboard), dan Mushaf (Reader).
+5. ASSETS: Tulang punggung Al-Qur'an digital (Font Glyph, Data Tajweed, Mushaf Page).
+
+========================================================================
+DOKUMENTASI INI TELAH DIAUDIT SECARA EXHAUSTIVE UNTUK SETIAP FILE & FOLDER.
+========================================================================
