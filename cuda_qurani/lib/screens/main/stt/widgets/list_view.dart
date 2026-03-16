@@ -838,6 +838,8 @@ class _CompleteAyahWidget extends StatelessWidget {
                           isListeningMode: ctrl.isListeningMode,
                           isHighlighted: layoutState.isHighlighted,
                           isCurrentAyat: layoutState.isCurrentAyat,
+                          hideUnreadAyat: ctrl.hideUnreadAyat,
+                          hideVerseMarkers: ctrl.hideVerseMarkers,
                         ),
                         builder: (context, contentState, _) {
                           return _buildAyahArabic(
@@ -925,21 +927,40 @@ class _CompleteAyahWidget extends StatelessWidget {
 
         for (int i = 0; i < segment.words.length; i++) {
           final word = segment.words[i];
+          final wordStatus = state.wordStatusMap?[word.id];
           final isLastWord =
               segment.isEndOfAyah && i == segment.words.length - 1;
 
+          double wordOpacity = 1.0;
+          if (state.hideUnreadAyat) {
+            if (wordStatus != null && wordStatus != WordStatus.pending) {
+              wordOpacity = 1.0;
+            } else {
+              wordOpacity = isLastWord ? 1.0 : 0.0;
+            }
+          }
+
           if (isLastWord) {
+            if (state.hideVerseMarkers) continue;
             // Display: WidgetSpan for visual end marker
             displaySpans.add(
               WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
-                child: _buildAyahEndMarker(context, segment, baseFontSize),
+                child: Opacity(
+                  opacity: wordOpacity,
+                  child: _buildAyahEndMarker(context, segment, baseFontSize),
+                ),
               ),
             );
             // Measure: placeholder text (won't need highlight on end marker)
             measureSpans.add(TextSpan(text: ' ', style: wordStyle));
           } else {
-            final span = TextSpan(text: word.text, style: wordStyle);
+            final span = TextSpan(
+              text: word.text,
+              style: wordStyle.copyWith(
+                color: wordStyle.color?.withValues(alpha: wordOpacity),
+              ),
+            );
             displaySpans.add(span);
             measureSpans.add(span);
             // Non-breaking space between words
@@ -1135,6 +1156,8 @@ class _AyahContentState {
   final bool isListeningMode;
   final bool isHighlighted;
   final bool isCurrentAyat;
+  final bool hideUnreadAyat;
+  final bool hideVerseMarkers;
 
   const _AyahContentState({
     required this.wordStatusMap,
@@ -1142,6 +1165,8 @@ class _AyahContentState {
     required this.isListeningMode,
     required this.isHighlighted,
     required this.isCurrentAyat,
+    required this.hideUnreadAyat,
+    required this.hideVerseMarkers,
   });
 
   @override
@@ -1152,6 +1177,8 @@ class _AyahContentState {
           isListeningMode == other.isListeningMode &&
           isHighlighted == other.isHighlighted &&
           isCurrentAyat == other.isCurrentAyat &&
+          hideUnreadAyat == other.hideUnreadAyat &&
+          hideVerseMarkers == other.hideVerseMarkers &&
           _mapEquals(wordStatusMap, other.wordStatusMap);
 
   @override
@@ -1160,6 +1187,8 @@ class _AyahContentState {
     isListeningMode,
     isHighlighted,
     isCurrentAyat,
+    hideUnreadAyat,
+    hideVerseMarkers,
     wordStatusMap,
   );
 

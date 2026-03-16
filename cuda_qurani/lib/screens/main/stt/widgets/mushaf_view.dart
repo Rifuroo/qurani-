@@ -673,6 +673,9 @@ class _JustifiedAyahLine extends StatelessWidget {
     final hideUnreadAyat = context.select<SttController, bool>(
       (c) => c.hideUnreadAyat,
     );
+    final hideVerseMarkers = context.select<SttController, bool>(
+      (c) => c.hideVerseMarkers,
+    );
 
     // Select ONLY the word status for the current active highlight if it belongs to this line
     final lineSegments = line.ayahSegments ?? [];
@@ -771,7 +774,7 @@ class _JustifiedAyahLine extends StatelessWidget {
     // ✅ ⚡️ ULTIMATE SPAN CACHING: Key includes all visual states
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final cacheKey =
-        '${mushafLayout.name}:$pageNumber:${line.lineNumber}:$isDarkMode:${lineHighlightState.relevantRevision}:${lineHighlightState.currentWordInLine}:${lineHighlightState.hasSelection}:$hideUnreadAyat';
+        '${mushafLayout.name}:$pageNumber:${line.lineNumber}:$isDarkMode:${lineHighlightState.relevantRevision}:${lineHighlightState.currentWordInLine}:${lineHighlightState.hasSelection}:$hideUnreadAyat:$hideVerseMarkers';
 
     if (_localSpanCache.containsKey(cacheKey)) {
       return _drawJustifiedLine(_localSpanCache[cacheKey]!, context);
@@ -809,6 +812,7 @@ class _JustifiedAyahLine extends StatelessWidget {
             : baseFontSize;
 
         if (isLastWordInAyah) {
+          if (hideVerseMarkers) continue; // Skip rendering the marker
           final markerSpan = WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: Container(

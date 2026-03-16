@@ -2,6 +2,7 @@
 
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/slider_guide_popup.dart';
+import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 
 import 'controllers/stt_controller.dart';
 import 'services/quran_service.dart';
@@ -87,6 +88,17 @@ class _SttPageState extends State<SttPage> {
               resumeSessionId: widget.resumeSessionId, // ✅ NEW
               highlightAyahId: widget.highlightAyahId, // ✅ NEW
             );
+
+            // ✅ NEW: Set SettingsProvider for persistent layout/marking settings
+            try {
+              final settings = Provider.of<MushafSettingsService>(
+                context,
+                listen: false,
+              );
+              controller.setSettingsService(settings);
+            } catch (e) {
+              print('⚠️ SttPage: MushafSettingsService not found');
+            }
 
             // ✅ NEW: Set PremiumProvider for word color gating
             try {

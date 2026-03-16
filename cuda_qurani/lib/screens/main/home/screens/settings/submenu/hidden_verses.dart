@@ -1,6 +1,8 @@
 // lib/screens/main/home/screens/settings/submenu/hidden_verses.dart
 import 'package:cuda_qurani/core/utils/language_helper.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
 
@@ -31,31 +33,24 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
     });
   }
 
-  // Default states untuk semua toggle (dummy state)
-  bool _hideVerses = false;
-  bool _hideVerseMarkers = false;
-
-  void _toggleHideVerses(bool value) {
-    setState(() {
-      _hideVerses = value;
-    });
-    AppHaptics.selection();
-
-    // TODO: Implement toggle logic
-  }
-
-  void _toggleHideVerseMarkers(bool value) {
-    setState(() {
-      _hideVerseMarkers = value;
-    });
-    AppHaptics.selection();
-
-    // TODO: Implement toggle logic
-  }
-
   @override
   Widget build(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
+    final settingsService = Provider.of<MushafSettingsService>(context);
+
+    // Get current values from service
+    final hideVerses = settingsService.hideUnreadAyat;
+    final hideVerseMarkers = settingsService.hideVerseMarkers;
+
+    void toggleHideVerses(bool value) {
+      settingsService.setHideUnreadAyat(value);
+      AppHaptics.selection();
+    }
+
+    void toggleHideVerseMarkers(bool value) {
+      settingsService.setHideVerseMarkers(value);
+      AppHaptics.selection();
+    }
 
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
@@ -135,8 +130,8 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                               ),
                             ),
                             Switch(
-                              value: _hideVerses,
-                              onChanged: _toggleHideVerses,
+                              value: hideVerses,
+                              onChanged: toggleHideVerses,
                               activeTrackColor: AppColors.getPrimary(context).withValues(alpha: 0.5),
                               activeThumbColor: Colors.white,
                               inactiveThumbColor: AppColors.getBorderMedium(context),
@@ -183,8 +178,8 @@ class _HiddenVersesPageState extends State<HiddenVersesPage> {
                               ),
                             ),
                             Switch(
-                              value: _hideVerseMarkers,
-                              onChanged: _toggleHideVerseMarkers,
+                              value: hideVerseMarkers,
+                              onChanged: toggleHideVerseMarkers,
                               activeTrackColor: AppColors.getPrimary(context).withValues(alpha: 0.5),
                               activeThumbColor: Colors.white,
                               inactiveThumbColor: AppColors.getBorderMedium(context),
