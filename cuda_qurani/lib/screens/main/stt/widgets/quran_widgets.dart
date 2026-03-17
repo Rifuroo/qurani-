@@ -775,14 +775,18 @@ class _QuranBottomBarState extends State<QuranBottomBar>
 
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
-    final containerHeight = screenHeight * 0.15;
-    final trackWidth = screenWidth * 0.75;
-    final trackHeight = screenHeight * 0.065;
-    final thumbSize = trackHeight * 0.85;
-    final iconSize = screenWidth * 0.065;
-    final labelSize = screenWidth * 0.032;
-    final bottomOffset = screenHeight * 0.057;
+    // ✅ LANDSCAPE SCALING: Use shorter dimension for scaling icons/text
+    final refSide = isLandscape ? screenHeight : screenWidth;
+
+    final containerHeight = isLandscape ? screenHeight * 0.22 : screenHeight * 0.15;
+    final trackWidth = isLandscape ? screenWidth * 0.6 : screenWidth * 0.75;
+    final trackHeight = isLandscape ? screenHeight * 0.12 : screenHeight * 0.065;
+    final thumbSize = trackHeight * 0.88;
+    final iconSize = refSide * 0.065;
+    final labelSize = refSide * 0.033;
+    final bottomOffset = isLandscape ? screenHeight * 0.08 : screenHeight * 0.057;
 
     // ✅ Compute position: forced 0 when actively playing/recording, free when paused/idle
     final double wiggleOffset = _isWiggling ? _wiggleAnimation.value : 0.0;

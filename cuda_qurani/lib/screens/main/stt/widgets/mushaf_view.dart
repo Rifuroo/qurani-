@@ -503,7 +503,7 @@ class MushafPageContent extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         padding: EdgeInsets.only(
           top: 20.0, 
-          bottom: isSpecialPage ? screenHeight * 0.8 : screenHeight * 1.6, 
+          bottom: isSpecialPage ? screenHeight * 1.0 : screenHeight * 1.8, 
         ),
         child: Column(
           children: [
