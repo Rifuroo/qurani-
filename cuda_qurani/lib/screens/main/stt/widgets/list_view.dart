@@ -677,9 +677,14 @@ class _SurahHeader extends StatelessWidget {
 
     final surahId = line.surahNumber ?? 1;
     final surahGlyphCode = controller.formatSurahHeaderName(surahId);
+    final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final headerSize = screenHeight * 0.060;
-    final surahNameSize = screenHeight * 0.045;
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    
+    // ✅ LANDSCAPE SCALING: Boosted to match Mushaf Zoom (effectively ~1.6x)
+    final refHeight = isLandscape ? screenWidth : screenHeight;
+    final headerSize = refHeight * (isLandscape ? 0.065 : 0.040);
+    final surahNameSize = refHeight * (isLandscape ? 0.070 : 0.045);
 
     return Center(
       child: Padding(
@@ -689,7 +694,7 @@ class _SurahHeader extends StatelessWidget {
           children: [
             Image.asset(
               'assets/surah-header/chapter_hdr.png',
-              height: headerSize * 1.5,
+              height: headerSize * 1.5, // ✅ Match mushaf_view.dart multiplier
               fit: BoxFit.contain,
               color: AppColors.getAyahNumber(context),
               colorBlendMode: BlendMode.srcIn,
@@ -721,13 +726,18 @@ class _Basmallah extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    
+    final refDimension = isLandscape ? screenWidth : screenHeight;
+    
     return Container(
       alignment: Alignment.center,
       padding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
       child: Text(
         '﷽',
         style: TextStyle(
-          fontSize: screenHeight * 0.04,
+          fontSize: refDimension * (isLandscape ? 0.025 : 0.04),
           fontFamily: 'Quran-Common',
           color: AppColors.getTextPrimary(context),
         ),
