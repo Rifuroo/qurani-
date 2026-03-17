@@ -48,7 +48,10 @@ class MushafRenderer {
 
     final lineH = customLineHeight ?? lineHeight(context);
 
-    if (isCentered) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    if (isCentered || isLandscape) {
       return SizedBox(
         height: lineH,
         width: availableWidth,
@@ -161,7 +164,7 @@ class MushafRenderer {
     double targetLineHeight = isLandscape
         ? referenceHeight *
               0.050 // Scale height in landscape
-        : screenHeight * 0.050;
+        : screenHeight * 0.050; // Normal for portrait
     bool useFittedBox = false;
 
     if (isIndopak) {
@@ -193,9 +196,9 @@ class MushafRenderer {
       }
     }
 
-    // ✅ Landscape: Allow the text to be wider instead of strictly following portrait width
+    // ✅ Landscape: MUCH WIDER for immersive "penuh" feel
     final availableWidth = isLandscape
-        ? (screenWidth * 0.85) - (horizontalPadding * 2)
+        ? (screenWidth * 0.95) - (horizontalPadding * 2)
         : referenceWidth - (horizontalPadding * 2) - 2.0;
 
     double calculatedFontSize = referenceWidth * fontSizeMultiplier;
@@ -483,36 +486,83 @@ class MushafPageContent extends StatelessWidget {
           .toList(),
     );
 
-    // ✅ CRITICAL: Clip page to prevent bleeding into adjacent pages during swipe
-    // ✅ Use ClipRect with explicit size for efficient clipping
-    // ✅ Highlighting Consolidated: Use a single Stack with one overlay for the entire page
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
+    final zoomFactor = isLandscape ? (isSpecialPage ? 1.6 : 1.9) : 1.0;
+
+    Widget content = _buildUnifiedContent(
+      context,
+      screenHeight,
+      screenWidth,
+      isLandscape,
+      isSpecialPage,
+      linesContent,
+    );
+
+    if (isLandscape) {
+      // 🚀 ZERO GAP LANDSCAPE: Content starts from the very top (behind AppBar)
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.only(
+          top: 20.0, 
+          bottom: isSpecialPage ? screenHeight * 0.8 : screenHeight * 1.6, 
+        ),
+        child: Column(
+          children: [
+            // Header (Normal Size)
+            MushafPageHeader(pageNumber: pageNumber),
+            
+            // Verses & Ornaments (Zoomed 1.9x)
+            Transform.scale(
+              scale: zoomFactor,
+              alignment: Alignment.topCenter,
+              child: _buildUnifiedContent(
+                context,
+                screenHeight,
+                screenWidth,
+                isLandscape,
+                isSpecialPage,
+                linesContent,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Default Portrait behavior (No Scroll, No Scale)
+    // ✅ BUGFIX: Restored header for Portrait
+    return Padding(
+      padding: EdgeInsets.only(top: appBarHeight),
       child: Column(
         children: [
-          // Header
-          Padding(
-            padding: EdgeInsets.only(top: appBarHeight),
-            child: MushafPageHeader(pageNumber: pageNumber),
-          ),
-
-          // ✅ KHUSUS HALAMAN 1 & 2: Tambahkan ruang kosong di atas Surah Header
-          if (isSpecialPage)
-            SizedBox(
-              height: isLandscape ? screenHeight * 0.05 : screenHeight * 0.04,
-            ),
-
-          const SizedBox(height: 0),
-
-          // Page lines
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: isLandscape ? screenWidth * 0.05 : 0.0,
-            ),
-            child: linesContent,
-          ),
+          MushafPageHeader(pageNumber: pageNumber),
+          content,
         ],
       ),
+    );
+  }
+
+  Widget _buildUnifiedContent(
+    BuildContext context,
+    double screenHeight,
+    double screenWidth,
+    bool isLandscape,
+    bool isSpecialPage,
+    Widget linesContent,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // ✅ KHUSUS HALAMAN 1 & 2: Tambahkan ruang kosong di atas Surah Header
+        if (isSpecialPage)
+          SizedBox(
+            height: isLandscape ? screenHeight * 0.05 : screenHeight * 0.04,
+          ),
+
+        const SizedBox(height: 8), // Small gap before verses
+
+        // Page lines
+        linesContent,
+      ],
     );
   }
 
@@ -1325,6 +1375,9 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
+    final orientation = MediaQuery.of(context).orientation;
+    final isLandscape = orientation == Orientation.landscape;
+
     // ✅ OPTIMIZATION: Only listen to layout changes, NOT page changes
     final mushafLayout = context.select<SttController, MushafLayout>(
       (c) => c.mushafLayout,
@@ -1332,8 +1385,9 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
     final isIndopak = mushafLayout == MushafLayout.indopak;
 
     final controller = context.read<SttController>();
-    final headerFontSize = screenWidth * 0.035;
-    final headerHeight = screenHeight * 0.035;
+    // ✅ BUGFIX: Perkecil dikit biar nggak "Gede Bet"
+    final headerFontSize = isLandscape ? screenHeight * 0.038 : screenWidth * 0.035;
+    final headerHeight = isLandscape ? screenHeight * 0.055 : screenHeight * 0.035;
     final juzText = _translations.isNotEmpty
         ? LanguageHelper.tr(_translations, 'mushaf_view.juz_text')
         : 'Juz';
@@ -1354,30 +1408,36 @@ class _MushafPageHeaderState extends State<MushafPageHeader> {
             : screenWidth * 0.010, // qpc,
       ),
       alignment: Alignment.center,
-      child: Row(
-        textDirection: TextDirection.rtl, // ✅ RTL layout
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // RIGHT side in RTL
-          Text(
-            '${context.formatNumber(widget.pageNumber)}', // ✅ Page number on RIGHT
-            style: TextStyle(
-              fontSize: headerFontSize,
-              color: AppColors.getTextPrimary(context).withOpacity(0.8),
-              fontWeight: FontWeight.w500,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: isLandscape ? 12.0 : (isIndopak ? screenWidth * 0.035 : screenWidth * 0.010),
+        ),
+        child: Row(
+          textDirection: TextDirection.rtl, // ✅ RTL layout
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // RIGHT side in RTL
+            Text(
+              '${context.formatNumber(widget.pageNumber)}',
+              style: TextStyle(
+                fontSize: headerFontSize,
+                color: AppColors.getTextPrimary(context).withOpacity(0.8),
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          // LEFT side in RTL
-          Text(
-            '$juzText ${context.formatNumber(juzNumber)}', // ✅ Juz on LEFT
-            style: TextStyle(
-              fontSize: headerFontSize,
-              color: AppColors.getTextPrimary(context).withOpacity(0.8),
-              fontWeight: FontWeight.w500,
+            
+            // LEFT side in RTL
+            Text(
+              '$juzText ${context.formatNumber(juzNumber)}',
+              style: TextStyle(
+                fontSize: headerFontSize,
+                color: AppColors.getTextPrimary(context).withOpacity(0.8),
+                fontWeight: FontWeight.w500,
+              ),
+              textDirection: TextDirection.rtl,
             ),
-            textDirection: TextDirection.rtl,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
