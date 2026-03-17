@@ -24,7 +24,6 @@ import 'package:cuda_qurani/providers/premium_provider.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/ayah_options_sheet.dart';
 import 'package:cuda_qurani/models/premium_features.dart';
 import 'package:cuda_qurani/screens/main/stt/services/mutashabihat_service.dart';
-import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SttController extends ChangeNotifier {
@@ -58,26 +57,6 @@ class SttController extends ChangeNotifier {
 
   // ✅ NEW: Highlight specific ayah (from deep link)
   final int? highlightAyahId;
-
-  // ✅ Settings Service
-  MushafSettingsService? _settingsService;
-
-  void setSettingsService(MushafSettingsService service) {
-    if (_settingsService == service) return;
-    _settingsService?.removeListener(notifyListeners);
-    _settingsService = service;
-    _settingsService?.addListener(notifyListeners);
-    notifyListeners();
-  }
-
-  // Settings Proxies
-  bool get showTajweedColors => _settingsService?.showTajweedColors ?? false;
-  bool get highlightMistakeHistory =>
-      _settingsService?.highlightMistakeHistory ?? false;
-  bool get colorSimilarPhrases =>
-      _settingsService?.colorSimilarPhrases ?? false;
-  bool get hideUnreadAyat => _settingsService?.hideUnreadAyat ?? true;
-  bool get hideVerseMarkers => _settingsService?.hideVerseMarkers ?? false;
 
   // ✅ NEW: Navigated/Highlighted Ayah State (Persistent)
   int? _navigatedAyahId;
@@ -339,6 +318,7 @@ class SttController extends ChangeNotifier {
   // UI State
   bool _isUIVisible = true;
   bool _isQuranMode = true;
+  bool _hideUnreadAyat = false;
   bool _showLogs = false;
   int _currentPage = 1;
   int _listViewCurrentPage = 1;
@@ -572,7 +552,7 @@ class SttController extends ChangeNotifier {
   Map<int, AyatProgress> get ayatProgress => _ayatProgress;
   bool get isUIVisible => _isUIVisible;
   bool get isQuranMode => _isQuranMode;
-  // bool get hideUnreadAyat => _hideUnreadAyat; // Removed duplicate proxy
+  bool get hideUnreadAyat => _hideUnreadAyat;
   bool get showLogs => _showLogs;
   int get currentPage => _currentPage;
   bool get isDataLoaded => _isDataLoaded;
@@ -1026,7 +1006,7 @@ class SttController extends ChangeNotifier {
       await _listeningAudioService!.startPlayback();
 
       // ✅ FIX: Removed erroneous _isRecording = true; (Listening mode is passive)
-      _settingsService?.setHideUnreadAyat(false);
+      _hideUnreadAyat = false;
       _wordStatusRevision++; // ✅ Sync UI
 
       appLogger.log('LISTENING', 'Listening mode started successfully');
@@ -2829,7 +2809,8 @@ class SttController extends ChangeNotifier {
   }
 
   void toggleHideUnread() {
-    _settingsService?.setHideUnreadAyat(!hideUnreadAyat);
+    _hideUnreadAyat = !_hideUnreadAyat;
+    notifyListeners();
   }
 
   /// ✅ MUSHAF LONG-PRESS: Map touch coordinate to Ayah and show options
@@ -4252,7 +4233,7 @@ class SttController extends ChangeNotifier {
           }
         },
       );
-      _settingsService?.setHideUnreadAyat(true);
+      _hideUnreadAyat = true;
       _isRecording = true;
       appLogger.log('RECORDING', 'Started for surah $recordingSurahId');
       print('✅ startRecording(): Recording started successfully');
@@ -4521,7 +4502,6 @@ class SttController extends ChangeNotifier {
   void dispose() {
     print('💀 SttController: DISPOSE CALLED for surah $suratId');
     appLogger.log('DISPOSAL', 'Starting cleanup process');
-    _settingsService?.removeListener(notifyListeners);
 
     // ✅ CRITICAL: Set disposal flag FIRST to stop all background tasks
     _isDisposed = true;

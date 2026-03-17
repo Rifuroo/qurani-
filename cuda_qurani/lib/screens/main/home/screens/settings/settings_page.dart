@@ -16,7 +16,6 @@ import 'package:cuda_qurani/screens/main/home/screens/settings/submenu/session_s
 import 'package:cuda_qurani/screens/main/home/screens/settings/submenu/translation_download.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/submenu/data_usage.dart';
 import 'package:flutter/material.dart';
-import 'package:cuda_qurani/screens/main/home/widgets/navigation_bar.dart';
 import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.dart';
 import 'package:cuda_qurani/core/design_system/app_design_system.dart';
 import 'package:cuda_qurani/core/widgets/app_components.dart';

@@ -2,7 +2,6 @@
 
 import 'package:cuda_qurani/core/enums/mushaf_layout.dart';
 import 'package:cuda_qurani/screens/main/stt/widgets/slider_guide_popup.dart';
-import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 
 import 'controllers/stt_controller.dart';
 import 'services/quran_service.dart';
@@ -14,6 +13,7 @@ import 'widgets/mushaf_paper_background.dart';
 import 'widgets/bookmark_drawer.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cuda_qurani/core/widgets/achievement_popup.dart';
 import 'package:cuda_qurani/core/widgets/rate_limit_banner.dart';
@@ -54,6 +54,37 @@ class SttPage extends StatefulWidget {
 
 class _SttPageState extends State<SttPage> {
   bool _achievementShown = false;
+  Orientation? _lastOrientation;
+
+  @override
+  void initState() {
+    super.initState();
+    // ✅ LANDSCAPE: Enable all orientations when entering Quran reader
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  @override
+  void dispose() {
+    // ✅ LANDSCAPE: Reset to portrait-only and restore system UI on exit
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    super.dispose();
+  }
+
+  void _handleOrientationChange(Orientation orientation) {
+    if (_lastOrientation == orientation) return;
+    _lastOrientation = orientation;
+
+    if (orientation == Orientation.landscape) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } else {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
 
   void _showAchievementPopup(BuildContext context, SttController controller) {
     if (_achievementShown) return;
@@ -89,17 +120,6 @@ class _SttPageState extends State<SttPage> {
               highlightAyahId: widget.highlightAyahId, // ✅ NEW
             );
 
-            // ✅ NEW: Set SettingsProvider for persistent layout/marking settings
-            try {
-              final settings = Provider.of<MushafSettingsService>(
-                context,
-                listen: false,
-              );
-              controller.setSettingsService(settings);
-            } catch (e) {
-              print('⚠️ SttPage: MushafSettingsService not found');
-            }
-
             // ✅ NEW: Set PremiumProvider for word color gating
             try {
               final premium = Provider.of<PremiumProvider>(
@@ -119,11 +139,18 @@ class _SttPageState extends State<SttPage> {
         ),
         Provider(create: (_) => QuranService()),
       ],
-      child: Scaffold(
-        backgroundColor: AppColors.getBackground(context),
-        resizeToAvoidBottomInset: false,
-        extendBodyBehindAppBar: true,
-        appBar: const QuranAppBar(),
+      child: OrientationBuilder(
+        builder: (context, orientation) {
+          // ✅ LANDSCAPE: Toggle immersive mode based on orientation
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _handleOrientationChange(orientation);
+          });
+
+          return Scaffold(
+            backgroundColor: AppColors.getBackground(context),
+            resizeToAvoidBottomInset: false,
+            extendBodyBehindAppBar: true,
+            appBar: const QuranAppBar(),
         endDrawer: Consumer<SttController>(
           builder: (context, controller, _) =>
               BookmarkDrawer(controller: controller),
@@ -232,6 +259,8 @@ class _SttPageState extends State<SttPage> {
                 );
               },
             ),
+          );
+        },
       ),
     );
   }

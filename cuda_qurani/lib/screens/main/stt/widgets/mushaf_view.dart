@@ -145,47 +145,60 @@ class MushafRenderer {
     int pageNumber,
     bool isIndopak,
   ) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final size = MediaQuery.of(context).size;
+    final screenWidth = size.width;
+    final screenHeight = size.height;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    // ✅ LANDSCAPE SCALING: Use the smaller dimension as the reference for fonts
+    final referenceWidth = isLandscape ? screenHeight : screenWidth;
+    final referenceHeight = isLandscape ? screenWidth : screenHeight;
 
     double horizontalPadding = 0.0;
     double fontSizeMultiplier = 0.055;
     double scaleX = 1.0;
     double scaleY = 1.0;
-    double targetLineHeight = lineHeight(context);
+    double targetLineHeight = isLandscape
+        ? referenceHeight *
+              0.050 // Scale height in landscape
+        : screenHeight * 0.050;
     bool useFittedBox = false;
 
     if (isIndopak) {
       if (pageNumber == 1 || pageNumber == 2) {
-        horizontalPadding = screenWidth * 0.05;
+        horizontalPadding = referenceWidth * 0.05;
         fontSizeMultiplier = 0.070;
         scaleY = 1.0;
         scaleX = 1.0;
-        targetLineHeight = screenHeight * 0.060;
+        targetLineHeight = referenceHeight * 0.060;
         useFittedBox = false;
       } else {
         horizontalPadding = 0.0;
         fontSizeMultiplier = 0.0630;
         scaleY = 1.150;
         scaleX = 0.98;
-        targetLineHeight = screenHeight * 0.050;
+        targetLineHeight = referenceHeight * 0.050;
         useFittedBox = false;
       }
     } else {
       if (pageNumber == 1 || pageNumber == 2) {
-        horizontalPadding = screenWidth * 0.05;
+        horizontalPadding = referenceWidth * 0.05;
         fontSizeMultiplier = 0.062;
-        targetLineHeight = screenHeight * 0.060;
+        targetLineHeight = referenceHeight * 0.060;
         useFittedBox = false;
       } else {
         horizontalPadding = 0.0;
         fontSizeMultiplier = 0.060;
-        targetLineHeight = screenHeight * 0.050;
+        targetLineHeight = referenceHeight * 0.050;
       }
     }
 
-    final availableWidth = screenWidth - (horizontalPadding * 2) - 2.0;
-    double calculatedFontSize = screenWidth * fontSizeMultiplier;
+    // ✅ Landscape: Allow the text to be wider instead of strictly following portrait width
+    final availableWidth = isLandscape
+        ? (screenWidth * 0.85) - (horizontalPadding * 2)
+        : referenceWidth - (horizontalPadding * 2) - 2.0;
+
+    double calculatedFontSize = referenceWidth * fontSizeMultiplier;
 
     if (!useFittedBox) {
       final maxFontSizeByHeight = targetLineHeight * 0.85;
@@ -443,7 +456,12 @@ class MushafPageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appBarHeight = kToolbarHeight;
+    final orientation = MediaQuery.of(context).orientation;
+    final isLandscape = orientation == Orientation.landscape;
+    final screenPadding = MediaQuery.of(context).padding;
+    final appBarHeight = isLandscape
+        ? kToolbarHeight + screenPadding.top
+        : kToolbarHeight * 0.86; // Match portrait behavior
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSpecialPage = pageNumber == 1 || pageNumber == 2;
@@ -468,25 +486,33 @@ class MushafPageContent extends StatelessWidget {
     // ✅ CRITICAL: Clip page to prevent bleeding into adjacent pages during swipe
     // ✅ Use ClipRect with explicit size for efficient clipping
     // ✅ Highlighting Consolidated: Use a single Stack with one overlay for the entire page
-    return Column(
-      children: [
-        // Header
-        Padding(
-          padding: EdgeInsets.only(top: appBarHeight),
-          child: MushafPageHeader(pageNumber: pageNumber),
-        ),
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: EdgeInsets.only(top: appBarHeight),
+            child: MushafPageHeader(pageNumber: pageNumber),
+          ),
 
-        // ✅ KHUSUS HALAMAN 1 & 2: Tambahkan ruang kosong di atas Surah Header
-        if (isSpecialPage) SizedBox(height: screenHeight * 0.15),
+          // ✅ KHUSUS HALAMAN 1 & 2: Tambahkan ruang kosong di atas Surah Header
+          if (isSpecialPage)
+            SizedBox(
+              height: isLandscape ? screenHeight * 0.05 : screenHeight * 0.04,
+            ),
 
-        const SizedBox(height: 0),
+          const SizedBox(height: 0),
 
-        // Page lines
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.00),
-          child: linesContent,
-        ),
-      ],
+          // Page lines
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isLandscape ? screenWidth * 0.05 : 0.0,
+            ),
+            child: linesContent,
+          ),
+        ],
+      ),
     );
   }
 
@@ -501,7 +527,7 @@ class MushafPageContent extends StatelessWidget {
 
     switch (line.lineType) {
       case 'surah_name':
-        lineWidget = _SurahNameLine(line: line);
+        lineWidget = _SurahNameLine(line: line, layoutConfig: layoutConfig);
         // ✅ KHUSUS HALAMAN 1 & 2: Tambahkan padding bawah sedikit biar nggak kedeketan sama Basmallah/Ayat
         if (pageNumber == 1 || pageNumber == 2) {
           lineWidget = Padding(
@@ -514,7 +540,7 @@ class MushafPageContent extends StatelessWidget {
         break;
 
       case 'basmallah':
-        lineWidget = _BasmallahLine();
+        lineWidget = _BasmallahLine(layoutConfig: layoutConfig);
         break;
 
       case 'ayah':
@@ -556,16 +582,20 @@ class MushafPageContent extends StatelessWidget {
 
 class _SurahNameLine extends StatelessWidget {
   final MushafPageLine line;
-  const _SurahNameLine({required this.line});
+  final MushafLayoutConfig layoutConfig;
+  const _SurahNameLine({required this.line, required this.layoutConfig});
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    final headerSize = screenHeight * 0.040;
-    final surahNameSize =
-        screenHeight *
-        0.045; // 👈 Ubah angka ini untuk mengatur besar Nama Surah (0.050 -> 0.040)
+
+    // ✅ LANDSCAPE SCALING: Use the same reference as calculateLayoutConfig
+    final refHeight = isLandscape ? screenWidth : screenHeight;
+    final headerSize = refHeight * 0.040;
+    final surahNameSize = refHeight * 0.045;
 
     final controller = context.read<SttController>();
     final isIndopak = context.select<SttController, bool>(
@@ -581,12 +611,14 @@ class _SurahNameLine extends StatelessWidget {
               0.005 // indopak
         : -screenWidth * 0.004; // qpc
 
-    return Center(
+    return Container(
+      height: layoutConfig.lineHeight,
+      alignment: Alignment.center,
       key: ValueKey(
         'surah_ornament_${isIndopak ? "indopak" : "qpc"}_${line.surahNumber}',
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.005),
+        padding: EdgeInsets.symmetric(vertical: refHeight * 0.005),
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -624,17 +656,27 @@ class _SurahNameLine extends StatelessWidget {
 }
 
 class _BasmallahLine extends StatelessWidget {
+  final MushafLayoutConfig layoutConfig;
+  const _BasmallahLine({required this.layoutConfig});
+
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     final screenHeight = MediaQuery.of(context).size.height;
-    final basmallahSize = screenHeight * 0.040;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // ✅ LANDSCAPE SCALING
+    final refHeight = isLandscape ? screenWidth : screenHeight;
+    final basmallahSize = refHeight * 0.040;
+
     // ✅ PERF FIX: Removed duplicate selector — isIndopak and isIndopakFontSize were identical
     final isIndopak = context.select<SttController, bool>(
       (c) => c.mushafLayout == MushafLayout.indopak,
     );
 
     return Container(
-      height: MushafRenderer.lineHeight(context),
+      height: layoutConfig.lineHeight,
       alignment: Alignment.center,
       child: Text(
         '﷽',
@@ -672,9 +714,6 @@ class _JustifiedAyahLine extends StatelessWidget {
     final isIndopak = mushafLayout == MushafLayout.indopak;
     final hideUnreadAyat = context.select<SttController, bool>(
       (c) => c.hideUnreadAyat,
-    );
-    final hideVerseMarkers = context.select<SttController, bool>(
-      (c) => c.hideVerseMarkers,
     );
 
     // Select ONLY the word status for the current active highlight if it belongs to this line
@@ -774,7 +813,7 @@ class _JustifiedAyahLine extends StatelessWidget {
     // ✅ ⚡️ ULTIMATE SPAN CACHING: Key includes all visual states
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final cacheKey =
-        '${mushafLayout.name}:$pageNumber:${line.lineNumber}:$isDarkMode:${lineHighlightState.relevantRevision}:${lineHighlightState.currentWordInLine}:${lineHighlightState.hasSelection}:$hideUnreadAyat:$hideVerseMarkers';
+        '${mushafLayout.name}:$pageNumber:${line.lineNumber}:$isDarkMode:${lineHighlightState.relevantRevision}:${lineHighlightState.currentWordInLine}:${lineHighlightState.hasSelection}:$hideUnreadAyat';
 
     if (_localSpanCache.containsKey(cacheKey)) {
       return _drawJustifiedLine(_localSpanCache[cacheKey]!, context);
@@ -812,7 +851,6 @@ class _JustifiedAyahLine extends StatelessWidget {
             : baseFontSize;
 
         if (isLastWordInAyah) {
-          if (hideVerseMarkers) continue; // Skip rendering the marker
           final markerSpan = WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: Container(

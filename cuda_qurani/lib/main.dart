@@ -201,10 +201,6 @@ class MainApp extends StatelessWidget {
           create: (_) => QuranResourceService(),
           lazy: false,
         ),
-        ChangeNotifierProvider(
-          create: (_) => MushafSettingsService(),
-          lazy: false,
-        ),
       ],
       child: Consumer2<LanguageProvider, ThemeProvider>(
         builder: (context, languageProvider, themeProvider, child) {

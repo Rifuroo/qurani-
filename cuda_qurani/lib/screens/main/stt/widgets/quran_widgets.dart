@@ -142,11 +142,16 @@ class _QuranAppBarState extends State<QuranAppBar> {
 
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
-    final iconSize = screenWidth * 0.050; // Increased
-    final titleSize = screenWidth * 0.028; // Increased
-    final subtitleSize = screenWidth * 0.028; // Increased
-    final badgeSize = screenWidth * 0.028; // Increased
+    // ✅ LANDSCAPE SCALING: Use shorter dimension as reference
+    final refWidth = isLandscape ? screenHeight : screenWidth;
+
+    final iconSize = refWidth * 0.050; // Adjusted for landscape
+    final titleSize = refWidth * 0.028; // Adjusted for landscape
+    final subtitleSize = refWidth * 0.028; // Adjusted for landscape
+    final badgeSize = refWidth * 0.028; // Adjusted for landscape
 
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),

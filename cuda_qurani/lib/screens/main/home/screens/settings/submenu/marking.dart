@@ -8,7 +8,6 @@ import 'package:cuda_qurani/screens/main/home/screens/settings/widgets/appbar.da
 import 'package:cuda_qurani/providers/premium_provider.dart';
 import 'package:cuda_qurani/models/premium_features.dart';
 import 'package:cuda_qurani/core/widgets/premium_dialog.dart';
-import 'package:cuda_qurani/services/mushaf_settings_service.dart';
 
 /// ==================== MARKING SETTINGS PAGE ====================
 /// Halaman untuk mengatur pengaturan marking/penandaan dalam pembacaan Quran
@@ -37,36 +36,41 @@ class _MarkingPageState extends State<MarkingPage> {
     });
   }
 
+  // Default states untuk semua toggle (dummy state)
+  bool _showTajweedColors = false;
+  bool _highlightMistakeHistory = false;
+  bool _colorSimilarPhrases = false;
+
+  void _toggleShowTajweedColors(bool value) {
+    setState(() {
+      _showTajweedColors = value;
+    });
+    AppHaptics.selection();
+
+    // TODO: Implement toggle logic
+  }
+
+  void _toggleHighlightMistakeHistory(bool value) {
+    setState(() {
+      _highlightMistakeHistory = value;
+    });
+    AppHaptics.selection();
+
+    // TODO: Implement toggle logic
+  }
+
+  void _toggleColorSimilarPhrases(bool value) {
+    setState(() {
+      _colorSimilarPhrases = value;
+    });
+    AppHaptics.selection();
+
+    // TODO: Implement toggle logic
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppDesignSystem.getScaleFactor(context);
-    final settingsService = Provider.of<MushafSettingsService>(context);
-
-    // Get current values from service
-    final showTajweedColors = settingsService.showTajweedColors;
-    final highlightMistakeHistory = settingsService.highlightMistakeHistory;
-    final colorSimilarPhrases = settingsService.colorSimilarPhrases;
-    final hideVerseMarkers = settingsService.hideVerseMarkers;
-
-    void toggleShowTajweedColors(bool value) {
-      settingsService.setShowTajweedColors(value);
-      AppHaptics.selection();
-    }
-
-    void toggleHighlightMistakeHistory(bool value) {
-      settingsService.setHighlightMistakeHistory(value);
-      AppHaptics.selection();
-    }
-
-    void toggleColorSimilarPhrases(bool value) {
-      settingsService.setColorSimilarPhrases(value);
-      AppHaptics.selection();
-    }
-
-    void toggleHideVerseMarkers(bool value) {
-      settingsService.setHideVerseMarkers(value);
-      AppHaptics.selection();
-    }
 
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
@@ -215,8 +219,8 @@ class _MarkingPageState extends State<MarkingPage> {
                           _buildPremiumSwitch(
                             context,
                             feature: PremiumFeature.tajweedColors,
-                            value: showTajweedColors,
-                            onChanged: toggleShowTajweedColors,
+                            value: _showTajweedColors,
+                            onChanged: _toggleShowTajweedColors,
                           ),
                         ],
                       ),
@@ -307,8 +311,8 @@ class _MarkingPageState extends State<MarkingPage> {
                           _buildPremiumSwitch(
                             context,
                             feature: PremiumFeature.mistakeHistory,
-                            value: highlightMistakeHistory,
-                            onChanged: toggleHighlightMistakeHistory,
+                            value: _highlightMistakeHistory,
+                            onChanged: _toggleHighlightMistakeHistory,
                           ),
                         ],
                       ),
@@ -396,8 +400,8 @@ class _MarkingPageState extends State<MarkingPage> {
                             ),
                           ),
                           Switch(
-                            value: colorSimilarPhrases,
-                            onChanged: toggleColorSimilarPhrases,
+                            value: _colorSimilarPhrases,
+                            onChanged: _toggleColorSimilarPhrases,
                             activeTrackColor: AppColors.getPrimary(context).withValues(alpha: 0.5),
                             activeThumbColor: Colors.white,
                             inactiveThumbColor: AppColors.getBorderMedium(context),
@@ -415,96 +419,6 @@ class _MarkingPageState extends State<MarkingPage> {
                                   'marking.similar_phrases_desc',
                                 )
                               : 'Color similar phrases (Mutashabihat) with distinct colors to identify patterns and avoid confusing different verses.',
-                          style: TextStyle(
-                            fontSize: 13 * s * 0.9,
-                            fontWeight: AppTypography.regular,
-                            color: AppColors.getTextSecondary(context),
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: AppDesignSystem.space24 * s * 0.9),
-
-                // Appearance Section (Verse Markers)
-                Text(
-                  _translations.isNotEmpty
-                      ? LanguageHelper.tr(_translations, 'marking.appearance_text')
-                      : 'Appearance',
-                  style: TextStyle(
-                    fontSize: 14 * s * 0.9,
-                    fontWeight: AppTypography.medium,
-                    color: AppColors.getTextSecondary(context),
-                  ),
-                ),
-
-                SizedBox(height: AppDesignSystem.space12 * s * 0.9),
-
-                // Hide Verse Markers Container
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppDesignSystem.space16 * s * 0.9,
-                    vertical: AppDesignSystem.space16 * s * 0.9,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.getSurface(context),
-                    borderRadius: BorderRadius.circular(
-                      AppDesignSystem.radiusMedium * s * 0.9,
-                    ),
-                    border: Border.all(
-                      color: AppColors.getBorderLight(context),
-                      width: 1.0 * s * 0.9,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.visibility_off_outlined,
-                            size: 20 * s * 0.9,
-                            color: AppColors.getTextPrimary(context),
-                          ),
-                          SizedBox(width: AppDesignSystem.space12 * s * 0.9),
-                          Expanded(
-                            child: Text(
-                              _translations.isNotEmpty
-                                  ? LanguageHelper.tr(
-                                      _translations,
-                                      'marking.hide_verse_markers_text',
-                                    )
-                                  : 'Hide verse markers',
-                              style: TextStyle(
-                                fontSize: 16 * s * 0.9,
-                                fontWeight: AppTypography.regular,
-                                color: AppColors.getTextPrimary(context),
-                              ),
-                            ),
-                          ),
-                          Switch(
-                            value: hideVerseMarkers,
-                            onChanged: toggleHideVerseMarkers,
-                            activeTrackColor: AppColors.getPrimary(context).withValues(alpha: 0.5),
-                            activeThumbColor: Colors.white,
-                            inactiveThumbColor: AppColors.getBorderMedium(context),
-                            inactiveTrackColor: AppColors.getBorderLight(context),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: AppDesignSystem.space8 * s * 0.9),
-                      Padding(
-                        padding: EdgeInsets.only(left: 32 * s * 0.9),
-                        child: Text(
-                          _translations.isNotEmpty
-                              ? LanguageHelper.tr(
-                                  _translations,
-                                  'marking.hide_verse_markers_desc',
-                                )
-                              : 'Hide the ayah number symbols to have a cleaner view of the text.',
                           style: TextStyle(
                             fontSize: 13 * s * 0.9,
                             fontWeight: AppTypography.regular,
